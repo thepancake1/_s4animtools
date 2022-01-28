@@ -1,6 +1,6 @@
 # _s4animtools
 
-S4AnimTools is a toolset for making animations and poses for The Sims 4.
+S4AnimTools is a toolset for making animations and poses for The Sims 4. Made in mind with Blender 3.0, but may work on versions 2.8 and above.
 
 # How do I make a pose?
 This tutorial assumes you are familiar with the basics of blender. It also assumes you have a pose already created and want to use the tool to export it.
