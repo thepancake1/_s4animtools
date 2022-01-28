@@ -7,7 +7,9 @@ This tutorial assumes you are familiar with the basics of blender. It also assum
 
 The first time you use _s4animtools, it may look complicated. Here's a guide to help explain the basics!
 ![img](https://i.imgur.com/UGaRs9I.png)
-Select the rig object, then fill out clip splits with the frame you want the pose to end on.
+Select the rig object. Scroll down until you see clip splits and clip name. 
+
+Fill out clip splits with how many frames you want the pose to last.
 In clip name, enter the name of the pose you want to make. 
 
 I'm calling my pose "a_thepancake1_lookingcoolpose"! Take note that the game will automatically add the actor name to the end of the clip name when you export it.
