@@ -1,7 +1,6 @@
-from _s4animtools.rig_constants import cas, slot
+from _s4animtools.rig_constants import slot
 from _s4animtools.channels.translation_channel import TranslationChannel
 from _s4animtools.channel import Channel
-from functools import lru_cache
 from collections import defaultdict
 from mathutils import Vector, Quaternion
 import math
@@ -223,8 +222,7 @@ class AnimationExporter:
         for bone in self.source_rig.pose.bones:
             if slot in bone.name:
                 continue
-            if cas in bone.name:
-                continue
+
             self.animated_frame_data[bone.name] = AnimationBoneData(self)
 
     def animate_recursively(self, idx, start_frame, force=False):
@@ -241,8 +239,8 @@ class AnimationExporter:
         This function requires the bone, the frame index, the current clip's start frame, and whether a keyframe
         should be inserted without checking if it's identical to previous keyframes.
 
-        If the bone has "slot" or "CAS" in the bone's name, then the bone will not be animated.
-        This assumes that slot or CAS bones have no children.
+        If the bone has "slot" in the bone's name, then the bone will not be animated.
+        This assumes that slot bones have no children.
 
         The b__ROOT__ bone is never animated.
         """
@@ -273,8 +271,6 @@ class AnimationExporter:
 
         for child in source_bone.children:
             if slot in child.name:
-                continue
-            if cas in child.name:
                 continue
             self.animate_frame(child, frame_idx, start_frame, force)
 
@@ -370,8 +366,6 @@ class AnimationExporter:
 
         for child in bone.children:
             if slot in child.name:
-                continue
-            if cas in child.name:
                 continue
             self.recursively_export_bone_animation_to_channels(child)
 
