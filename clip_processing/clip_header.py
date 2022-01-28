@@ -1,12 +1,14 @@
 import io
-
-from _s4animtools.clip_processing.value_types import uint32, float32, serializable_string
 import os
-import _s4animtools.clip_processing
-from _s4animtools.clip_processing.clip_body import ClipBody
 import importlib
-from _s4animtools.clip_processing.test_tool import get_size, get_hash_from_bone_name, get_64bithash
+import _s4animtools.clip_processing
+import _s4animtools.serialization
+from _s4animtools.serialization.types.basic import UInt32, Float32, String
+from _s4animtools.clip_processing.clip_body import ClipBody
+from _s4animtools.serialization import get_size
+from _s4animtools.serialization.fnv import get_64bithash
 from _s4animtools.rig_namepsaces import SlotAssignment
+
 importlib.reload(_s4animtools.clip_processing.clip_body)
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
@@ -20,7 +22,7 @@ class ExplicitNamespace:
         self.value = value
 
     def serialize(self):
-        return uint32(self.length).serialize() + self.value.encode("ascii")
+        return UInt32(self.length).serialize() + self.value.encode("ascii")
 class ClipResource:
     def __init__(self, clip_name, rig_name, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
                  initial_offset_t, source_file_name, loco_animation,disable_rig_suffix):
@@ -31,15 +33,10 @@ class ClipResource:
         if loco_animation:
             self._flags = 1
         self._duration = 0
-        self._initialOffsetQ = list(map(float, initial_offset_q.split(",")))
-        self._initialOffsetT = list(map(float, initial_offset_t.split(",")))
-        if len(self._initialOffsetT) != 3:
-            raise Exception(f"invalid initial offset T, expected 3 values. Got {len(self._initialOffsetT)}")
-
-        if len(self._initialOffsetQ) != 4:
-            raise Exception(f"invalid initial offset Q, expected 4 values. Got {len(self._initialOffsetQ)}")
-        self.referenceNamespaceHash = int(reference_namespace_hash, 16)
+        self._initialOffsetQ = initial_offset_q
+        self._initialOffsetT =  initial_offset_t
         #TODO Add support for user-specified namespace hashes
+        self.referenceNamespaceHash = reference_namespace_hash
         self.surfaceNamespaceHash = 2166136261
         self.surfaceJointNameHash = 2166136261
         self.surfaceChildNamespaceHash = 2166136261
@@ -56,30 +53,28 @@ class ClipResource:
         self.rigNameLength, self.rigName = len(rig_name), rig_name
         self.explicitNamespaceCount = 0
         self.explicitNamespaces = []
-        self.slotAssignmentCount = 5
+        self.slotAssignmentCount = 0
         self.slotAssignments = []
         slot_idx = 0
-        # TODO Huh??? What does this do??
-        for i in range(5):
-            sA = SlotAssignment(i, 0, rig_name.encode("ascii"), b"b__ROOT__")
-            self.slotAssignments.append(sA)
+        """
+        Declare world ik and actual slot assignments
+        +1 for actual slot assignments because the zeroth index is taken 
+        up by the world iks
+        """
 
         for chain_bone in slot_assignments:
             for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
-            # TODO Jesus christ, replace this with a class
-                target_rig = slot_assignment[1]
-                target_bone = slot_assignment[2]
-                chain_idx = slot_assignment[4]
+                target_rig = slot_assignment.target_rig
+                target_bone = slot_assignment.target_bone
+                chain_idx = slot_assignment.chain_idx
                 if "subroot" in target_bone:
                     target_bone = "b__ROOT__"
                 if target_bone.endswith("Adjust"):
                     target_bone = target_bone.replace("Adjust", "")
-                # + 2 offset for consistency
                 if chain_idx == -1:
-                    chain_idx = bone_to_slot_offset_idx[slot_assignment[0]]
-                sA = SlotAssignment(chain_idx, idx+1, target_rig.name.encode('ascii'), target_bone.encode('ascii'))
+                    chain_idx = bone_to_slot_offset_idx[slot_assignment.source_bone]
+                sA = SlotAssignment(chain_idx, idx, target_rig.rig_name.encode('ascii'), target_bone.encode('ascii'))
                 self.slotAssignments.append(sA)
-                # TODO Have more than one slot assignment per ik slot idx. Right now, one slot idx equals one target idx.
                 slot_idx += 1
 
         self.slotAssignmentCount += slot_idx
@@ -87,7 +82,6 @@ class ClipResource:
         self.clipEventList = []
         self.codecDataLength = 1 #Offset to end file I think. Remember to actually set this
         self.clip_body = ClipBody(self.clipName, source_file_name)
-        # TODO WHAT IS GOING ON???
         if len(explicit_namespaces) >= 2:
             for namespace in explicit_namespaces.split(","):
                 self.add_explicit_namespace(namespace.lstrip())
@@ -122,13 +116,13 @@ class ClipResource:
             os.mkdir(anim_path)
 
         with open(anim_path + os.sep +  self.get_filename(), "wb") as file:
-            serialized = [uint32(self._version), uint32(self._flags), float32(self._duration),
-                          *map(float32, self._initialOffsetQ), *map(float32, self._initialOffsetT),
-                          uint32(self.referenceNamespaceHash), uint32(self.surfaceNamespaceHash),
-                          uint32(self.surfaceJointNameHash), uint32(self.surfaceChildNamespaceHash),
-                          uint32(self.clipNameLength), serializable_string(self.clipName),
-                          uint32(self.rigNameLength), serializable_string(self.rigName), uint32(self.explicitNamespaceCount), *self.explicitNamespaces,
-                          uint32(self.slotAssignmentCount), *self.slotAssignments, uint32(self.clipEventCount), *self.clipEventList, uint32(self.codecDataLength)]
+            serialized = [UInt32(self._version), UInt32(self._flags), Float32(self._duration),
+                          *self._initialOffsetQ.to_binary(), *self._initialOffsetT.to_binary(),
+                          UInt32(self.referenceNamespaceHash), UInt32(self.surfaceNamespaceHash),
+                          UInt32(self.surfaceJointNameHash), UInt32(self.surfaceChildNamespaceHash),
+                          UInt32(self.clipNameLength), String(self.clipName),
+                          UInt32(self.rigNameLength), String(self.rigName), UInt32(self.explicitNamespaceCount), *self.explicitNamespaces,
+                          UInt32(self.slotAssignmentCount), *self.slotAssignments, UInt32(self.clipEventCount), *self.clipEventList, UInt32(self.codecDataLength)]
             header_data = []
 
             header_length = 0
@@ -141,11 +135,11 @@ class ClipResource:
 
             actualCodecDataLength = get_size(clip_body) + get_size(frame_data)
             # Replace codec data length with actual one
-            header_data[-1] = uint32(actualCodecDataLength).serialize()
+            header_data[-1] = UInt32(actualCodecDataLength).serialize()
             all_data = io.BytesIO()
             # offsets
 
-            _s4animtools.clip_processing.test_tool.recursive_write([*header_data, clip_body, frame_data], all_data)
+            _s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
             write_data = all_data.getvalue()
 
             file.write(write_data)

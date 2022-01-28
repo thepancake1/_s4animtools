@@ -1,18 +1,28 @@
 from struct import pack, unpack
 
-class serializable_bytes:
+"""
+Basic Types are the types that go into a file. 
+These include things like an array of bytes, 
+an 8, 16, 32, or 64 bit integer, or a string.
+"""
+
+class Bytes:
     def __init__(self, value):
         self.value = value
 
     def serialize(self):
         return self.value
-class byte8:
+
+
+class Byte:
     def __init__(self, value):
         self.value = value
 
     def serialize(self):
         return pack("<B", self.value)
-class uint16:
+
+
+class UInt16:
     def __init__(self, value):
         self.value = value
 
@@ -20,7 +30,7 @@ class uint16:
         return pack("<H", self.value)
 
 
-class uint32:
+class UInt32:
     def __init__(self, value):
         self.value = value
 
@@ -31,7 +41,8 @@ class uint32:
     def deserialize(value):
         return unpack("<L", value)[0]
 
-class uint64:
+
+class UInt64:
     def __init__(self, value):
         self.value = value
 
@@ -43,7 +54,7 @@ class uint64:
         return unpack("<Q", value)[0]
 
 
-class int32:
+class Int32:
     def __init__(self, value):
         self.value = value
 
@@ -51,8 +62,7 @@ class int32:
         return pack("<l", self.value)
 
 
-
-class float32:
+class Float32:
     def __init__(self, value):
         self.value = value
 
@@ -63,7 +73,8 @@ class float32:
     def deserialize(value):
         return unpack("<f", value)[0]
 
-class serializable_string:
+
+class String:
     def __init__(self, value):
         self.value = value
 

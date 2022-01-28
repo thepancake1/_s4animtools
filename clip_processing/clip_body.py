@@ -1,5 +1,5 @@
-from _s4animtools.clip_processing.value_types import uint32, float32, serializable_string, uint16, byte8
-from _s4animtools.clip_processing.test_tool import get_size
+from _s4animtools.serialization.types.basic import UInt32, Float32, String, UInt16, Byte
+from _s4animtools.serialization import get_size
 
 
 class ClipBody:
@@ -17,10 +17,10 @@ class ClipBody:
         self._f1DataPaletteOffset = 0
         self._sourceNameOffset = 0
         self._sourceAssetNameOffset = 0
-        self._clipName = clipname.encode("ascii") + byte8(0).serialize()
+        self._clipName = clipname.encode("ascii") + Byte(0).serialize()
         self._channels = []
         self._f1PaletteData = []
-        self._source_file_name = source_file_name.encode("ascii") + byte8(0).serialize()
+        self._source_file_name = source_file_name.encode("ascii") + Byte(0).serialize()
 
     def add_channel(self, new_channel):
         self._channel_count += 1
@@ -30,11 +30,11 @@ class ClipBody:
         self._numTicks = length
 
     def serialize(self):
-        serialized = [serializable_string(self._formatToken), uint32(self._version),
-                    uint32(self._flags), float32(self._tickLength), uint16(self._numTicks),
-                    uint16(self._padding), uint32(self._channel_count), uint32(self._f1PaletteSize),
-                    uint32(self._channelDataOffset), uint32(self._f1DataPaletteOffset), uint32(self._sourceNameOffset),
-                      uint32(self._sourceAssetNameOffset)]
+        serialized = [String(self._formatToken), UInt32(self._version),
+                      UInt32(self._flags), Float32(self._tickLength), UInt16(self._numTicks),
+                      UInt16(self._padding), UInt32(self._channel_count), UInt32(self._f1PaletteSize),
+                      UInt32(self._channelDataOffset), UInt32(self._f1DataPaletteOffset), UInt32(self._sourceNameOffset),
+                      UInt32(self._sourceAssetNameOffset)]
 
         serialized_channels = []
         raw_channel_data = []
@@ -55,13 +55,13 @@ class ClipBody:
 
 
         # Set the offset values to their correct values
-        serialized[-2] = uint32(data_offset)
+        serialized[-2] = UInt32(data_offset)
         raw_channel_data.append(self._source_file_name)
         data_offset += len(self._source_file_name)
-        serialized[-1] = uint32(data_offset)
+        serialized[-1] = UInt32(data_offset)
         raw_channel_data.append(self._source_file_name)
         data_offset += len(self._source_file_name)
-        serialized[-3] = uint32(data_offset)
+        serialized[-3] = UInt32(data_offset)
 
         for data in self._f1PaletteData:
             # Assume data to be 4 bytes
@@ -82,7 +82,7 @@ class ClipBody:
         for idx in range(len(serialized_channels)):
 
             # Update the channel data offset to its actual offset
-            raw_channel_data[idx][0] = uint32(channel_offsets[idx]).serialize()
+            raw_channel_data[idx][0] = UInt32(channel_offsets[idx]).serialize()
 
         serialized_stuff = []
         for value in serialized:

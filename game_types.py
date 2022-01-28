@@ -1,5 +1,9 @@
 import enum
 import struct
+"""
+This sucks.
+"""
+
 class DataTypes(enum.IntEnum):
     uint8 = 0
     uint16 = 1

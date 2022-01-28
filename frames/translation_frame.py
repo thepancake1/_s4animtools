@@ -1,9 +1,9 @@
-from _s4animtools.clip_processing.value_types import uint16
+from _s4animtools.serialization.types.basic import UInt16
 from _s4animtools.frames.frame import Frame
 
 class TranslationFrame(Frame):
     def set_frame_data(self, startTick, frame_data, snap_frame):
-        self._startTick = uint16(startTick)
+        self._startTick = UInt16(startTick)
         sign_bits = [frame_data[0] < 0, frame_data[1] < 0, frame_data[2] < 0, 0,
                      0, 0, 0, snap_frame]
         sign_bits = [str(int(x)) for x in sign_bits]
@@ -11,7 +11,7 @@ class TranslationFrame(Frame):
         sign_bits = "".join(sign_bits)[::-1]
 
         #print(sign_bits)
-        self._sign_bits = uint16(int(sign_bits, 2))
+        self._sign_bits = UInt16(int(sign_bits, 2))
         self._frame_data = frame_data
         self._bitshifted_data  = None
 

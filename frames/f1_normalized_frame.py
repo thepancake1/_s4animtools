@@ -1,4 +1,4 @@
-from _s4animtools.clip_processing.value_types import uint16
+from _s4animtools.serialization.types.basic import UInt16
 from _s4animtools.frames.frame import Frame
 
 class F1NormalizedFrame(Frame):
@@ -6,12 +6,12 @@ class F1NormalizedFrame(Frame):
         """Set frame data for F1 Normalized Frame.
         This is slightly different as there is only
         one value in the animation data nd sign bits."""
-        self._startTick = uint16(startTick)
+        self._startTick = UInt16(startTick)
         sign_bits = [value, 0, 0, 0,
                      0, 0, 0, snap_frame]
         sign_bits = [str(int(x)) for x in sign_bits]
 
-        self._sign_bits = uint16(int(value < 0))
+        self._sign_bits = UInt16(int(value < 0))
         self._frame_data = value
 
 

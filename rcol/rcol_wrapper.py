@@ -1,10 +1,8 @@
-import io
 import math
 
-import _s4animtools.clip_processing.test_tool
 from _s4animtools.rcol.skin import Skin
-from _s4animtools.clip_processing.value_types import uint32, uint64, serializable_bytes
-from _s4animtools.clip_processing.test_tool import get_size
+from _s4animtools.serialization.types.basic import UInt32, UInt64, Bytes
+from _s4animtools.serialization import get_size
 
 
 def get_combined_len(value):
@@ -21,12 +19,12 @@ class ChunkInfo:
         self.chunk_size = chunk_size
 
     def read(self, stream):
-        self.chunk_position = uint32.deserialize(stream.read(4))
-        self.chunk_size = uint32.deserialize(stream.read(4))
+        self.chunk_position = UInt32.deserialize(stream.read(4))
+        self.chunk_size = UInt32.deserialize(stream.read(4))
         return self
 
     def serialize(self):
-        data = [uint32(self.chunk_position), uint32(self.chunk_size)]
+        data = [UInt32(self.chunk_position), UInt32(self.chunk_size)]
         serialized_stuff = []
         for value in data:
             serialized_stuff.append(value.serialize())
@@ -43,13 +41,13 @@ class TGI:
         self.g = 0
 
     def read(self, stream):
-        self.i = uint64.deserialize(stream.read(8))
-        self.t = uint32.deserialize(stream.read(4))
-        self.g = uint32.deserialize(stream.read(4))
+        self.i = UInt64.deserialize(stream.read(8))
+        self.t = UInt32.deserialize(stream.read(4))
+        self.g = UInt32.deserialize(stream.read(4))
         return self
 
     def serialize(self):
-        data = [uint64(self.i), uint32(self.t), uint32(self.g)]
+        data = [UInt64(self.i), UInt32(self.t), UInt32(self.g)]
         serialized_stuff = []
         for value in data:
             serialized_stuff.append(value.serialize())
@@ -70,11 +68,11 @@ class RCOL:
         self.chunk_info = []
         self.chunk_data = []
     def read(self, stream):
-        self.version = uint32.deserialize(stream.read(4))
-        self.public_chunks = uint32.deserialize(stream.read(4))
-        self.index3 = uint32.deserialize(stream.read(4))
-        self.external_count = uint32.deserialize(stream.read(4))
-        self.internal_count = uint32.deserialize(stream.read(4))
+        self.version = UInt32.deserialize(stream.read(4))
+        self.public_chunks = UInt32.deserialize(stream.read(4))
+        self.index3 = UInt32.deserialize(stream.read(4))
+        self.external_count = UInt32.deserialize(stream.read(4))
+        self.internal_count = UInt32.deserialize(stream.read(4))
         for i in range(self.internal_count):
             self.internal_tgis.append(TGI().read(stream))
         for i in range(self.external_count):
@@ -90,7 +88,7 @@ class RCOL:
                 print(stream.tell())
 
             else:
-                chunk_data = serializable_bytes(stream.read(self.chunk_info[i].chunk_size))
+                chunk_data = Bytes(stream.read(self.chunk_info[i].chunk_size))
             self.chunk_data.append(chunk_data)
 
         print(vars(self))
@@ -155,8 +153,8 @@ class RCOL:
 
 
     def serialize(self):
-        data = [uint32(self.version), uint32(self.public_chunks), uint32(self.index3), uint32(self.external_count),
-                uint32(self.internal_count), *self.internal_tgis, *self.external_tgis]
+        data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
+                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis]
 
         serialized_stuff = []
         total_len = 0

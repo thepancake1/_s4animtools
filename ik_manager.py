@@ -1,5 +1,5 @@
 import bpy
-from _s4animtools.ik_baker import s4animtool_OT_bakeik
+from _s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
 
 class BeginIKMarker(bpy.types.Operator):
     """Move the currently selected script item."""
@@ -48,7 +48,7 @@ class BeginIKMarker(bpy.types.Operator):
 
             found=False
 
-            for idx, item in enumerate(context.object.ik_targets):
+            for idx, item in enumerate(get_ik_targets(obj)):
                 if item.target_bone == context.selected_pose_bones[0].name:
                     if item.target_obj == context.object.name:
                         if item.chain_bone == chain_bone:
@@ -63,7 +63,6 @@ class BeginIKMarker(bpy.types.Operator):
             context.object.ik_targets[idx].ranges[-1].start_time = context.scene.frame_current
             context.object.ik_targets[idx].ranges[-1].end_time = context.scene.frame_current
             context.object.ik_targets[idx].chain_bone = chain_bone
-            context.object.ik_targets[idx].holder_src_bone = holder_bone
             context.object.ik_targets[idx].target_obj = context.object.name
             context.object.ik_targets[idx].target_bone = context.selected_pose_bones [0].name
 
@@ -117,7 +116,7 @@ class LIST_OT_DeleteIKRange(bpy.types.Operator):
 
 
 class LIST_OT_NewIKTarget(bpy.types.Operator):
-    """Add a new script item to the list."""
+    """Add a new ik target item to the list."""
     bl_idname = "iktarget.new"
     bl_label = "Add a new item"
     bl_options = {"REGISTER", "UNDO"}
@@ -129,15 +128,32 @@ class LIST_OT_NewIKTarget(bpy.types.Operator):
         context.object.ik_targets.add()
         context.object.ik_targets[-1].ranges.add()
         context.object.ik_idx = len(context.object.ik_targets)
-        if len(self.command) > 0:
-            existing_chain_bone, existing_source_bone = self.command.split(",")
-            context.object.ik_targets[-1].chain_bone = existing_chain_bone
-            context.object.ik_targets[-1].holder_src_bone = existing_source_bone
+        context.object.ik_targets[-1].chain_bone = self.command
+        context.object.ik_targets[-1].target_obj = context.object.name
 
 
         return {'FINISHED'}
 
+class LIST_OT_CreateIKTarget(bpy.types.Operator):
+    """Add roots to the list."""
+    bl_idname = "iktarget.create_roots"
+    bl_label = "Add a new item"
+    bl_options = {"REGISTER", "UNDO"}
 
+    def execute(self, context):
+        chain_bones  = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
+
+        for i in range(5):
+            context.object.ik_targets.add()
+            context.object.ik_targets[-1].ranges.add()
+            context.object.ik_idx = len(context.object.ik_targets)
+            context.object.ik_targets[-1].chain_bone = chain_bones[i]
+            context.object.ik_targets[-1].target_obj = context.object.name
+            context.object.ik_targets[-1].target_bone = "b__ROOT__"
+
+
+
+        return {'FINISHED'}
 class LIST_OT_DeleteIKTarget(bpy.types.Operator):
     """Delete an ik target."""
     bl_idname = "iktarget.delete"

@@ -1,16 +1,16 @@
 import importlib
 import _s4animtools.frames.frame
-
-import _s4animtools.clip_processing.value_types
-from _s4animtools.clip_processing.value_types import uint16, uint32, float32, byte8
-import _s4animtools.clip_processing.test_tool
+from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
+import _s4animtools.serialization
+from _s4animtools.serialization.fnv import get_32bit_hash
 
 importlib.reload(_s4animtools.frames.frame)
-importlib.reload(_s4animtools.clip_processing.value_types)
+
+
 class Channel:
     def __init__(self, channel_name, channel_type, sub_type):
         self._channel_name = channel_name
-        self._target = uint32(_s4animtools.clip_processing.test_tool.get_hash_from_bone_name(channel_name))
+        self._target = UInt32(get_32bit_hash(channel_name))
         self._data_offset = 0
         self._offset = 0
         self._scale = 0
@@ -26,14 +26,16 @@ class Channel:
         return (value - self._offset) / self._scale
 
     def serialize_data(self, value):
-        return uint16(value)
+        return UInt16(value)
 
-    def compress_data(self, value):
+    def quantize_data(self, value):
         # Throw away the sign. Watch it burn.
         # Rotation data uses 32 bits of precision
         return int(round(abs(value * 4095)))
 
-    def setup(self, channel_data):
+    def setup(self, channel_data, snap_frames=None):
+        if snap_frames is None:
+            snap_frames = []
         channel_frame_values = {}
         min, max = 9999, -9999
         for idx, frame_data in channel_data.items():
@@ -46,7 +48,7 @@ class Channel:
         offset = (min + max) / 2
         scale = -((min - max) / 2)
         self.set_channel_data(offset=offset, scale=scale, individual_frames=channel_frame_values,
-                                         snap_frames=[])
+                                         snap_frames=snap_frames)
 
     def set_channel_data(self, offset, scale, individual_frames, snap_frames):
         self._offset = offset
@@ -54,16 +56,17 @@ class Channel:
         self._individual_frames = individual_frames
         self._frame_count = len(self._individual_frames)
         for idx, values in self._individual_frames.items():
+            values = (values[1], values[2], values[3], values[0])
             single_frame = _s4animtools.frames.frame.Frame()
             single_frame.set_frame_data(idx, list(map(self.normalize_offset_scale, values)), idx in snap_frames)
-            single_frame._frame_data = list(map(self.compress_data, single_frame._frame_data))
+            single_frame._frame_data = list(map(self.quantize_data, single_frame._frame_data))
             single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
-            #print(idx, self._individual_frames[idx])
             self.serialized_frames[idx] = single_frame
 
     def serialize(self):
 
-        order = [uint32(self._data_offset), self._target, float32(self._offset), float32(self._scale), uint16(self._frame_count), byte8(self._channel_type ), byte8(self._sub_type)]
+        order = [UInt32(self._data_offset), self._target, Float32(self._offset), Float32(self._scale),
+                 UInt16(self._frame_count), Byte(self._channel_type), Byte(self._sub_type)]
         serialized_header = []
         serialized_frames = []
 
@@ -71,14 +74,5 @@ class Channel:
             serialized_header.append(item.serialize())
         for idx, frame in self.serialized_frames.items():
             serialized_frames.append(frame.serialize())
-
-            # with open(anim_path + "\\{}-{}-{}-{}.channel".format(self._channel_name, "F4_SuperHighPrecision_Quaternion",
-            #                                         "SubChannelType.Orientation", "Header"), "wb") as file:
-            # for item in order:
-            # #    file.write(item.serialize())
-
-            # with open(anim_path + "\\{}-{}-{}-{}.channel".format(self._channel_name, "F4_SuperHighPrecision_Quaternion",
-            #                                                  "SubChannelType.Orientation", "Body"), "wb") as file:
-
 
         return serialized_header, serialized_frames

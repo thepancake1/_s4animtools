@@ -1,6 +1,27 @@
 from _s4animtools.rig_constants import cas, slot
-import _s4animtools
+from _s4animtools.channels.translation_channel import TranslationChannel
+from _s4animtools.channel import Channel
+from functools import lru_cache
+from collections import defaultdict
+from mathutils import Vector, Quaternion
 import math
+IK_TARGET_COUNT = 11
+
+IK_TRANSLATION_SUBTARGET_IDX = 25
+IK_ROTATION_SUBTARGET_IDX = 26
+
+TRANSLATION_SUBTARGET_IDX = 1
+ROTATION_SUBTARGET_IDX = 2
+SCALE_SUBTARGET_IDX = 3
+
+F3_HIGH_PRECISION_NORMALIZED_IDX = 18
+F4_SUPER_HIGH_PRECISION_IDX = 20
+
+IK_POLE_TO_BASE = {"b__L_ArmExportPole__" : "b__L_Forearm__",
+                   "b__R_ArmExportPole__" : "b__R_Forearm__",
+                   "b__L_LegExportPole__" : "b__L_Calf__",
+                   "b__R_LegExportPole__" : "b__R_Calf__"}
+
 
 class AnimationChannelDataBase:
     def __init__(self, name):
@@ -9,6 +30,7 @@ class AnimationChannelDataBase:
 
     def items(self):
         return self.values.items()
+
     def get_animated_frame_indices(self):
         """
         Returns a list of ints of frames that have animation data.
@@ -19,9 +41,8 @@ class AnimationChannelDataBase:
         """
         Returns greatest animation frame.
         """
-        indices = self.get_animated_frame_indices()
-        if len(indices) > 0:
-            return indices[-1]
+        if len(self.values) > 0:
+            return max(self.values.keys())
         return -1
 
     def get_latest_animation_data(self):
@@ -48,10 +69,10 @@ class AnimationChannelDataBase:
         animation_data = self.get_latest_animation_data()
         if animation_data is None:
             return True
-        return not self.are_two_keyframes_same(new_keyframe, animation_data)
+        return not self.identical(new_keyframe, animation_data)
 
     @staticmethod
-    def are_two_keyframes_same(frame_a, frame_b):
+    def identical(frame_a, frame_b):
         """
         Compares two keyframes to check if they are the same.
         """
@@ -61,29 +82,14 @@ class AnimationChannelDataBase:
     def frame_count(self):
         return len(self.values)
 
-class AnimationDataTranslation(AnimationChannelDataBase):
+
+class AnimationDataMagnitude(AnimationChannelDataBase):
     @staticmethod
-    def are_two_keyframes_same(frame_a, frame_b):
+    def identical(frame_a, frame_b):
         """
         Compares two keyframes to check if they are the same.
         """
-        return AnimationDataTranslation.get_distance(frame_a, frame_b) < 0.001
-
-    # TODO Move this somewhere else
-    @staticmethod
-    def get_distance(posA, posB):
-        distance = math.sqrt((posA.x - posB.x) ** 2 + (posA.y - posB.y) ** 2 + (posA.z - posB.z) ** 2)
-        # print(distance)
-        return distance
-
-
-class AnimationDataRotation(AnimationChannelDataBase):
-    @staticmethod
-    def are_two_keyframes_same(frame_a, frame_b):
-        """
-        Compares two keyframes to check if they are the same.
-        """
-        return (frame_a - frame_b).magnitude < 0.001
+        return (frame_a - frame_b).magnitude < 0.0001
 
 
 class AnimationBoneData:
@@ -93,104 +99,286 @@ class AnimationBoneData:
         self.create_animation_channels()
 
     def create_animation_channels(self):
-        self.channels.append(AnimationDataTranslation("Translation"))
-        self.channels.append(AnimationDataTranslation("Rotation"))
+        """
+        Create AnimationData channels for Translation, Rotation, Scale,
+        along with Translation and Rotation IK channels.
+        """
+        self.channels.append(AnimationDataMagnitude("Translation"))
+        self.channels.append(AnimationDataMagnitude("Rotation"))
+        self.channels.append(AnimationDataMagnitude("Scale"))
+
+        for i in range(IK_TARGET_COUNT):
+            self.channels.append(AnimationDataMagnitude(f"Translation IK {i}"))
+            self.channels.append(AnimationDataMagnitude(f"Rotation IK {i}"))
 
     def get_channel_matching_name(self, name):
+        """
+        Return the first channel matching the name specified.
+        Does not support multiple channels with the same name.
+        """
         for channel in self.channels:
             if channel.name == name:
                 return channel
 
-    def get_translation_channel(self):
-        return self.get_channel_matching_name("Translation")
+    def get_translation_channel(self, ik_idx=-1):
+        """
+        Returns the translation channel for an ik_idx.
+        If ik_idx is -1, then it returns the base translation
+        channel data.
+        """
+        if ik_idx == -1:
+            return self.get_channel_matching_name("Translation")
+        return self.get_channel_matching_name(f"Translation IK {ik_idx}")
 
-    def get_rotation_channel(self):
-        return self.get_channel_matching_name("Rotation")
+    def get_rotation_channel(self, ik_idx=-1):
+        """
+        Returns the rotation channel for an ik_idx.
+        If ik_idx is -1, then it returns the base rotation
+        channel data.
+        """
+        if ik_idx == -1:
+            return self.get_channel_matching_name("Rotation")
+        return self.get_channel_matching_name(f"Rotation IK {ik_idx}")
 
-    def get_matrix_data(self, bone, parent_bone):
-        src_matrix = self.animation_exporter.source_rig.matrix_world @ bone.matrix
-        dst_matrix = self.animation_exporter.target_rig.matrix_world @ parent_bone.matrix
+    def get_scale_channel(self):
+        """
+        Returns the rotation channel for an ik_idx.
+        If ik_idx is -1, then it returns the base rotation
+        channel data.
+        """
+        return self.get_channel_matching_name("Scale")
+
+    def get_transform(self, source_rig, source_bone, target_rig, target_bone):
+        """
+        Returns a tuple of translation, rotation, and scale data of
+        the source bone animated to the target bone.
+        """
+        src_matrix = source_rig.matrix_world @ source_bone.matrix
+        dst_matrix = target_rig.matrix_world @ target_bone.matrix
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
-        return translation_data, rotation_data
+        scale_data = source_bone.scale
+        return translation_data, rotation_data, scale_data
 
-    def serialize_animation_data(self, bone, parent_bone, frame_idx):
-        translation_data, rotation_data = self.get_matrix_data(bone, parent_bone)
-        self.get_translation_channel().add_keyframe(translation_data.copy(), frame_idx)
-        self.get_rotation_channel().add_keyframe(rotation_data.copy(), frame_idx)
+    def get_transform_and_serialize(self, source_rig, source_bone, target_rig, target_bone, frame_idx, start_frame, ik_idx=-1,
+                                    force=False):
+        """
+        Add keyframe to each of the transform, rotation, and scale channels.
+        """
+        translation_data, rotation_data, scale_data = self.get_transform(source_rig, source_bone, target_rig, target_bone)
+        self.get_translation_channel(ik_idx).add_keyframe(translation_data, frame_idx-start_frame, force)
+        self.get_rotation_channel(ik_idx).add_keyframe(rotation_data, frame_idx-start_frame, force)
+        self.get_scale_channel().add_keyframe(scale_data, frame_idx-start_frame, force)
 
-    def force_serialize_animation_data(self, bone, parent_bone, frame_idx):
-        translation_data, rotation_data = self.get_matrix_data(bone, parent_bone)
-        self.get_translation_channel().add_keyframe(translation_data.copy(), frame_idx, force=True)
-        self.get_rotation_channel().add_keyframe(rotation_data.copy(), frame_idx, force=True)
+    def get_transform_with_offset_and_serialize(self, source_bone, bone_to_be_offset, frame_idx, start_frame, ik_idx=-1,
+                                                force=False):
+        """
+        Meant to be used for the export poles.
+        The offset should probably be determined automatically, instead of being hardcoded.
+        Will not work for pets right now.
+        """
+        offset = -0.491
+        if "Leg" in source_bone.name:
+            offset *= -1
+        translation_data = source_bone.parent.matrix.inverted() @ (bone_to_be_offset.matrix @ Vector((0, offset, 0)))
+        self.get_translation_channel(ik_idx).add_keyframe(translation_data, frame_idx-start_frame, force)
+
+
+
     def __str__(self):
+        """Returns a string version the animation channels.
+        It lists each of the channel names and how many frames are in a single channel.
+        """
         str = ""
         str += f"Channels: \n"
         for channel in self.channels:
             str += f"{channel.name}  - {channel.frame_count}\n"
         return str
+
+
 class AnimationExporter:
-    def __init__(self, source_rig, target_rig):
+    def __init__(self, source_rig, snap_frames, world_rig, world_root):
         self.animated_frame_data = {}
         self.source_rig = source_rig
-        self.target_rig = target_rig
+        self.snap_frames = snap_frames
         self.root_bone = self.source_rig.pose.bones["b__ROOT__"]
         self.exported_channels = []
+        self.world_rig = world_rig
+        self.world_root = world_root
     @property
     def animated_bones(self):
+        """
+        Returns all the animated bones in an animation.
+        Not implemented yet is support for overlays as all potential
+        animated bones are listed regardless if they're actually
+        animated.
+        """
         return self.animated_frame_data.keys()
 
     def create_animation_data(self):
+        """
+        Create an AnimationBoneData class for each bone that can be animated.
+        """
         for bone in self.source_rig.pose.bones:
             if slot in bone.name:
                 continue
+            if cas in bone.name:
+                continue
             self.animated_frame_data[bone.name] = AnimationBoneData(self)
 
-    def animate_recursively(self, idx, force=False):
-        self.animate_frame(self.root_bone, idx, force)
+    def animate_recursively(self, idx, start_frame, force=False):
+        """
+        Recursively animate all the bones from a rig
+        starting from the root bone.
+        This assumes that the root bone is called "b__ROOT__"
+        """
+        self.animate_frame(self.root_bone, idx, start_frame, force)
 
-    def animate_frame(self, bone, idx, force):
+    def animate_frame(self, source_bone, frame_idx, start_frame, force):
+        """
+        Animate a bone relative to its parent.
+        This function requires the bone, the frame index, the current clip's start frame, and whether a keyframe
+        should be inserted without checking if it's identical to previous keyframes.
 
-        parent_bone = bone.parent
-        if parent_bone is None:
-            parent_bone = bone
-        if force:
-            self.animated_frame_data[bone.name].force_serialize_animation_data(bone, parent_bone, idx)
-        else:
-            self.animated_frame_data[bone.name].serialize_animation_data(bone, parent_bone, idx)
+        If the bone has "slot" or "CAS" in the bone's name, then the bone will not be animated.
+        This assumes that slot or CAS bones have no children.
 
-        for child in bone.children:
+        The b__ROOT__ bone is never animated.
+        """
+        parent_bone = source_bone.parent
+        if parent_bone is not None:
+            is_parent_root_bone = False
+            if source_bone.parent.name == "b__ROOT__":
+                is_parent_root_bone = True
+                self.animate_bone_relative_to_other_bone(source_bone=source_bone,
+                                                         target_rig=self.world_rig,
+                                                         target_bone=self.world_root, frame_idx=frame_idx,
+                                                         start_frame=start_frame,
+                                                         force=force)
+            if not is_parent_root_bone:
+                if source_bone.name in IK_POLE_TO_BASE.keys():
+                    self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_bone=source_bone,
+                                                                                           bone_to_be_offset=self.source_rig.pose.bones[IK_POLE_TO_BASE[source_bone.name]],
+                                                                                           frame_idx=frame_idx,
+                                                                                           start_frame=start_frame,
+                                                                                           force=force)
+                else:
+                    self.animated_frame_data[source_bone.name].get_transform_and_serialize(source_rig=self.source_rig, source_bone=source_bone,
+                                                                                           target_rig=self.source_rig,
+                                                                                           target_bone=parent_bone, frame_idx=frame_idx,
+                                                                                           start_frame=start_frame,
+                                                                                           force=force)
+
+
+        for child in source_bone.children:
             if slot in child.name:
                 continue
-            self.animate_frame(child, idx, force)
+            if cas in child.name:
+                continue
+            self.animate_frame(child, frame_idx, start_frame, force)
+
+    def animate_bone_relative_to_other_bone(self, source_bone, target_rig, target_bone, frame_idx, start_frame, ik_idx=-1, force=False):
+        """
+        Animate a bone relative to another bone.
+
+        This does not recursively go through the children unlike animate_frame.
+
+        Requires source_bone which is the bone you want to animate relative to the target rig's target bone.
+        The other parameters are the same as animate_frame()
+        """
+        self.animated_frame_data[source_bone.name].get_transform_and_serialize(source_rig=self.source_rig,
+                                                                               source_bone=source_bone,
+                                                                               target_rig=target_rig,
+                                                                               target_bone=target_bone, frame_idx=frame_idx,
+                                                                               start_frame=start_frame,
+                                                                               force=force, ik_idx=ik_idx)
+
+
+    def add_baked_animation_data_to_frame(self, source_bone_name, start_frame, end_frame, ik_idx=-1):
+        translation_data_path = f'pose.bones["{source_bone_name}"].ik_pos_{ik_idx}'
+        rotation_data_path = f'pose.bones["{source_bone_name}"].ik_rot_{ik_idx}'
+
+        translation_channel_clip = self.animated_frame_data[source_bone_name].get_translation_channel(ik_idx)
+        rotation_channel_clip = self.animated_frame_data[source_bone_name].get_rotation_channel(ik_idx)
+        translations = defaultdict(dict)
+        for t_axis in range(3):
+            fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
+            for keyframe in fc_t.keyframe_points:
+                frame = math.floor(keyframe.co[0])
+                if start_frame <= frame < end_frame:
+                    translations[frame-start_frame][t_axis] = keyframe.co[1]
+        for frame in translations:
+            translation_channel_clip.add_keyframe(Vector(translations[frame].values()), frame, force=frame==0)
+        rotations = defaultdict(dict)
+        for r_axis in range(4):
+            fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
+            for keyframe in fc_r.keyframe_points:
+                frame = math.floor(keyframe.co[0])
+
+                if start_frame <= frame < end_frame:
+                    rotations[frame-start_frame][r_axis] = keyframe.co[1]
+        for frame in rotations:
+            rotation_channel_clip.add_keyframe(Quaternion(rotations[frame].values()), frame, force=frame==0)
 
     def export_to_channels(self):
-        self.export_single_bone_to_channel(self.root_bone)
+        """
+        Recursively export all bones starting from the root bone, then
+        return the exported channels
+        """
+        self.recursively_export_bone_animation_to_channels(self.root_bone)
         return self.exported_channels
 
-    def export_single_bone_to_channel(self, bone):
+    def recursively_export_bone_animation_to_channels(self, bone):
         """
-        Exports animation data and adds it to the exported channels li st.
-        :param bone:
-        :return: none
+        Set up the bone animation data for each of the channels.
+        It calculates the Translation, Rotation, and Scale channels,
+        as long as the IK channels.
+
+        Note that if an IK channel does not have any keyframes,
+        it will not be exported.
         """
-        animation_data = self.animated_frame_data[bone.name]
+        if bone.name != "b__ROOT__":
+            animation_data = self.animated_frame_data[bone.name]
 
-        location_channel = _s4animtools.channels.translation_channel.TranslationChannel(bone.name, 18, 1)
-        location_channel.setup(animation_data.get_translation_channel())
-        self.exported_channels.append(location_channel)
+            location_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                  TRANSLATION_SUBTARGET_IDX)
+            location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
+            self.exported_channels.append(location_channel)
 
-        rotation_channel = _s4animtools.channel.Channel(bone.name, 20, 2)
-        rotation_channel.setup(animation_data.get_rotation_channel())
-        self.exported_channels.append(rotation_channel)
+            rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
+            rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
+            self.exported_channels.append(rotation_channel)
+
+            scale_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
+            scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
+            self.exported_channels.append(scale_channel)
+
+            for ik_target_idx in range(IK_TARGET_COUNT):
+                animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
+                animation_rotation_channel = animation_data.get_rotation_channel(ik_target_idx)
+                if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
+                    translation_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                             IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+                    rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
+                                               IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
+                    translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)
+                    rotation_channel.setup(animation_rotation_channel, snap_frames=self.snap_frames)
+
+                    self.exported_channels.append(translation_channel)
+                    self.exported_channels.append(rotation_channel)
 
         for child in bone.children:
             if slot in child.name:
                 continue
-            self.export_single_bone_to_channel(child)
+            if cas in child.name:
+                continue
+            self.recursively_export_bone_animation_to_channels(child)
 
     def __str__(self):
+        """
+        Return a string representation of the animation.
+        """
         str = ""
         for bone in self.animated_frame_data:
             str += f"{bone} - {self.animated_frame_data[bone]}"

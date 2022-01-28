@@ -1,7 +1,7 @@
 import os
 
-from _s4animtools.clip_processing.test_tool import get_hash_from_bone_name
-from _s4animtools.clip_processing.value_types import uint32, float32, serializable_bytes, int32
+from _s4animtools.serialization.fnv import get_32bit_hash
+from _s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Int32
 import bpy
 from _s4animtools.stream import StreamReader
 
@@ -37,18 +37,18 @@ class Bone:
         location = (bp2.inverted() @ bp1).to_translation()
         rotation = matrix_data.to_quaternion()
 
-        self.position = [float32(round(location.x, 4)), float32(round(location.y, 4)),
-                         float32(round(location.z, 4))]
-        self.rotation = [float32(round(rotation.x, 4)), float32(round(rotation.y, 4)), float32(round(rotation.z, 4)),
-                         float32(round(rotation.w, 4))]
+        self.position = [Float32(round(location.x, 4)), Float32(round(location.y, 4)),
+                         Float32(round(location.z, 4))]
+        self.rotation = [Float32(round(rotation.x, 4)), Float32(round(rotation.y, 4)), Float32(round(rotation.z, 4)),
+                         Float32(round(rotation.w, 4))]
 
-        self.scale = [float32(1), float32(1), float32(1)]
-        self.bone_name_length, self.bone_name = uint32(len(current_bone.name)), \
-                                                serializable_bytes(current_bone.name.encode('ascii'))
-        self.mirrored_bone_idx = int32(current_idx)
-        self.parent_idx = int32(parent_idx)
-        self.bone_hash = uint32(get_hash_from_bone_name(current_bone.name))
-        self.flags = uint32(Rig.determine_bone_type(current_bone.name))
+        self.scale = [Float32(1), Float32(1), Float32(1)]
+        self.bone_name_length, self.bone_name = UInt32(len(current_bone.name)), \
+                                                Bytes(current_bone.name.encode('ascii'))
+        self.mirrored_bone_idx = Int32(current_idx)
+        self.parent_idx = Int32(parent_idx)
+        self.bone_hash = UInt32(get_32bit_hash(current_bone.name))
+        self.flags = UInt32(Rig.determine_bone_type(current_bone.name))
         return self
     def serialize(self):
         serialized = [*self.position, *self.rotation, *self.scale, self.bone_name_length, self.bone_name,
@@ -92,9 +92,9 @@ class Rig:
             self.bones.append(Bone().read(reader))
         return self
     def create(self, bones):
-        self.major_version = uint32(3)
-        self.minor_version = uint32(1)
-        self.bone_count = uint32(len(bones))
+        self.major_version = UInt32(3)
+        self.minor_version = UInt32(1)
+        self.bone_count = UInt32(len(bones))
         self.bones = []
         bone_to_idx = {}
         for i in range(len(bones)):
@@ -108,7 +108,7 @@ class Rig:
                 parent_bone = current_bone
                 parent_bone_idx = -1
             self.bones.append(Bone().create(current_bone, parent_bone, parent_bone_idx, i))
-        self.rig_name_length = uint32(0)
+        self.rig_name_length = UInt32(0)
         return self
 
     def serialize(self):

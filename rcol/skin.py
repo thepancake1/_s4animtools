@@ -1,4 +1,4 @@
-from _s4animtools.clip_processing.value_types import uint32, uint64, uint16, serializable_string, serializable_bytes, float32
+from _s4animtools.serialization.types.basic import UInt32, Bytes, Float32
 
 
 class VertexGroup:
@@ -15,16 +15,16 @@ class Skin:
 
     def read(self, stream):
         self.identifier = stream.read(4)
-        self.version = uint32.deserialize(stream.read(4))
-        self.count = uint32.deserialize(stream.read(4))
+        self.version = UInt32.deserialize(stream.read(4))
+        self.count = UInt32.deserialize(stream.read(4))
         self.hashes = []
         self.matrices = []
         for i in range(self.count):
-            self.hashes.append(uint32.deserialize(stream.read(4)))
+            self.hashes.append(UInt32.deserialize(stream.read(4)))
         for i in range(self.count):
             matrix = []
             for v in range(12):
-                matrix.append(float32.deserialize(stream.read(4)))
+                matrix.append(Float32.deserialize(stream.read(4)))
             self.matrices.append(matrix)
         return self
 
@@ -33,16 +33,16 @@ class Skin:
         hashes = []
         count = 0
         for hash in self.hashes:
-            hashes.append(uint32(hash))
+            hashes.append(UInt32(hash))
             count += 1
-        count = uint32(count)
+        count = UInt32(count)
 
         matrix_values = []
         for matrix in self.matrices:
             for value in matrix:
-                matrix_values.append(float32(value))
+                matrix_values.append(Float32(value))
 
-        data = [serializable_bytes(self.identifier), uint32(self.version), count, *hashes, *matrix_values]
+        data = [Bytes(self.identifier), UInt32(self.version), count, *hashes, *matrix_values]
 
 
         for value in data:
