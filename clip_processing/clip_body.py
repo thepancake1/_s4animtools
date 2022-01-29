@@ -15,7 +15,7 @@ class ClipBody:
         self._f1PaletteSize = 0
         self._channelDataOffset = 48
         self._f1DataPaletteOffset = 0
-        self._sourceNameOffset = 0
+        self._clipNameOffset = 0
         self._sourceAssetNameOffset = 0
         self._clipName = clipname.encode("ascii") + Byte(0).serialize()
         self._channels = []
@@ -33,7 +33,7 @@ class ClipBody:
         serialized = [String(self._formatToken), UInt32(self._version),
                       UInt32(self._flags), Float32(self._tickLength), UInt16(self._numTicks),
                       UInt16(self._padding), UInt32(self._channel_count), UInt32(self._f1PaletteSize),
-                      UInt32(self._channelDataOffset), UInt32(self._f1DataPaletteOffset), UInt32(self._sourceNameOffset),
+                      UInt32(self._channelDataOffset), UInt32(self._f1DataPaletteOffset), UInt32(self._clipNameOffset),
                       UInt32(self._sourceAssetNameOffset)]
 
         serialized_channels = []
@@ -56,8 +56,8 @@ class ClipBody:
 
         # Set the offset values to their correct values
         serialized[-2] = UInt32(data_offset)
-        raw_channel_data.append(self._source_file_name)
-        data_offset += len(self._source_file_name)
+        raw_channel_data.append(self._clipName)
+        data_offset += len(self._clipName)
         serialized[-1] = UInt32(data_offset)
         raw_channel_data.append(self._source_file_name)
         data_offset += len(self._source_file_name)
