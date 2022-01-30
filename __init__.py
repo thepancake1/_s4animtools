@@ -44,7 +44,7 @@ CHAIN_STR_IDX = 2
 
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
 
-importlib.reload(_s4animtools.ik_baker)
+importlib.reload(_s4animtools.animation_exporter.animation)
 
 # importlib.reload(_s4animtools.asm.states)
 

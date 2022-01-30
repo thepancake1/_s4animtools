@@ -68,7 +68,8 @@ class AnimationChannelDataBase:
         animation_data = self.get_latest_animation_data()
         if animation_data is None:
             return True
-        return not self.identical(new_keyframe, animation_data)
+        is_identical = self.identical(new_keyframe, animation_data)
+        return not is_identical
 
     @staticmethod
     def identical(frame_a, frame_b):
@@ -168,7 +169,7 @@ class AnimationBoneData:
         translation_data, rotation_data, scale_data = self.get_transform(source_rig, source_bone, target_rig, target_bone)
         self.get_translation_channel(ik_idx).add_keyframe(translation_data, frame_idx-start_frame, force)
         self.get_rotation_channel(ik_idx).add_keyframe(rotation_data, frame_idx-start_frame, force)
-        self.get_scale_channel().add_keyframe(scale_data, frame_idx-start_frame, force)
+        self.get_scale_channel().add_keyframe(scale_data.copy(), frame_idx-start_frame, force)
 
     def get_transform_with_offset_and_serialize(self, source_bone, bone_to_be_offset, frame_idx, start_frame, ik_idx=-1,
                                                 force=False):
@@ -342,9 +343,11 @@ class AnimationExporter:
             location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
             self.exported_channels.append(location_channel)
 
-            rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
-            rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
-            self.exported_channels.append(rotation_channel)
+
+            if len(animation_data.get_rotation_channel().items()) > 0:
+                rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
+                rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
+                self.exported_channels.append(rotation_channel)
 
             scale_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
             scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
