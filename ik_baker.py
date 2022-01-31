@@ -11,9 +11,11 @@ def get_ik_targets(obj):
     for ik_target in obj.ik_targets:
         if ik_target.target_bone == "b__ROOT__":
             yield ik_target
-
     for ik_target in obj.ik_targets:
-        if ik_target.target_bone != "b__ROOT__":
+        if ik_target.target_bone == "b__ROOT__Adjust":
+            yield ik_target
+    for ik_target in obj.ik_targets:
+        if ik_target.target_bone != "b__ROOT__" and ik_target.target_bone != "b__ROOT__Adjust":
             yield ik_target
 
 class s4animtool_OT_bakeik(bpy.types.Operator):

@@ -31,7 +31,7 @@ import _s4animtools.channels.translation_channel
 import _s4animtools.channels.loco_channel
 import _s4animtools.channels.palette_channel
 from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
-    CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim
+    CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig
 from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
     LIST_OT_DeleteSpecificIKTarget
@@ -750,8 +750,8 @@ class NewClipExporter(bpy.types.Operator):
                     ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
                              explicit_namespaces=self.get_explicit_namespaces(),
                              reference_namespace_hash=self.get_reference_namespace_hash(),
-                             initial_offset_q=Quaternion.from_str("0,0,0,1"),
-                             initial_offset_t=Vector3.from_str("0,0,0"), rig_name=rig_name))
+                             initial_offset_q=Quaternion.from_str(self.context.object.initial_offset_q),
+                             initial_offset_t=Vector3.from_str(self.context.object.initial_offset_t), rig_name=rig_name))
             self.clip_infos = clip_infos
         return self.clip_infos
 
@@ -856,7 +856,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             row.operator('s4animtools.move_new_element', text='Create').args = f"{events_list_name},{idx},create"
 
     def draw(self, context):
-        # self.layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
+        self.layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
 
         # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
         self.layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
@@ -1432,7 +1432,7 @@ classes = (
     IKTarget, s4animtool_PT_IKTargetPanel, LIST_OT_NewIKTarget, LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget,
     s4animtool_OT_bakeik, s4animtool_OT_removeIK,
     BeginIKMarker, s4animtool_OT_unmute_ik, s4animtool_OT_mute_ik, NewClipExporter, PositionConfig, QuaternionConfig,
-    ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim,
+    ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig,
     CopySelectedLeftSideToRightSide,
     LIST_OT_MoveActor, ActorPanel, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, StatePanel,
     ActorProperties, ControllerProperties, StateProperties,

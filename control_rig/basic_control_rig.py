@@ -1,9 +1,6 @@
 import math
 import os.path
-
-from mathutils import Matrix
 import bpy
-
 class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side"
     bl_label = "Copy Left Side Animation"
@@ -169,3 +166,122 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
                                 print(current_value)
 
         return {"FINISHED"}
+class CopyBakedAnimationToControlRig(bpy.types.Operator):
+    bl_idname = "s4animtools.copy_baked_animation"
+    bl_label = "Copy Baked Animation"
+    bl_options = {"REGISTER", "UNDO"}
+    LEFT_ARM_TARGET = "b__L_Hand__Hold"
+    RIGHT_ARM_TARGET = "b__R_Hand__Hold"
+    LEFT_ARM_BAKED = ["b__L_UpperArm__", "b__L_Forearm__", "b__L_Hand__"]
+    RIGHT_ARM_BAKED = [ "b__R_UpperArm__", "b__R_Forearm__", "b__R_Hand__"]
+
+    LEFT_ARM_POLE = "b__L_LegExportPole__"
+    RIGHT_ARM_POLE = "b__R_LegExportPole__"
+
+    LEFT_LEG_POLE = "b__L_LegExportPole__"
+    RIGHT_LEG_POLE = "b__R_LegExportPole__"
+
+    LEFT_LEG_TARGET = "b__L_Hand__Hold"
+    RIGHT_LEG_TARGET = "b__R_Hand__Hold"
+    LEFT_LEG_BAKED = ["b__L_Thigh__", "b__L_Calf__", "b__L_Foot__"]
+    RIGHT_LEG_BAKED = ["b__R_Thigh__", "b__R_Calf__", "b__R_Foot__"]
+
+    def copy_location(self, arm, target, from_target):
+        print(f"Copying position from {target} to {from_target.name}")
+        copy_constraint = from_target.constraints.new('COPY_LOCATION')
+        copy_constraint.target = arm
+        copy_constraint.subtarget = target
+        return copy_constraint
+
+    def copy_rotation(self, arm, target, from_target):
+        print(f"Copying position from {target} to {from_target.name}")
+        copy_constraint = from_target.constraints.new('COPY_ROTATION')
+        copy_constraint.target = arm
+        copy_constraint.subtarget = target
+        return copy_constraint
+
+    def execute(self, context):
+        obj = bpy.context.object
+        bpy.ops.object.mode_set(mode='POSE', toggle=False)
+
+        bpy.ops.pose.select_all(action='DESELECT')
+        constraints = []
+
+        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
+        constraints.extend(self.setup_constraints(obj, self.LEFT_ARM_BAKED, self.LEFT_ARM_IK, self.LEFT_ARM_TARGET))
+        constraints.extend(self.setup_constraints(obj, self.RIGHT_ARM_BAKED, self.RIGHT_ARM_IK, self.RIGHT_ARM_TARGET))
+        constraints.extend(self.setup_constraints(obj, self.LEFT_LEG_BAKED, self.LEFT_LEG_IK, self.LEFT_LEG_TARGET))
+        constraints.extend(self.setup_constraints(obj, self.RIGHT_LEG_BAKED, self.RIGHT_LEG_IK, self.RIGHT_LEG_TARGET))
+        bpy.context.view_layer.update()
+
+        bpy.ops.nla.bake(frame_start=context.scene.frame_start, frame_end=context.scene.frame_end, only_selected=True, visual_keying=True, clear_constraints=False, use_current_action=True, bake_types={'POSE'})
+
+
+        for bone in [*self.LEFT_ARM_BAKED, *self.LEFT_ARM_FK, *self.LEFT_ARM_IK, self.LEFT_ARM_TARGET,
+                     *self.RIGHT_ARM_BAKED,*self.RIGHT_ARM_FK, *self.RIGHT_ARM_IK, self.RIGHT_ARM_TARGET,
+                     *self.LEFT_LEG_BAKED, *self.LEFT_LEG_FK, *self.LEFT_LEG_IK, self.LEFT_LEG_TARGET,
+                     *self.RIGHT_LEG_BAKED,*self.RIGHT_LEG_FK, *self.RIGHT_LEG_IK, self.RIGHT_LEG_TARGET]:
+            bone = obj.pose.bones[bone]
+            for constraint in constraints:
+                try:
+                    bone.constraints.remove(constraint)
+                except:
+                    pass
+        bpy.context.view_layer.update()
+
+        self.unmute_copy_bones(obj, self.LEFT_ARM_BAKED)
+        self.unmute_copy_bones(obj, self.RIGHT_ARM_BAKED)
+        self.unmute_copy_bones(obj, self.LEFT_LEG_BAKED)
+        self.unmute_copy_bones(obj, self.RIGHT_LEG_BAKED)
+
+
+
+        return {'FINISHED'}
+
+    def setup_constraints(self, obj, baked, ik, target):
+        self.mute_copy_bones(obj, baked)
+        results = [*self.add_copy_constraints_with_pole(obj, baked, ik, target)]
+        return results
+
+    def add_hold_copy_constraints(self, obj, bone, target_bone):
+        self.mute_copy_bones(obj, bone)
+        return eslf.add_single_copy_constraint(obj, bone, target_bone)
+
+    def add_single_copy_constraint(self, bone, target_bone):
+        constraints = list()
+        constraints.append(self.copy_location(obj, bone, target_bone))
+        constraints.append(self.copy_rotation(obj, bone, target_bone))
+
+        bone.bone.select = True
+        return constraints
+
+    def add_copy_constraints(self, obj, baked, fk):
+        constraints = []
+        for idx in range(0, 3):
+            fk_bone = obj.pose.bones[fk[idx]]
+            constraints.append(self.copy_rotation(obj, baked[idx], fk_bone))
+            fk_bone.bone.select = True
+        return constraints
+
+    def add_copy_constraints_with_pole(self, obj, baked, ik, target):
+        ik_bone = obj.pose.bones[target]
+        ik_bone.bone.select = True
+        obj.pose.bones[ik[3]].bone.select = True
+        return self.copy_location(obj, baked[2], obj.pose.bones[target]), self.copy_location(obj, baked[1], obj.pose.bones[ik[3]]), \
+                self.copy_rotation(obj, baked[1], obj.pose.bones[ik[3]]), self.copy_rotation(obj, baked[2], obj.pose.bones[target])
+
+
+    def mute_copy_bones(self, obj, copy_list):
+        for idx in range(0, 3):
+            existing_constraints = [c for c in obj.pose.bones[copy_list[idx]].constraints]
+            for constraint in existing_constraints:
+                constraint.mute = True
+
+    def unmute_copy_bones(self, obj, copy_list):
+        for idx in range(0, 3):
+            existing_constraints = [c for c in obj.pose.bones[copy_list[idx]].constraints]
+            for constraint in existing_constraints:
+                constraint.mute = False
