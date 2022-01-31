@@ -338,20 +338,21 @@ class AnimationExporter:
         if bone.name != "b__ROOT__":
             animation_data = self.animated_frame_data[bone.name]
 
-            location_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                  TRANSLATION_SUBTARGET_IDX)
-            location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
-            self.exported_channels.append(location_channel)
-
+            if len(animation_data.get_translation_channel().items()) > 0:
+                location_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                      TRANSLATION_SUBTARGET_IDX)
+                location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
+                self.exported_channels.append(location_channel)
 
             if len(animation_data.get_rotation_channel().items()) > 0:
                 rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
                 rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
                 self.exported_channels.append(rotation_channel)
 
-            scale_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
-            scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
-            self.exported_channels.append(scale_channel)
+            if len(animation_data.get_scale_channel().items()) > 0:
+                scale_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
+                scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
+                self.exported_channels.append(scale_channel)
 
             for ik_target_idx in range(IK_TARGET_COUNT):
                 animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
