@@ -184,8 +184,6 @@ class AnimationBoneData:
         translation_data = source_bone.parent.matrix.inverted() @ (bone_to_be_offset.matrix @ Vector((0, offset, 0)))
         self.get_translation_channel(ik_idx).add_keyframe(translation_data, frame_idx-start_frame, force)
 
-
-
     def __str__(self):
         """Returns a string version the animation channels.
         It lists each of the channel names and how many frames are in a single channel.

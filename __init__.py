@@ -738,7 +738,13 @@ class NewClipExporter(bpy.types.Operator):
         if rig_name == "":
             self.context.object.rig_name = "x"
         rig_name = self.context.object.rig_name
-
+        initial_offset_t = self.context.object.initial_offset_t
+        initial_offset_q = self.context.object.initial_offset_q
+        # Set the initial offsets to the default if the user doesn't enter anything.
+        if initial_offset_t == "":
+            initial_offset_t = "0,0,0"
+        if initial_offset_q == "":
+            initial_offset_q = "0,0,0,1"
         if len(self.clip_infos) == 0:
             clip_infos = []
             clip_names = self.get_clip_names()
@@ -751,8 +757,8 @@ class NewClipExporter(bpy.types.Operator):
                     ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
                              explicit_namespaces=self.get_explicit_namespaces(),
                              reference_namespace_hash=self.get_reference_namespace_hash(),
-                             initial_offset_q=Quaternion.from_str(self.context.object.initial_offset_q),
-                             initial_offset_t=Vector3.from_str(self.context.object.initial_offset_t), rig_name=rig_name))
+                             initial_offset_q=Quaternion.from_str(initial_offset_q),
+                             initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
             self.clip_infos = clip_infos
         return self.clip_infos
 
