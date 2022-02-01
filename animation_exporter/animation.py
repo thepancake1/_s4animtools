@@ -158,7 +158,7 @@ class AnimationBoneData:
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
-        scale_data = source_bone.scale
+        scale_data = matrix_data.to_scale()
         return translation_data, rotation_data, scale_data
 
     def get_transform_and_serialize(self, source_rig, source_bone, target_rig, target_bone, frame_idx, start_frame, ik_idx=-1,
@@ -169,7 +169,7 @@ class AnimationBoneData:
         translation_data, rotation_data, scale_data = self.get_transform(source_rig, source_bone, target_rig, target_bone)
         self.get_translation_channel(ik_idx).add_keyframe(translation_data, frame_idx-start_frame, force)
         self.get_rotation_channel(ik_idx).add_keyframe(rotation_data, frame_idx-start_frame, force)
-        self.get_scale_channel().add_keyframe(scale_data.copy(), frame_idx-start_frame, force)
+        self.get_scale_channel().add_keyframe(scale_data, frame_idx-start_frame, force)
 
     def get_transform_with_offset_and_serialize(self, source_bone, bone_to_be_offset, frame_idx, start_frame, ik_idx=-1,
                                                 force=False):
