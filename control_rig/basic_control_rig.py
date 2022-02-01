@@ -202,22 +202,20 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
 
     def execute(self, context):
         obj = bpy.context.object
+        action = obj.animation_data
+
         bpy.ops.object.mode_set(mode='POSE', toggle=False)
 
         bpy.ops.pose.select_all(action='DESELECT')
         constraints = []
 
         constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.setup_constraints(obj, self.LEFT_ARM_BAKED, self.LEFT_ARM_IK, self.LEFT_ARM_TARGET))
-        constraints.extend(self.setup_constraints(obj, self.RIGHT_ARM_BAKED, self.RIGHT_ARM_IK, self.RIGHT_ARM_TARGET))
-        constraints.extend(self.setup_constraints(obj, self.LEFT_LEG_BAKED, self.LEFT_LEG_IK, self.LEFT_LEG_TARGET))
-        constraints.extend(self.setup_constraints(obj, self.RIGHT_LEG_BAKED, self.RIGHT_LEG_IK, self.RIGHT_LEG_TARGET))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.RIGHT_ARM_TARGET, self.RIGHT_ARM_TARGET[:-4]))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_LEG_TARGET, self.LEFT_LEG_TARGET[:-4]))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.RIGHT_LEG_TARGET, self.RIGHT_LEG_TARGET[:-4]))
         bpy.context.view_layer.update()
 
-        bpy.ops.nla.bake(frame_start=context.scene.frame_start, frame_end=context.scene.frame_end, only_selected=True, visual_keying=True, clear_constraints=False, use_current_action=True, bake_types={'POSE'})
+       # bpy.ops.nla.bake(frame_start=context.scene.frame_start, frame_end=context.scene.frame_end, only_selected=True, visual_keying=True, clear_constraints=False, use_current_action=True, bake_types={'POSE'})
 
 
         for bone in [*self.LEFT_ARM_BAKED, *self.LEFT_ARM_FK, *self.LEFT_ARM_IK, self.LEFT_ARM_TARGET,
@@ -230,6 +228,25 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
                     bone.constraints.remove(constraint)
                 except:
                     pass
+
+            for bone in [*self.LEFT_ARM_BAKED,
+                         *self.RIGHT_ARM_BAKED,
+                         *self.LEFT_LEG_BAKED,
+                         *self.RIGHT_LEG_BAKED]:
+                data_path = f'pose.bones["{prop_bone.name}"]["{prop_id}"]'
+                # Create FCurve for IK/FK toggle
+                fc = action.fcurves.find(data_path, index=-1)
+                for pos in range(3):
+                    fc = action.fcurves.find(data_path, index=pos)
+                    if fc:
+                        action.fcurves.remove(fc)
+                bone.rotation_quaternion = Quaternion((0,0,0,1))
+                bone.rotation_euler = Quaternion((0,0,0,1))
+
+                for rot in range(4):
+                    fc = action.fcurves.find(data_path, index=rot)
+                    if fc:
+                        action.fcurves.remove(fc)
         bpy.context.view_layer.update()
 
         self.unmute_copy_bones(obj, self.LEFT_ARM_BAKED)
@@ -242,20 +259,20 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
         return {'FINISHED'}
 
     def setup_constraints(self, obj, baked, ik, target):
-        self.mute_copy_bones(obj, baked)
+        #self.mute_copy_bones(obj, baked)
         results = [*self.add_copy_constraints_with_pole(obj, baked, ik, target)]
         return results
 
-    def add_hold_copy_constraints(self, obj, bone, target_bone):
-        self.mute_copy_bones(obj, bone)
-        return eslf.add_single_copy_constraint(obj, bone, target_bone)
+    def add_hold_copy_constraints(self, obj, bone_to_copy_from, target_bone):
+        #self.mute_copy_bones(obj, bone)
+        return eslf.add_single_copy_constraint(obj, bone_to_copy_from, target_bone)
 
-    def add_single_copy_constraint(self, bone, target_bone):
+    def add_single_copy_constraint(self, bone_to_copy_frame, target_bone):
         constraints = list()
-        constraints.append(self.copy_location(obj, bone, target_bone))
-        constraints.append(self.copy_rotation(obj, bone, target_bone))
+        constraints.append(self.copy_location(obj, bone_to_copy_frame, target_bone))
+        constraints.append(self.copy_rotation(obj, bone_to_copy_frame, target_bone))
 
-        bone.bone.select = True
+        bone_to_copy_frame.bone.select = True
         return constraints
 
     def add_copy_constraints(self, obj, baked, fk):

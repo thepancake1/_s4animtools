@@ -30,6 +30,8 @@ import _s4animtools.channels.f1_normalized_channel
 import _s4animtools.channels.translation_channel
 import _s4animtools.channels.loco_channel
 import _s4animtools.channels.palette_channel
+import _s4animtools.control_rig.basic_control_rig
+
 from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig
 from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
@@ -43,8 +45,7 @@ from _s4animtools.serialization.types.transforms import Vector3, Quaternion
 CHAIN_STR_IDX = 2
 
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
-
-importlib.reload(_s4animtools.animation_exporter.animation)
+importlib.reload(_s4animtools.control_rig.basic_control_rig)
 
 # importlib.reload(_s4animtools.asm.states)
 
