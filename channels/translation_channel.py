@@ -3,6 +3,7 @@ import _s4animtools.frames.translation_frame
 from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
 import _s4animtools.serialization
 import _s4animtools.channels.quaternion_channel
+import math
 from _s4animtools.channels.palette_channel import PaletteChannel
 importlib.reload(_s4animtools.channels.quaternion_channel)
 importlib.reload(_s4animtools.frames.translation_frame)
@@ -13,7 +14,7 @@ class Vector3Channel(_s4animtools.channels.quaternion_channel.QuaternionChannel)
     def quantize_data(self, value):
         # Throw away the sign. Watch it burn.
         # Rotation data uses 10 bits of precision
-        return int(round(abs(value * 1023)))
+        return int(math.floor(abs(value * 1023)))
 
     def set_channel_data(self, offset, scale, individual_frames, snap_frames):
         self._offset = offset

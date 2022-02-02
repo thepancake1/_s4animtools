@@ -3,7 +3,7 @@ import _s4animtools.frames.frame
 from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
 import _s4animtools.serialization
 from _s4animtools.serialization.fnv import get_32bit_hash
-
+import math
 importlib.reload(_s4animtools.frames.frame)
 
 
@@ -31,7 +31,7 @@ class QuaternionChannel:
     def quantize_data(self, value):
         # Throw away the sign. Watch it burn.
         # Rotation data uses 12 bits of precision
-        return int(round(abs(value * 4095)))
+        return int(math.floor(abs(value * 4095)))
 
     def setup(self, channel_data, snap_frames=None):
         if snap_frames is None:

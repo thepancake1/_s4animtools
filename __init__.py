@@ -77,7 +77,7 @@ def determine_ik_slot_targets(rig):
                                                                            chain_idx=chain_idx,
                                                                            slot_assignment_idx=current_bone_idx[ik_target.chain_bone]))
         current_bone_idx[ik_target.chain_bone] += 1
-    print(",".join(all_constraints))
+    #print(",".join(all_constraints))
     return all_constraints
 
 
@@ -1209,7 +1209,7 @@ class S4ANIMTOOLS_OT_move_new_element(bpy.types.Operator):
         for i, element in enumerate(elements_to_append):
             to_edit.add()
             to_edit[-1].info = element
-            print(f'adding {element}')
+           # print(f'adding {element}')
 
 
 class IKTarget(PropertyGroup):

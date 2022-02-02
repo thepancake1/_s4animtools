@@ -24,7 +24,8 @@ IK_POLE_TO_BASE = {"b__L_ArmExportPole__" : "b__L_Forearm__",
                    "b__R_ArmExportPole__" : "b__R_Forearm__",
                    "b__L_LegExportPole__" : "b__L_Calf__",
                    "b__R_LegExportPole__" : "b__R_Calf__"}
-
+IK_POLE_TO_PARENT = {"b__L_LegExportPole__" : "b__L_Thigh__",
+                    "b__R_LegExportPole__" : "b__R_Thigh__"}
 
 class AnimationChannelDataBase:
     def __init__(self, name):
@@ -166,7 +167,7 @@ class AnimationBoneData:
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
-        print(matrix_data.to_scale())
+        #print(matrix_data.to_scale())
         scale_data = matrix_data.to_scale()
 
         return translation_data, rotation_data, scale_data
@@ -181,7 +182,7 @@ class AnimationBoneData:
         self.get_rotation_channel(ik_idx).add_keyframe(rotation_data, frame_idx-start_frame, force)
         self.get_scale_channel().add_keyframe(scale_data, frame_idx-start_frame, force)
 
-    def get_transform_with_offset_and_serialize(self, source_bone, bone_to_be_offset, frame_idx, start_frame, ik_idx=-1,
+    def get_transform_with_offset_and_serialize(self, source_rig, source_bone, bone_to_be_offset, frame_idx, start_frame, ik_idx=-1,
                                                 force=False):
         """
         Meant to be used for the export poles.
@@ -191,7 +192,12 @@ class AnimationBoneData:
         offset = -0.491
         if "Leg" in source_bone.name:
             offset *= -1
-        translation_data = source_bone.parent.matrix.inverted() @ (bone_to_be_offset.matrix @ Vector((0, offset, 0)))
+        if source_bone.name in IK_POLE_TO_PARENT.keys():
+            parent = source_rig.pose.bones[IK_POLE_TO_PARENT[source_bone.name]]
+            print(source_bone.name, parent.name)
+        else:
+            parent = source_bone.parent
+        translation_data = parent.matrix.inverted() @ (bone_to_be_offset.matrix @ Vector((0, offset, 0)))
         self.get_translation_channel(ik_idx).add_keyframe(translation_data, frame_idx-start_frame, force)
 
     def __str__(self):
@@ -259,18 +265,27 @@ class AnimationExporter:
             is_parent_root_bone = False
             if source_bone.parent.name == "b__ROOT__":
                 is_parent_root_bone = True
-                self.animate_bone_relative_to_other_bone(source_bone=source_bone,
-                                                         target_rig=self.world_rig,
-                                                         target_bone=self.world_root, frame_idx=frame_idx,
-                                                         start_frame=start_frame,
-                                                         force=force)
+                if source_bone.name in IK_POLE_TO_BASE.keys():
+                    self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_rig =self.source_rig,
+                                                                                                       source_bone=source_bone,
+                                                                                                       bone_to_be_offset=self.source_rig.pose.bones[IK_POLE_TO_BASE[source_bone.name]],
+                                                                                                       frame_idx=frame_idx,
+                                                                                                       start_frame=start_frame,
+                                                                                                       force=force)
+                else:
+                    self.animate_bone_relative_to_other_bone(source_bone=source_bone,
+                                                             target_rig=self.world_rig,
+                                                             target_bone=self.world_root, frame_idx=frame_idx,
+                                                             start_frame=start_frame,
+                                                             force=force)
             if not is_parent_root_bone:
                 if source_bone.name in IK_POLE_TO_BASE.keys():
-                    self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_bone=source_bone,
-                                                                                           bone_to_be_offset=self.source_rig.pose.bones[IK_POLE_TO_BASE[source_bone.name]],
-                                                                                           frame_idx=frame_idx,
-                                                                                           start_frame=start_frame,
-                                                                                           force=force)
+                    self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_rig =self.source_rig,
+                                                                                                       source_bone=source_bone,
+                                                                                                       bone_to_be_offset=self.source_rig.pose.bones[IK_POLE_TO_BASE[source_bone.name]],
+                                                                                                       frame_idx=frame_idx,
+                                                                                                       start_frame=start_frame,
+                                                                                                       force=force)
                 else:
                     self.animated_frame_data[source_bone.name].get_transform_and_serialize(source_rig=self.source_rig, source_bone=source_bone,
                                                                                            target_rig=self.source_rig,
@@ -359,13 +374,16 @@ class AnimationExporter:
                 self.exported_channels.append(rotation_channel)
 
             if len(animation_data.get_scale_channel().items()) > 0:
-                frame_indices = defaultdict(list)
-                for frame, data in animation_data.get_scale_channel().items():
-                    for axis in range(3):
-                        index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
-                        frame_indices[frame].append(index)
-                scale_channel = PaletteChannel(bone.name, UNCOMPRESSED_F3, SCALE_SUBTARGET_IDX)
-                scale_channel.setup(frame_indices, snap_frames=self.snap_frames)
+               # frame_indices = defaultdict(list)
+               # for frame, data in animation_data.get_scale_channel().items():
+               #     for axis in range(3):
+               #         index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
+               #         frame_indices[frame].append(index)
+               # scale_channel = PaletteChannel(bone.name, UNCOMPRESSED_F3, SCALE_SUBTARGET_IDX)
+
+                scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
+
+                scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
                 self.exported_channels.append(scale_channel)
 
             for ik_target_idx in range(IK_TARGET_COUNT):
