@@ -84,15 +84,17 @@ class ClipBody:
         clip_body_data.append(self._clipName)
         data_offset += len(self._clipName)
 
-        serialized[F1_PALETTE_OFFSET] = UInt32(data_offset)
-        serialized[F1_PALETTE_SIZE] = UInt32(len(self._f1PaletteData))
-        for data in self._f1PaletteData:
-            data_offset += 4
-            clip_body_data.append(data.serialize())
-        print("DATA OFFSET ", serialized[F1_PALETTE_OFFSET].value, "AFTER DATA OFFSET ", data_offset)
         serialized[SOURCE_ASSET_NAME_OFFSET_IDX] = UInt32(data_offset)
         clip_body_data.append(self._source_file_name)
         data_offset += len(self._source_file_name)
+
+        serialized[F1_PALETTE_OFFSET] = UInt32(data_offset)
+        serialized[F1_PALETTE_SIZE] = UInt32(len(self._f1PaletteData))
+        for idx, data in enumerate(self._f1PaletteData):
+            data_offset += 4
+            clip_body_data.append(data.serialize())
+            print(idx, data.value)
+
 
         for idx in range(len(serialized_channels)):
             channel_offsets[idx] = data_offset

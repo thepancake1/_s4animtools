@@ -48,6 +48,7 @@ bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
 importlib.reload(_s4animtools.animation_exporter.animation)
 
 importlib.reload(_s4animtools.clip_processing.clip_body)
+importlib.reload(_s4animtools.channels.palette_channel)
 
 # importlib.reload(_s4animtools.asm.state_machine)
 # importlib.reload(_s4animtools.translation_channel)

@@ -40,9 +40,10 @@ class F1Palette:
         similar_value = potential_palette_value
         found_similar = False
         for value in self.palette_values:
-            if abs(value - potential_palette_value) < 0.000001:
+            if abs(value - potential_palette_value) < 0.00001:
                 found_similar = True
                 similar_value = value
+                break
         if not found_similar:
             self.palette_values.append(potential_palette_value)
 
