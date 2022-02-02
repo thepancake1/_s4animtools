@@ -421,7 +421,7 @@ class AnimationExporter:
 
             for axis in range(axis_count):
                 print(data[axis])
-                original_values[frame].append(data[axis])
+                original_values[frame].append(data[axis_order[axis]])
                 index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
                 values.append(index)
             if axis_count == 3:
