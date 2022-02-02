@@ -158,6 +158,7 @@ class AnimationBoneData:
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
+        scale_data = matrix_data.to_scale()
         return translation_data, rotation_data, scale_data
 
     def get_transform_and_serialize(self, source_rig, source_bone, target_rig, target_bone, frame_idx, start_frame, ik_idx=-1,
