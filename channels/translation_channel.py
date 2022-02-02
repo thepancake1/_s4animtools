@@ -2,10 +2,10 @@ import importlib
 import _s4animtools.frames.translation_frame
 from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
 import _s4animtools.serialization
-import _s4animtools.channel
-importlib.reload(_s4animtools.channel)
+import _s4animtools.channels.channel
+importlib.reload(_s4animtools.channels.channel)
 importlib.reload(_s4animtools.frames.translation_frame)
-class TranslationChannel(_s4animtools.channel.Channel):
+class Vector3Channel(_s4animtools.channels.channel.QuaternionChannel):
     def serialize_data(self, value):
         return UInt16(value)
 
@@ -47,7 +47,7 @@ class TranslationChannel(_s4animtools.channel.Channel):
         return serialized_header, serialized_frames
 
 if __name__ == "__main__":
-    channel = TranslationChannel("b__R_Squint__")
+    channel = Vector3Channel("b__R_Squint__")
     channel.set_channel_data(0.444224, -0.570586, {0: [0.00024896969696969196,1.007001393939394,0.00024896969696969196]})
     data = channel.serialized_frames[0]._frame_data
     #print(data)

@@ -4,7 +4,7 @@ from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
 import _s4animtools.serialization
 
 
-class F1Normalized(_s4animtools.channel.Channel):
+class F1Normalized(_s4animtools.channels.channel.QuaternionChannel):
     def serialize_data(self, value):
         return Bytes(Byte(value).serialize() + Byte(0).serialize())
 

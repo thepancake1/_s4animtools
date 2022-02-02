@@ -1,6 +1,6 @@
 from _s4animtools.rig_constants import slot
-from _s4animtools.channels.translation_channel import TranslationChannel
-from _s4animtools.channel import Channel
+from _s4animtools.channels.translation_channel import Vector3Channel
+from _s4animtools.channels.channel import Channel
 from collections import defaultdict
 from mathutils import Vector, Quaternion
 import math
@@ -153,12 +153,15 @@ class AnimationBoneData:
         Returns a tuple of translation, rotation, and scale data of
         the source bone animated to the target bone.
         """
+
         src_matrix = source_rig.matrix_world @ source_bone.matrix
         dst_matrix = target_rig.matrix_world @ target_bone.matrix
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
+        print(matrix_data.to_scale().magnitude)
         scale_data = matrix_data.to_scale()
+
         return translation_data, rotation_data, scale_data
 
     def get_transform_and_serialize(self, source_rig, source_bone, target_rig, target_bone, frame_idx, start_frame, ik_idx=-1,
@@ -337,8 +340,8 @@ class AnimationExporter:
             animation_data = self.animated_frame_data[bone.name]
 
             if len(animation_data.get_translation_channel().items()) > 0:
-                location_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                      TRANSLATION_SUBTARGET_IDX)
+                location_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                  TRANSLATION_SUBTARGET_IDX)
                 location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
                 self.exported_channels.append(location_channel)
 
@@ -348,7 +351,7 @@ class AnimationExporter:
                 self.exported_channels.append(rotation_channel)
 
             if len(animation_data.get_scale_channel().items()) > 0:
-                scale_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
+                scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
                 scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
                 self.exported_channels.append(scale_channel)
 
@@ -356,8 +359,8 @@ class AnimationExporter:
                 animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
                 animation_rotation_channel = animation_data.get_rotation_channel(ik_target_idx)
                 if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
-                    translation_channel = TranslationChannel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                             IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+                    translation_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                         IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
                     rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
                                                IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
                     translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)

@@ -7,7 +7,7 @@ from _s4animtools.serialization.fnv import get_32bit_hash
 importlib.reload(_s4animtools.frames.frame)
 
 
-class Channel:
+class QuaternionChannel:
     def __init__(self, channel_name, channel_type, sub_type):
         self._channel_name = channel_name
         self._target = UInt32(get_32bit_hash(channel_name))

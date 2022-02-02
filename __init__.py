@@ -25,7 +25,7 @@ from collections import defaultdict
 from _s4animtools.rig.create_rig import create_rig_with_context
 import _s4animtools.clip_processing.clip_header
 import _s4animtools.rig
-import _s4animtools.channel
+import _s4animtools.channels.channel
 import _s4animtools.channels.f1_normalized_channel
 import _s4animtools.channels.translation_channel
 import _s4animtools.channels.loco_channel
@@ -45,9 +45,9 @@ from _s4animtools.serialization.types.transforms import Vector3, Quaternion
 CHAIN_STR_IDX = 2
 
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
-importlib.reload(_s4animtools.control_rig.basic_control_rig)
+importlib.reload(_s4animtools.animation_exporter.animation)
 
-# importlib.reload(_s4animtools.asm.states)
+importlib.reload(_s4animtools.asm.states)
 
 # importlib.reload(_s4animtools.asm.state_machine)
 # importlib.reload(_s4animtools.translation_channel)
@@ -383,19 +383,19 @@ class ClipExporter(bpy.types.Operator):
                     all_frame_data = {}
                     current_channel = None
                     if channel_type == "TRANSLATION":
-                        current_channel = _s4animtools.channels.translation_channel.TranslationChannel(bone.name, 18, 1)
+                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 1)
                     elif channel_type == "ORIENTATION":
-                        current_channel = _s4animtools.channel.Channel(bone.name, 20, 2)
+                        current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20, 2)
                     elif channel_type == "SCALE":
-                        current_channel = _s4animtools.channels.translation_channel.TranslationChannel(bone.name, 18, 3)
+                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 3)
                     if "IK" in channel_name:
                         if channel_type == "TRANSLATION":
-                            current_channel = _s4animtools.channels.translation_channel.TranslationChannel(bone.name,
-                                                                                                           18, 23 + (
+                            current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name,
+                                                                                                       18, 23 + (
                                                                                                                    current_sequence_count * 2))
                         elif channel_type == "ORIENTATION":
-                            current_channel = _s4animtools.channel.Channel(bone.name, 20,
-                                                                           (24 + current_sequence_count * 2))
+                            current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20,
+                                                                                              (24 + current_sequence_count * 2))
                     finalize_channels(all_frame_data, channel_data, current_channel)
                 if "IK" in channel_name:
                     current_sequence_count += 1
@@ -466,7 +466,7 @@ class ClipExporter(bpy.types.Operator):
                 for idx in range(clip_start, clip_end):
                     channel_frame_data[idx - clip_start] = (0, 0, idx - clip_start)
                 loco_channel_pos.set_channel_data(0, 1, channel_frame_data, snap_frames)
-                loco_channel_rot = _s4animtools.channel.Channel("loco", 17, 2)
+                loco_channel_rot = _s4animtools.channels.channel.QuaternionChannel("loco", 17, 2)
                 loco_channel_rot.set_channel_data(0, 1, {}, snap_frames)
 
                 loco_channel_pos._target = UInt32(720414894)
