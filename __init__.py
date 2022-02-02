@@ -466,7 +466,7 @@ class ClipExporter(bpy.types.Operator):
                     if idx == clip_start:
                         next_initial_translation_offset = "0,0,{}".format(abs(bp1.to_translation().y))
                 current_clip.clip_body._f1PaletteSize = len(current_clip.clip_body._f1PaletteData)
-                loco_channel_pos = _s4animtools.channels.palette_channel.PaletteChannel("loco", 3, 1)
+                loco_channel_pos = _s4animtools.channels.palette_channel.PaletteTranslationChannel("loco", 3, 1)
                 channel_frame_data = {}
                 for idx in range(clip_start, clip_end):
                     channel_frame_data[idx - clip_start] = (0, 0, idx - clip_start)

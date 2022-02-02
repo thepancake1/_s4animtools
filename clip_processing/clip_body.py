@@ -46,8 +46,11 @@ class ClipBody:
         self._channel_count += 1
         self._channels.append(new_channel)
 
+
+
+
     def set_palette_values(self, palette_values):
-        self._f1PaletteData = list(map(Float32, palette_values))
+        self._f1PaletteData = list(map(Float32, map(abs,  palette_values)))
         #print(self._f1PaletteData[0].value)
     def set_clip_length(self, length):
         """

@@ -1,10 +1,12 @@
 from _s4animtools.rig_constants import slot
 from _s4animtools.channels.translation_channel import Vector3Channel
 from _s4animtools.channels.quaternion_channel import QuaternionChannel
-from _s4animtools.channels.palette_channel import PaletteChannel
+from _s4animtools.channels.palette_channel import PaletteTranslationChannel
+from _s4animtools.frames.frame import PaletteTranslationFrame, PaletteFrame
 from _s4animtools.clip_processing.f1_palette import F1Palette
 from collections import defaultdict
 from mathutils import Vector, Quaternion
+from _s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
 
 F3 = 3
@@ -367,17 +369,17 @@ class AnimationExporter:
             animation_data = self.animated_frame_data[bone.name]
 
             if len(animation_data.get_translation_channel().items()) > 0:
-                location_channel = PaletteChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
-                translation_channel_data = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3)
+                location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
+                translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3)
 
-                location_channel.setup(translation_channel_data, snap_frames=self.snap_frames)
+                location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
                 self.exported_channels.append(location_channel)
 
             if len(animation_data.get_rotation_channel().items()) > 0:
-                rotation_channel_data = self.get_f1_palette_for_channel(animation_data.get_rotation_channel(), axis_count=4)
+                rotation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_rotation_channel(), axis_count=4)
 
-                rotation_channel = PaletteChannel(bone.name, F4, ROTATION_SUBTARGET_IDX)
-                rotation_channel.setup(rotation_channel_data, snap_frames=self.snap_frames)
+                rotation_channel = PaletteQuaternionChannel(bone.name, F4, ROTATION_SUBTARGET_IDX)
+                rotation_channel.palette_setup(channel_data=rotation_channel_data,snap_frames=self.snap_frames, values=original_values)
                 self.exported_channels.append(rotation_channel)
 #
             #if len(animation_data.get_scale_channel().items()) > 0:
@@ -386,15 +388,15 @@ class AnimationExporter:
             #    scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
             #    self.exported_channels.append(scale_channel)
 
-            for ik_target_idx in range(IK_TARGET_COUNT):
+            for ik_target_idx in range(0):
                 animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
                 animation_rotation_channel = animation_data.get_rotation_channel(ik_target_idx)
                 if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
-                    translation_channel = PaletteChannel(bone.name, F3, IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+                    translation_channel = PaletteQuaternionChannel(bone.name, F3, IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
 
-                    rotation_channel = PaletteChannel(bone.name, F4, IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
-                    translation_channel_data = self.get_f1_palette_for_channel(animation_translation_channel, axis_count=3)
-                    rotation_channel_data = self.get_f1_palette_for_channel(animation_rotation_channel, axis_count=4)
+                    rotation_channel = PaletteQuaternionChannel(bone.name, F4, IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
+                    translation_channel_data,original_values = self.get_f1_palette_for_channel(animation_translation_channel, axis_count=3)
+                    rotation_channel_data,original_values = self.get_f1_palette_for_channel(animation_rotation_channel, axis_count=4)
                     translation_channel.setup(translation_channel_data, snap_frames=self.snap_frames)
                     rotation_channel.setup(rotation_channel_data, snap_frames=self.snap_frames)
 
@@ -407,6 +409,7 @@ class AnimationExporter:
             self.recursively_export_bone_animation_to_channels(child)
 
     def get_f1_palette_for_channel(self, channel, axis_count, axis_order=None):
+        original_values = defaultdict(list)
         if axis_order is None:
             if axis_count == 3:
                 axis_order = (0, 1, 2)
@@ -417,13 +420,15 @@ class AnimationExporter:
             values = []
 
             for axis in range(axis_count):
+                print(data[axis])
+                original_values[frame].append(data[axis])
                 index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
                 values.append(index)
             if axis_count == 3:
                 frame_indices[frame] = [values[axis_order[0]], values[axis_order[1]], values[axis_order[2]]]
             elif axis_count == 4:
                 frame_indices[frame] = [values[axis_order[0]], values[axis_order[1]], values[axis_order[2]], values[axis_order[3]]]
-        return frame_indices
+        return frame_indices, original_values
     def __str__(self):
         """
         Return a string representation of the animation.

@@ -50,6 +50,8 @@ class QuaternionChannel:
         self.set_channel_data(offset=offset, scale=scale, individual_frames=channel_frame_values,
                                          snap_frames=snap_frames)
 
+
+
     def set_channel_data(self, offset, scale, individual_frames, snap_frames):
         self._offset = offset
         self._scale = scale

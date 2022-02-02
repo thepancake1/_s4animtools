@@ -4,7 +4,7 @@ from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
 import _s4animtools.serialization
 import _s4animtools.channels.quaternion_channel
 import math
-from _s4animtools.channels.palette_channel import PaletteChannel
+from _s4animtools.channels.palette_channel import PaletteTranslationChannel
 importlib.reload(_s4animtools.channels.quaternion_channel)
 importlib.reload(_s4animtools.frames.translation_frame)
 class Vector3Channel(_s4animtools.channels.quaternion_channel.QuaternionChannel):
@@ -30,7 +30,7 @@ class Vector3Channel(_s4animtools.channels.quaternion_channel.QuaternionChannel)
             single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
             serialized = single_frame._frame_data
             combined_bits = serialized[0].value + (serialized[1].value << 10) + (serialized[2].value << 20)
-            single_frame._bitshifted_data = UInt32(combined_bits)
+            single_frame.data = UInt32(combined_bits)
             #print(combined_bits)
             #print(idx, self._individual_frames[idx])
             self.serialized_frames[idx] = single_frame

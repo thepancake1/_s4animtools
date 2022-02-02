@@ -39,8 +39,8 @@ class F1Palette:
         :param potential_palette_value: The potential palette value to add to the list.
         """
         found_similar = False
-        string_representation = str(round(potential_palette_value, FLOAT_PRECISION)).strip()
-        if float(string_representation) == 0:
+        string_representation = str(round(abs(potential_palette_value), FLOAT_PRECISION)).strip()
+        if round(float(string_representation), 5) == 0:
             string_representation = "0"
         if string_representation in self.palette_values_string:
             found_similar = True
