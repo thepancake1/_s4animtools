@@ -3,12 +3,12 @@ import _s4animtools.frames.frame
 
 from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
 import _s4animtools.serialization
-import _s4animtools.channels.channel
+import _s4animtools.channels.quaternion_channel
 
 importlib.reload(_s4animtools.frames.frame)
 
 
-class F1Normalized(_s4animtools.channels.channel.QuaternionChannel):
+class F1Normalized(_s4animtools.channels.quaternion_channel.QuaternionChannel):
     def serialize_data(self, value):
         return _s4animtools.clip_processing.serializable_bytes(Byte(value).serialize() + Byte(0).serialize())
 

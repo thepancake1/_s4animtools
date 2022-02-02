@@ -1,9 +1,13 @@
 from _s4animtools.rig_constants import slot
 from _s4animtools.channels.translation_channel import Vector3Channel
-from _s4animtools.channels.channel import Channel
+from _s4animtools.channels.quaternion_channel import QuaternionChannel
+from _s4animtools.channels.palette_channel import PaletteChannel
+from _s4animtools.clip_processing.f1_palette import F1Palette
 from collections import defaultdict
 from mathutils import Vector, Quaternion
 import math
+
+UNCOMPRESSED_F3 = 3
 IK_TARGET_COUNT = 11
 
 IK_TRANSLATION_SUBTARGET_IDX = 25
@@ -26,6 +30,9 @@ class AnimationChannelDataBase:
     def __init__(self, name):
         self.name = name
         self.values = {}
+
+    def keys(self):
+        return self.values.keys()
 
     def items(self):
         return self.values.items()
@@ -89,7 +96,7 @@ class AnimationDataMagnitude(AnimationChannelDataBase):
         """
         Compares two keyframes to check if they are the same.
         """
-        return (frame_a - frame_b).magnitude < 0.0001
+        return (frame_a - frame_b).magnitude < 0.00001
 
 
 class AnimationBoneData:
@@ -159,7 +166,7 @@ class AnimationBoneData:
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
-        print(matrix_data.to_scale().magnitude)
+        print(matrix_data.to_scale())
         scale_data = matrix_data.to_scale()
 
         return translation_data, rotation_data, scale_data
@@ -207,6 +214,7 @@ class AnimationExporter:
         self.exported_channels = []
         self.world_rig = world_rig
         self.world_root = world_root
+        self.paletteHolder = F1Palette()
     @property
     def animated_bones(self):
         """
@@ -346,13 +354,18 @@ class AnimationExporter:
                 self.exported_channels.append(location_channel)
 
             if len(animation_data.get_rotation_channel().items()) > 0:
-                rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
+                rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
                 rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
                 self.exported_channels.append(rotation_channel)
 
             if len(animation_data.get_scale_channel().items()) > 0:
-                scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
-                scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
+                frame_indices = defaultdict(list)
+                for frame, data in animation_data.get_scale_channel().items():
+                    for axis in range(3):
+                        index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
+                        frame_indices[frame].append(index)
+                scale_channel = PaletteChannel(bone.name, UNCOMPRESSED_F3, SCALE_SUBTARGET_IDX)
+                scale_channel.setup(frame_indices, snap_frames=self.snap_frames)
                 self.exported_channels.append(scale_channel)
 
             for ik_target_idx in range(IK_TARGET_COUNT):
@@ -361,7 +374,7 @@ class AnimationExporter:
                 if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
                     translation_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
                                                          IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
-                    rotation_channel = Channel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
+                    rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
                                                IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
                     translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)
                     rotation_channel.setup(animation_rotation_channel, snap_frames=self.snap_frames)

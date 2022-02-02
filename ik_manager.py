@@ -42,7 +42,7 @@ class BeginIKMarker(bpy.types.Operator):
             chain_bone = "b__ROOT_bind__"
             holder_bone = "b__ROOT_bind__"
 
-        print(self.side,self.grip)
+        #print(self.side,self.grip)
         if self.begin == "BEGIN":
 
 

@@ -30,7 +30,7 @@ class QuaternionChannel:
 
     def quantize_data(self, value):
         # Throw away the sign. Watch it burn.
-        # Rotation data uses 32 bits of precision
+        # Rotation data uses 12 bits of precision
         return int(round(abs(value * 4095)))
 
     def setup(self, channel_data, snap_frames=None):

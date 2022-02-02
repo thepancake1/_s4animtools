@@ -2,10 +2,10 @@ import importlib
 import _s4animtools.frames.palette_frame
 from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
 import _s4animtools.serialization
-import _s4animtools.channels.channel
-importlib.reload(_s4animtools.channels.channel)
+import _s4animtools.channels.quaternion_channel
+importlib.reload(_s4animtools.channels.quaternion_channel)
 importlib.reload(_s4animtools.frames.palette_frame)
-class PaletteChannel(_s4animtools.channels.channel.QuaternionChannel):
+class PaletteChannel(_s4animtools.channels.quaternion_channel.QuaternionChannel):
     def serialize_data(self, value):
         return UInt16(value)
 
@@ -13,8 +13,8 @@ class PaletteChannel(_s4animtools.channels.channel.QuaternionChannel):
         return
 
     def set_channel_data(self, offset, scale, individual_frames, snap_frames):
-        self._offset = offset
-        self._scale = scale
+        self._offset = 0
+        self._scale = 1
         self._individual_frames = individual_frames
         self._frame_count = len(self._individual_frames)
 

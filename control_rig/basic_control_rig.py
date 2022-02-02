@@ -48,7 +48,7 @@ class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
                     for keyframe in fcurve.keyframe_points:
                         current_value = keyframe.co[1]
                         keyframe.co[1] = current_value * -1
-                        print(current_value)
+                        #print(current_value)
 
         return {"FINISHED"}
 class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
@@ -97,7 +97,7 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
                         for keyframe in fcurve.keyframe_points:
                             current_value = keyframe.co[1]
                             keyframe.co[1] = current_value * -1
-                            print(current_value)
+                            #print(current_value)
 
 
                 if "location" in fcurve.data_path:
@@ -105,7 +105,7 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
                         for keyframe in fcurve.keyframe_points:
                             current_value = keyframe.co[1]
                             keyframe.co[1] = current_value * -1
-                            print(current_value)
+                           # print(current_value)
 
         return {"FINISHED"}
 class CopySelectedLeftSideToRightSide(bpy.types.Operator):
@@ -121,7 +121,7 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
         selected_bones = [x.name for x in selected_bones]
         for item in selected_bones[:]:
             selected_bones.append(item.replace("_L_", "_R_").replace("_l_", "_r_"))
-        print(selected_bones)
+       # print(selected_bones)
 
         for group in action.groups:
 

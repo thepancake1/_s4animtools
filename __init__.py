@@ -25,11 +25,11 @@ from collections import defaultdict
 from _s4animtools.rig.create_rig import create_rig_with_context
 import _s4animtools.clip_processing.clip_header
 import _s4animtools.rig
-import _s4animtools.channels.channel
 import _s4animtools.channels.f1_normalized_channel
 import _s4animtools.channels.translation_channel
 import _s4animtools.channels.loco_channel
 import _s4animtools.channels.palette_channel
+import _s4animtools.channels.quaternion_channel
 import _s4animtools.control_rig.basic_control_rig
 
 from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
@@ -41,13 +41,13 @@ import _s4animtools.animation_exporter.animation
 from _s4animtools.animation_exporter.animation import AnimationExporter
 import _s4animtools.rig.create_rig
 from _s4animtools.serialization.types.transforms import Vector3, Quaternion
-
+import _s4animtools.clip_processing.clip_body
 CHAIN_STR_IDX = 2
 
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
 importlib.reload(_s4animtools.animation_exporter.animation)
 
-importlib.reload(_s4animtools.asm.states)
+importlib.reload(_s4animtools.clip_processing.clip_body)
 
 # importlib.reload(_s4animtools.asm.state_machine)
 # importlib.reload(_s4animtools.translation_channel)
@@ -57,6 +57,7 @@ importlib.reload(_s4animtools.asm.states)
 importlib.reload(_s4animtools.clip_processing.clip_header)
 importlib.reload(_s4animtools.control_rig.basic_control_rig)
 importlib.reload(_s4animtools.ik_manager)
+importlib.reload(_s4animtools.clip_processing.clip_body)
 
 def determine_ik_slot_targets(rig):
     all_constraints = defaultdict(list)
@@ -825,7 +826,7 @@ class NewClipExporter(bpy.types.Operator):
 
             for channel in exporter.export_to_channels():
                 current_clip.clip_body.add_channel(new_channel=channel)
-
+            current_clip.clip_body.set_palette_values(exporter.paletteHolder.palette_values)
             current_clip.clip_body.set_clip_length(clip_info.end_frame - clip_info.start_frame)
             current_clip.update_duration(clip_info.end_frame - clip_info.start_frame)
 
@@ -1083,7 +1084,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 ik_chain_count += 1
 
 
-        print(ik_chain_count, chain_bone)
+       # print(ik_chain_count, chain_bone)
         current_chain_idx = 0
         for idx, item in enumerate(get_ik_targets(obj)):
             if chain_bone == "":
@@ -1303,7 +1304,7 @@ class OffsetCalculator(bpy.types.Operator):
         x_matrix = bpy.context.active_object.matrix_world @ active_object_root.matrix
         offset = chair_matrix.inverted() @ x_matrix
 
-        print(offset.to_translation(), offset.to_quaternion())
+       # print(offset.to_translation(), offset.to_quaternion())
         rotation = offset.to_quaternion()
         translation = offset.to_translation()
         bpy.context.active_object.initial_offset_q = ",".join(
@@ -1327,7 +1328,7 @@ class MaintainKeyframe(bpy.types.Operator):
         selected_bone = context.selected_pose_bones[0]
 
         matrix_data = selected_bone.matrix.copy()
-        print(matrix_data)
+        #print(matrix_data)
         if self.direction == "FORWARDS":
             bpy.context.scene.frame_set(context.scene.frame_current + 1)
         else:

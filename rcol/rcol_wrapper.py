@@ -85,7 +85,7 @@ class RCOL:
             stream.seek(self.chunk_info[i].chunk_position)
             if "SKIN" in data.decode("ascii"):
                 chunk_data = Skin().read(stream)
-                print(stream.tell())
+               # print(stream.tell())
 
             else:
                 chunk_data = Bytes(stream.read(self.chunk_info[i].chunk_size))
