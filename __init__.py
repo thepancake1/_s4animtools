@@ -42,10 +42,13 @@ from _s4animtools.animation_exporter.animation import AnimationExporter
 import _s4animtools.rig.create_rig
 from _s4animtools.serialization.types.transforms import Vector3, Quaternion
 import _s4animtools.clip_processing.clip_body
+import _s4animtools.clip_processing.f1_palette
+
 CHAIN_STR_IDX = 2
 
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
 importlib.reload(_s4animtools.animation_exporter.animation)
+importlib.reload(_s4animtools.clip_processing.f1_palette)
 
 importlib.reload(_s4animtools.clip_processing.clip_body)
 importlib.reload(_s4animtools.channels.palette_channel)
@@ -796,8 +799,12 @@ class NewClipExporter(bpy.types.Operator):
             snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
                                             self.context.object.additional_snap_frames)
 
+
             exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root)
             exporter.create_animation_data()
+            exporter.paletteHolder.try_add_palette_to_palette_values(0)
+            exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
+
             last_frame_influences = defaultdict(int)
             ik_weight_animation_data = defaultdict(dict)
 

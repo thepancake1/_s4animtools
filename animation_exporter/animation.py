@@ -7,7 +7,8 @@ from collections import defaultdict
 from mathutils import Vector, Quaternion
 import math
 
-UNCOMPRESSED_F3 = 3
+F3 = 3
+F4 = 4
 IK_TARGET_COUNT = 11
 
 IK_TRANSLATION_SUBTARGET_IDX = 25
@@ -194,7 +195,7 @@ class AnimationBoneData:
             offset *= -1
         if source_bone.name in IK_POLE_TO_PARENT.keys():
             parent = source_rig.pose.bones[IK_POLE_TO_PARENT[source_bone.name]]
-            print(source_bone.name, parent.name)
+           # print(source_bone.name, parent.name)
         else:
             parent = source_bone.parent
         translation_data = parent.matrix.inverted() @ (bone_to_be_offset.matrix @ Vector((0, offset, 0)))
@@ -347,10 +348,13 @@ class AnimationExporter:
         Recursively export all bones starting from the root bone, then
         return the exported channels
         """
+
+
         self.recursively_export_bone_animation_to_channels(self.root_bone)
         return self.exported_channels
 
     def recursively_export_bone_animation_to_channels(self, bone):
+
         """
         Set up the bone animation data for each of the channels.
         It calculates the Translation, Rotation, and Scale channels,
@@ -363,39 +367,36 @@ class AnimationExporter:
             animation_data = self.animated_frame_data[bone.name]
 
             if len(animation_data.get_translation_channel().items()) > 0:
-                location_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                  TRANSLATION_SUBTARGET_IDX)
-                location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
+                location_channel = PaletteChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
+                translation_channel_data = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3)
+
+                location_channel.setup(translation_channel_data, snap_frames=self.snap_frames)
                 self.exported_channels.append(location_channel)
 
             if len(animation_data.get_rotation_channel().items()) > 0:
-                rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
-                rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
+                rotation_channel_data = self.get_f1_palette_for_channel(animation_data.get_rotation_channel(), axis_count=4)
+
+                rotation_channel = PaletteChannel(bone.name, F4, ROTATION_SUBTARGET_IDX)
+                rotation_channel.setup(rotation_channel_data, snap_frames=self.snap_frames)
                 self.exported_channels.append(rotation_channel)
-
-            if len(animation_data.get_scale_channel().items()) > 0:
-               # frame_indices = defaultdict(list)
-               # for frame, data in animation_data.get_scale_channel().items():
-               #     for axis in range(3):
-               #         index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
-               #         frame_indices[frame].append(index)
-               # scale_channel = PaletteChannel(bone.name, UNCOMPRESSED_F3, SCALE_SUBTARGET_IDX)
-
-                scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
-
-                scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
-                self.exported_channels.append(scale_channel)
+#
+            #if len(animation_data.get_scale_channel().items()) > 0:
+            #    scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
+#
+            #    scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
+            #    self.exported_channels.append(scale_channel)
 
             for ik_target_idx in range(IK_TARGET_COUNT):
                 animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
                 animation_rotation_channel = animation_data.get_rotation_channel(ik_target_idx)
                 if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
-                    translation_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                         IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
-                    rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
-                                               IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
-                    translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)
-                    rotation_channel.setup(animation_rotation_channel, snap_frames=self.snap_frames)
+                    translation_channel = PaletteChannel(bone.name, F3, IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+
+                    rotation_channel = PaletteChannel(bone.name, F4, IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
+                    translation_channel_data = self.get_f1_palette_for_channel(animation_translation_channel, axis_count=3)
+                    rotation_channel_data = self.get_f1_palette_for_channel(animation_rotation_channel, axis_count=4)
+                    translation_channel.setup(translation_channel_data, snap_frames=self.snap_frames)
+                    rotation_channel.setup(rotation_channel_data, snap_frames=self.snap_frames)
 
                     self.exported_channels.append(translation_channel)
                     self.exported_channels.append(rotation_channel)
@@ -405,6 +406,24 @@ class AnimationExporter:
                 continue
             self.recursively_export_bone_animation_to_channels(child)
 
+    def get_f1_palette_for_channel(self, channel, axis_count, axis_order=None):
+        if axis_order is None:
+            if axis_count == 3:
+                axis_order = (0, 1, 2)
+            elif axis_count == 4:
+                axis_order = (1, 2, 3, 0)
+        frame_indices = defaultdict(list)
+        for frame, data in channel.items():
+            values = []
+
+            for axis in range(axis_count):
+                index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
+                values.append(index)
+            if axis_count == 3:
+                frame_indices[frame] = [values[axis_order[0]], values[axis_order[1]], values[axis_order[2]]]
+            elif axis_count == 4:
+                frame_indices[frame] = [values[axis_order[0]], values[axis_order[1]], values[axis_order[2]], values[axis_order[3]]]
+        return frame_indices
     def __str__(self):
         """
         Return a string representation of the animation.

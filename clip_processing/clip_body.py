@@ -93,7 +93,7 @@ class ClipBody:
         for idx, data in enumerate(self._f1PaletteData):
             data_offset += 4
             clip_body_data.append(data.serialize())
-            print(idx, data.value)
+            #print(idx, data.value)
 
 
         for idx in range(len(serialized_channels)):

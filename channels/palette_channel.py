@@ -21,10 +21,8 @@ class PaletteChannel(_s4animtools.channels.quaternion_channel.QuaternionChannel)
         for idx, values in self._individual_frames.items():
             single_frame = _s4animtools.frames.palette_frame.PaletteFrame()
             single_frame.set_frame_data(idx, list(values), idx == 0)
-            single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data)) # the two 0's are for padding
+            single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
             serialized = single_frame._frame_data
-            #print(combined_bits)
-            #print(idx, self._individual_frames[idx])
             self.serialized_frames[idx] = single_frame
 
     def serialize(self):

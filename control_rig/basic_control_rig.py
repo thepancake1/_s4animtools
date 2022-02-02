@@ -151,11 +151,11 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
 
                     if "rotation_quaternion" in fcurve.data_path:
                         if fcurve.array_index == 1 or fcurve.array_index == 2:
-                            print("test")
+                            #print("test")
                             for keyframe in fcurve.keyframe_points:
                                 current_value = keyframe.co[1]
                                 keyframe.co[1] = current_value * -1
-                                print(current_value)
+                                #print(current_value)
 
 
                     if "location" in fcurve.data_path:
@@ -163,7 +163,7 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
                             for keyframe in fcurve.keyframe_points:
                                 current_value = keyframe.co[1]
                                 keyframe.co[1] = current_value * -1
-                                print(current_value)
+                                #print(current_value)
 
         return {"FINISHED"}
 class CopyBakedAnimationToControlRig(bpy.types.Operator):
