@@ -44,7 +44,7 @@ class F1Palette:
             string_representation = "0"
         if string_representation in self.palette_values_string:
             found_similar = True
-            print("Found similar palette value: ",  string_representation, round(potential_palette_value, FLOAT_PRECISION))
+           # print("Found similar palette value: ",  string_representation, round(potential_palette_value, FLOAT_PRECISION))
         if not found_similar:
             self.palette_values.append(round(potential_palette_value, FLOAT_PRECISION))
             self.palette_values_string.append(string_representation)

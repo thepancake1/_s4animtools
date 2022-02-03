@@ -150,6 +150,7 @@ class LIST_OT_CreateIKTarget(bpy.types.Operator):
             context.object.ik_targets[-1].chain_bone = chain_bones[i]
             context.object.ik_targets[-1].target_obj = context.object.name
             context.object.ik_targets[-1].target_bone = "b__ROOT__"
+            context.object.ik_targets[-1].ranges[-1].end_time = context.scene.frame_end
 
 
 
