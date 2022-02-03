@@ -794,7 +794,7 @@ class NewClipExporter(bpy.types.Operator):
             current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
                                         clip_info.explicit_namespaces,
                                         clip_info.reference_namespace_hash, clip_info.initial_offset_q,
-                                        clip_info.initial_offset_t, source_filename, False, False)
+                                        clip_info.initial_offset_t, source_filename, False, context.object.disable_rig_suffix)
             rig = self.context.object
             snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
                                             self.context.object.additional_snap_frames)
