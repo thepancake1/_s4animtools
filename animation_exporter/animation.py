@@ -396,7 +396,6 @@ class AnimationExporter:
                     location_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
                                                           TRANSLATION_SUBTARGET_IDX)
                     location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
-                    self.exported_channels.append(location_channel)
 
                 self.exported_channels.append(location_channel)
 
@@ -409,7 +408,6 @@ class AnimationExporter:
                 else:
                     rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
                     rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
-                    self.exported_channels.append(rotation_channel)
                 self.exported_channels.append(rotation_channel)
 
 #
@@ -423,7 +421,6 @@ class AnimationExporter:
                 else:
                     scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
                     scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
-                    self.exported_channels.append(scale_channel)
     #
                 self.exported_channels.append(scale_channel)
 
