@@ -55,12 +55,6 @@ class ClipResource:
         self.slotAssignmentCount = 0
         self.slotAssignments = []
         slot_idx = 0
-        """
-        Declare world ik and actual slot assignments
-        +1 for actual slot assignments because the zeroth index is taken 
-        up by the world iks
-        """
-
         for chain_bone in slot_assignments:
             for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
                 target_rig = slot_assignment.target_rig
