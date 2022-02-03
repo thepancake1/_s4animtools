@@ -19,6 +19,5 @@ class TranslationFrame(Frame):
         frame_data = []
         for item in serialize_order:
             frame_data.append(item.serialize())
-        for data in self._frame_data:
-            frame_data.append(data.serialize())
+        frame_data.append(self._bitshifted_data.serialize())
         return frame_data
