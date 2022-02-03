@@ -800,7 +800,7 @@ class NewClipExporter(bpy.types.Operator):
                                             self.context.object.additional_snap_frames)
 
 
-            exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root)
+            exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision)
             exporter.create_animation_data()
             exporter.paletteHolder.try_add_palette_to_palette_values(0)
             exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
@@ -885,12 +885,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         # self.layout.operator("s4animtools.create_advanced_control_rig", icon='MESH_CUBE', text="Create Advanced Control Rig (Sim)")
 
         self.layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
+        self.layout.label(text="Use Full Precision means using full precision for all animation data.")
+        self.layout.label(text="Don't enable if you don't know what that means!")
 
-        self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="New Export Clip")
+        self.layout.prop(context.object, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+        self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
 
         self.layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
-        self.layout.operator("s4animtools.export_clip", icon='MESH_CUBE', text="Export Clip")
+        #self.layout.operator("s4animtools.export_clip", icon='MESH_CUBE', text="Export Clip")
 
         # self.layout.operator("s4animtools.sync_rig_to_mesh", icon='MESH_CUBE', text="Sync Rig To Mesh")
         # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
@@ -1529,6 +1532,7 @@ def register():
     bpy.types.Object.world_bone = bpy.props.StringProperty()
     bpy.types.Object.relative_rig = bpy.props.StringProperty()
     bpy.types.Object.relative_bone = bpy.props.StringProperty()
+    bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)
 
     # OLD STUFF
     bpy.types.Scene.rig_name = bpy.props.StringProperty()
