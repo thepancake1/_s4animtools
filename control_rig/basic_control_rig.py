@@ -97,16 +97,23 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
                         for keyframe in fcurve.keyframe_points:
                             current_value = keyframe.co[1]
                             keyframe.co[1] = current_value * -1
-                            #print(current_value)
-
+                if "rotation_euler" in fcurve.data_path:
+                    multiplier = 1
+                    if fcurve.array_index == 1:
+                        multiplier = -1
+                    for keyframe in fcurve.keyframe_points:
+                        current_value = keyframe.co[1]
+                        keyframe.co[1] = current_value * multiplier
 
                 if "location" in fcurve.data_path:
                     if fcurve.array_index == 2:
                         for keyframe in fcurve.keyframe_points:
                             current_value = keyframe.co[1]
                             keyframe.co[1] = current_value * -1
-                           # print(current_value)
-
+        fcurves = obj.animation_data.action.fcurves
+        for fcurve in fcurves:
+            for kf in fcurve.keyframe_points:
+                kf.interpolation = 'LINEAR'
         return {"FINISHED"}
 class CopySelectedLeftSideToRightSide(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side_sim_selected"
