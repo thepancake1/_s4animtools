@@ -12,4 +12,6 @@ I used the following resources to help build this tool:
 
 [Sims 4 Clip Binary Template](https://forums.thesims.com/en_US/discussion/872672/clip-resource-0x6b20c4f3-v14)
 
+[Sims 4 Rig File Info Structure](https://modthesims.info/wiki.php?title=Sims_4:0x8EAF13DE)
+
 Thanks to everybody who contributed to these resources, as well as everybody who helped test the tools!
