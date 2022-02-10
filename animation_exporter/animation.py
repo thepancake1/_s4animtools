@@ -170,27 +170,7 @@ class AnimationBoneData:
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
-        #print(matrix_data.to_scale())
         scale_data = matrix_data.to_scale()
-
-        return translation_data, rotation_data, scale_data
-
-    def get_transform_for_scale(self, source_rig, source_bone, target_rig, target_bone):
-        """
-        Returns a tuple of translation, rotation, and scale data of
-        the source bone animated to the target bone.
-        """
-
-        src_matrix = source_rig.matrix_world @ source_bone.matrix
-        dst_matrix = target_rig.matrix_world @ target_bone.matrix
-        matrix_data = dst_matrix.inverted() @ src_matrix
-        scale_data = matrix_data.to_scale()
-
-        scale_matrix_x2 = Matrix.Scale(scale_data[0], 4, (1.0, 0.0, 0.0))
-        scale_matrix_y2 = Matrix.Scale(scale_data[1], 4, (0.0, 1.0, 0.0))
-        scale_matrix_z2 = Matrix.Scale(scale_data[2], 4, (0.0, 0.0, 1.0))
-        scale_data = matrix_data.to_scale()
-
         return translation_data, rotation_data, scale_data
 
     def get_transform_and_serialize(self, source_rig, source_bone, target_rig, target_bone, frame_idx, start_frame, ik_idx=-1,

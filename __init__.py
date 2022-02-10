@@ -812,6 +812,7 @@ class NewClipExporter(bpy.types.Operator):
 
             for frame_idx in range(clip_info.start_frame, clip_info.end_frame):
                 bpy.context.scene.frame_set(frame_idx)
+                bpy.context.view_layer.update()
                 exporter.animate_recursively(frame_idx, start_frame=clip_info.start_frame, force=frame_idx == clip_info.start_frame
                                                               or frame_idx == clip_info.end_frame)
 
