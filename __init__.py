@@ -527,9 +527,10 @@ class ClipExporter(bpy.types.Operator):
         if initial_offset_q == "":
             initial_offset_q = "0,0,0,1"
         rig_name = context.object.rig_name
-
         if rig_name == "":
-            rig_name = "x"
+            context.object.rig_name = "x"
+            rig_name = context.object.rig_name
+
         reference_namespace_hash = context.object.reference_namespace_hash
         if reference_namespace_hash == "":
             reference_namespace_hash = 0
