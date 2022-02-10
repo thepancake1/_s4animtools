@@ -1,6 +1,6 @@
-import math
-import os.path
+
 import bpy
+from mathutils import Vector, Quaternion
 class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side"
     bl_label = "Copy Left Side Animation"
@@ -9,8 +9,6 @@ class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
     def execute(self, context):
         obj = context.object
         action = obj.animation_data.action
-        d = ["_bind_DB_blanket_Top_L_", "_bind_DB_blanket_Mid_L_", "_bind_DB_blanket_Bottom_L_",
-             "_bind_DB_OpacityPanel_L_", "_bind_DB_blanket_MakeBedFront_L_", "_bind_DB_blanket_MakeBedMid_L_"]
         for group in action.groups:
           #  if group.name.replace("_R_", "_L_") in d:
             oldname = group.name
@@ -48,8 +46,12 @@ class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
                     for keyframe in fcurve.keyframe_points:
                         current_value = keyframe.co[1]
                         keyframe.co[1] = current_value * -1
-                        print(current_value)
+                        #print(current_value)
 
+                if "rotation_euler" in fcurve.data_path:
+                    for keyframe in fcurve.keyframe_points:
+                        current_value = keyframe.co[1]
+                        keyframe.co[1] = current_value * -1
         return {"FINISHED"}
 class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side_sim"
@@ -89,6 +91,8 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
         for group in action.groups:
             oldname = group.name
             group.name = group.name.replace("temp", "")
+
+            print(group.name, oldname)
             for fcurve in group.channels:
                 fcurve.data_path = fcurve.data_path.replace(oldname, group.name)
 
@@ -97,16 +101,34 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
                         for keyframe in fcurve.keyframe_points:
                             current_value = keyframe.co[1]
                             keyframe.co[1] = current_value * -1
-                            print(current_value)
+                if "rotation_euler" in fcurve.data_path:
+                    multiplier = 1
+                    if fcurve.array_index == 1:
+                        multiplier = -1
+                    for keyframe in fcurve.keyframe_points:
+                        current_value = keyframe.co[1]
+                        keyframe.co[1] = current_value * multiplier
 
+                            #print(current_value)
+
+                if "_L_" in group.name or "_R_" in group.name:
+                    pass
+                else:
+                    continue
+                if "rotation_euler" in fcurve.data_path:
+                    for keyframe in fcurve.keyframe_points:
+                        current_value = keyframe.co[1]
+                        keyframe.co[1] = current_value * -1
 
                 if "location" in fcurve.data_path:
                     if fcurve.array_index == 2:
                         for keyframe in fcurve.keyframe_points:
                             current_value = keyframe.co[1]
                             keyframe.co[1] = current_value * -1
-                            print(current_value)
-
+        fcurves = obj.animation_data.action.fcurves
+        for fcurve in fcurves:
+            for kf in fcurve.keyframe_points:
+                kf.interpolation = 'LINEAR'
         return {"FINISHED"}
 class CopySelectedLeftSideToRightSide(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side_sim_selected"
@@ -121,7 +143,7 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
         selected_bones = [x.name for x in selected_bones]
         for item in selected_bones[:]:
             selected_bones.append(item.replace("_L_", "_R_").replace("_l_", "_r_"))
-        print(selected_bones)
+       # print(selected_bones)
 
         for group in action.groups:
 
@@ -151,19 +173,22 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
 
                     if "rotation_quaternion" in fcurve.data_path:
                         if fcurve.array_index == 1 or fcurve.array_index == 2:
-                            print("test")
+                            #print("test")
                             for keyframe in fcurve.keyframe_points:
                                 current_value = keyframe.co[1]
                                 keyframe.co[1] = current_value * -1
-                                print(current_value)
+                                #print(current_value)
 
-
+                    if "rotation_euler" in fcurve.data_path:
+                            for keyframe in fcurve.keyframe_points:
+                                current_value = keyframe.co[1]
+                                keyframe.co[1] = current_value * -1
                     if "location" in fcurve.data_path:
                         if fcurve.array_index == 2:
                             for keyframe in fcurve.keyframe_points:
                                 current_value = keyframe.co[1]
                                 keyframe.co[1] = current_value * -1
-                                print(current_value)
+                                #print(current_value)
 
         return {"FINISHED"}
 class CopyBakedAnimationToControlRig(bpy.types.Operator):
@@ -187,49 +212,69 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
     RIGHT_LEG_BAKED = ["b__R_Thigh__", "b__R_Calf__", "b__R_Foot__"]
 
     def copy_location(self, arm, target, from_target):
-        print(f"Copying position from {target} to {from_target.name}")
+        print(f"Copying position from {target.name} to {from_target.name}")
         copy_constraint = from_target.constraints.new('COPY_LOCATION')
         copy_constraint.target = arm
-        copy_constraint.subtarget = target
+        copy_constraint.subtarget = target.name
         return copy_constraint
 
     def copy_rotation(self, arm, target, from_target):
-        print(f"Copying position from {target} to {from_target.name}")
+        print(f"Copying position from {target.name} to {from_target.name}")
         copy_constraint = from_target.constraints.new('COPY_ROTATION')
         copy_constraint.target = arm
-        copy_constraint.subtarget = target
+        copy_constraint.subtarget = target.name
         return copy_constraint
 
     def execute(self, context):
         obj = bpy.context.object
+        animation_data = obj.animation_data
+
         bpy.ops.object.mode_set(mode='POSE', toggle=False)
 
         bpy.ops.pose.select_all(action='DESELECT')
         constraints = []
-
-        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4]))
-        constraints.extend(self.setup_constraints(obj, self.LEFT_ARM_BAKED, self.LEFT_ARM_IK, self.LEFT_ARM_TARGET))
-        constraints.extend(self.setup_constraints(obj, self.RIGHT_ARM_BAKED, self.RIGHT_ARM_IK, self.RIGHT_ARM_TARGET))
-        constraints.extend(self.setup_constraints(obj, self.LEFT_LEG_BAKED, self.LEFT_LEG_IK, self.LEFT_LEG_TARGET))
-        constraints.extend(self.setup_constraints(obj, self.RIGHT_LEG_BAKED, self.RIGHT_LEG_IK, self.RIGHT_LEG_TARGET))
+        IK_suffix = "IK"
+        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_ARM_TARGET, self.LEFT_ARM_TARGET[:-4] + IK_suffix, self.LEFT_ARM_BAKED))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.RIGHT_ARM_TARGET, self.RIGHT_ARM_TARGET[:-4] + IK_suffix, self.RIGHT_ARM_BAKED))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.LEFT_LEG_TARGET, self.LEFT_LEG_TARGET[:-4] + IK_suffix, self.LEFT_LEG_BAKED))
+        constraints.extend(self.add_hold_copy_constraints(obj, self.RIGHT_LEG_TARGET, self.RIGHT_LEG_TARGET[:-4] + IK_suffix, self.RIGHT_LEG_BAKED))
         bpy.context.view_layer.update()
 
-        bpy.ops.nla.bake(frame_start=context.scene.frame_start, frame_end=context.scene.frame_end, only_selected=True, visual_keying=True, clear_constraints=False, use_current_action=True, bake_types={'POSE'})
+       # bpy.ops.nla.bake(frame_start=context.scene.frame_start, frame_end=context.scene.frame_end, only_selected=True, visual_keying=True, clear_constraints=False, use_current_action=True, bake_types={'POSE'})
 
 
-        for bone in [*self.LEFT_ARM_BAKED, *self.LEFT_ARM_FK, *self.LEFT_ARM_IK, self.LEFT_ARM_TARGET,
-                     *self.RIGHT_ARM_BAKED,*self.RIGHT_ARM_FK, *self.RIGHT_ARM_IK, self.RIGHT_ARM_TARGET,
-                     *self.LEFT_LEG_BAKED, *self.LEFT_LEG_FK, *self.LEFT_LEG_IK, self.LEFT_LEG_TARGET,
-                     *self.RIGHT_LEG_BAKED,*self.RIGHT_LEG_FK, *self.RIGHT_LEG_IK, self.RIGHT_LEG_TARGET]:
+        for bone in [*self.LEFT_ARM_BAKED,self.LEFT_ARM_TARGET,
+                     *self.RIGHT_ARM_BAKED, self.RIGHT_ARM_TARGET,
+                     *self.LEFT_LEG_BAKED,self.LEFT_LEG_TARGET,
+                     *self.RIGHT_LEG_BAKED, self.RIGHT_LEG_TARGET]:
             bone = obj.pose.bones[bone]
             for constraint in constraints:
                 try:
                     bone.constraints.remove(constraint)
                 except:
                     pass
+
+            for bone in [*self.LEFT_ARM_BAKED,
+                         *self.RIGHT_ARM_BAKED,
+                         *self.LEFT_LEG_BAKED,
+                         *self.RIGHT_LEG_BAKED]:
+                bone = bpy.context.object.pose.bones[bone]
+                data_path = f'pose.bones["{bone}"]["location"]'
+                # Create FCurve for IK/FK toggle
+                action = animation_data.action
+                for pos in range(3):
+                    fc = action.fcurves.find(data_path, index=pos)
+                    if fc:
+                        action.fcurves.remove(fc)
+                data_path = f'pose.bones["{bone}"]["rotation_quaternion"]'
+                for rot in range(4):
+                    fc = action.fcurves.find(data_path, index=rot)
+                    if fc:
+                        action.fcurves.remove(fc)
+                bone.location = Vector((0, 0, 0))
+
+                bone.rotation_quaternion = Quaternion((0, 0, 0, 1))
+                bone.rotation_euler = Vector((0, 0, 0))
         bpy.context.view_layer.update()
 
         self.unmute_copy_bones(obj, self.LEFT_ARM_BAKED)
@@ -246,16 +291,17 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
         results = [*self.add_copy_constraints_with_pole(obj, baked, ik, target)]
         return results
 
-    def add_hold_copy_constraints(self, obj, bone, target_bone):
-        self.mute_copy_bones(obj, bone)
-        return eslf.add_single_copy_constraint(obj, bone, target_bone)
+    def add_hold_copy_constraints(self, obj, bone_to_copy_from, target_bone, chain_bones):
+        self.mute_copy_bones(obj, chain_bones)
+        return self.add_single_copy_constraint(obj, bpy.context.object.pose.bones[bone_to_copy_from],
+                                               bpy.context.object.pose.bones[target_bone])
 
-    def add_single_copy_constraint(self, bone, target_bone):
+    def add_single_copy_constraint(self, obj, bone_tocopy_from, target_bone):
         constraints = list()
-        constraints.append(self.copy_location(obj, bone, target_bone))
-        constraints.append(self.copy_rotation(obj, bone, target_bone))
+        constraints.append(self.copy_location(obj, bone_tocopy_from, target_bone))
+        constraints.append(self.copy_rotation(obj, bone_tocopy_from, target_bone))
 
-        bone.bone.select = True
+        bone_tocopy_from.bone.select = True
         return constraints
 
     def add_copy_constraints(self, obj, baked, fk):
@@ -278,7 +324,7 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
         for idx in range(0, 3):
             existing_constraints = [c for c in obj.pose.bones[copy_list[idx]].constraints]
             for constraint in existing_constraints:
-                constraint.mute = True
+                obj.pose.bones[copy_list[idx]].constraints.remove(constraint)
 
     def unmute_copy_bones(self, obj, copy_list):
         for idx in range(0, 3):

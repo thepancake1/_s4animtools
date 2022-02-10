@@ -13,7 +13,6 @@ class TranslationFrame(Frame):
         #print(sign_bits)
         self._sign_bits = UInt16(int(sign_bits, 2))
         self._frame_data = frame_data
-        self._bitshifted_data  = None
 
     def serialize(self):
         serialize_order = [self._startTick, self._sign_bits]

@@ -25,11 +25,13 @@ from collections import defaultdict
 from _s4animtools.rig.create_rig import create_rig_with_context
 import _s4animtools.clip_processing.clip_header
 import _s4animtools.rig
-import _s4animtools.channel
 import _s4animtools.channels.f1_normalized_channel
 import _s4animtools.channels.translation_channel
 import _s4animtools.channels.loco_channel
 import _s4animtools.channels.palette_channel
+import _s4animtools.channels.quaternion_channel
+import _s4animtools.control_rig.basic_control_rig
+import _s4animtools.frames.frame
 from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig
 from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
@@ -39,14 +41,17 @@ import _s4animtools.animation_exporter.animation
 from _s4animtools.animation_exporter.animation import AnimationExporter
 import _s4animtools.rig.create_rig
 from _s4animtools.serialization.types.transforms import Vector3, Quaternion
+import _s4animtools.clip_processing.clip_body
+import _s4animtools.clip_processing.f1_palette
 
 CHAIN_STR_IDX = 2
 
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
-
 importlib.reload(_s4animtools.animation_exporter.animation)
-
-# importlib.reload(_s4animtools.asm.states)
+importlib.reload(_s4animtools.clip_processing.f1_palette)
+importlib.reload(_s4animtools.frames.frame)
+importlib.reload(_s4animtools.clip_processing.clip_body)
+importlib.reload(_s4animtools.channels.palette_channel)
 
 # importlib.reload(_s4animtools.asm.state_machine)
 # importlib.reload(_s4animtools.translation_channel)
@@ -56,6 +61,7 @@ importlib.reload(_s4animtools.animation_exporter.animation)
 importlib.reload(_s4animtools.clip_processing.clip_header)
 importlib.reload(_s4animtools.control_rig.basic_control_rig)
 importlib.reload(_s4animtools.ik_manager)
+importlib.reload(_s4animtools.clip_processing.clip_body)
 
 def determine_ik_slot_targets(rig):
     all_constraints = defaultdict(list)
@@ -74,7 +80,7 @@ def determine_ik_slot_targets(rig):
                                                                            chain_idx=chain_idx,
                                                                            slot_assignment_idx=current_bone_idx[ik_target.chain_bone]))
         current_bone_idx[ik_target.chain_bone] += 1
-    print(",".join(all_constraints))
+    #print(",".join(all_constraints))
     return all_constraints
 
 
@@ -382,19 +388,19 @@ class ClipExporter(bpy.types.Operator):
                     all_frame_data = {}
                     current_channel = None
                     if channel_type == "TRANSLATION":
-                        current_channel = _s4animtools.channels.translation_channel.TranslationChannel(bone.name, 18, 1)
+                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 1)
                     elif channel_type == "ORIENTATION":
-                        current_channel = _s4animtools.channel.Channel(bone.name, 20, 2)
+                        current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20, 2)
                     elif channel_type == "SCALE":
-                        current_channel = _s4animtools.channels.translation_channel.TranslationChannel(bone.name, 18, 3)
+                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 3)
                     if "IK" in channel_name:
                         if channel_type == "TRANSLATION":
-                            current_channel = _s4animtools.channels.translation_channel.TranslationChannel(bone.name,
-                                                                                                           18, 23 + (
+                            current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name,
+                                                                                                       18, 23 + (
                                                                                                                    current_sequence_count * 2))
                         elif channel_type == "ORIENTATION":
-                            current_channel = _s4animtools.channel.Channel(bone.name, 20,
-                                                                           (24 + current_sequence_count * 2))
+                            current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20,
+                                                                                              (24 + current_sequence_count * 2))
                     finalize_channels(all_frame_data, channel_data, current_channel)
                 if "IK" in channel_name:
                     current_sequence_count += 1
@@ -460,12 +466,12 @@ class ClipExporter(bpy.types.Operator):
                     if idx == clip_start:
                         next_initial_translation_offset = "0,0,{}".format(abs(bp1.to_translation().y))
                 current_clip.clip_body._f1PaletteSize = len(current_clip.clip_body._f1PaletteData)
-                loco_channel_pos = _s4animtools.channels.palette_channel.PaletteChannel("loco", 3, 1)
+                loco_channel_pos = _s4animtools.channels.palette_channel.PaletteTranslationChannel("loco", 3, 1)
                 channel_frame_data = {}
                 for idx in range(clip_start, clip_end):
                     channel_frame_data[idx - clip_start] = (0, 0, idx - clip_start)
                 loco_channel_pos.set_channel_data(0, 1, channel_frame_data, snap_frames)
-                loco_channel_rot = _s4animtools.channel.Channel("loco", 17, 2)
+                loco_channel_rot = _s4animtools.channels.channel.QuaternionChannel("loco", 17, 2)
                 loco_channel_rot.set_channel_data(0, 1, {}, snap_frames)
 
                 loco_channel_pos._target = UInt32(720414894)
@@ -737,7 +743,13 @@ class NewClipExporter(bpy.types.Operator):
         if rig_name == "":
             self.context.object.rig_name = "x"
         rig_name = self.context.object.rig_name
-
+        initial_offset_t = self.context.object.initial_offset_t
+        initial_offset_q = self.context.object.initial_offset_q
+        # Set the initial offsets to the default if the user doesn't enter anything.
+        if initial_offset_t == "":
+            initial_offset_t = "0,0,0"
+        if initial_offset_q == "":
+            initial_offset_q = "0,0,0,1"
         if len(self.clip_infos) == 0:
             clip_infos = []
             clip_names = self.get_clip_names()
@@ -750,8 +762,8 @@ class NewClipExporter(bpy.types.Operator):
                     ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
                              explicit_namespaces=self.get_explicit_namespaces(),
                              reference_namespace_hash=self.get_reference_namespace_hash(),
-                             initial_offset_q=Quaternion.from_str(self.context.object.initial_offset_q),
-                             initial_offset_t=Vector3.from_str(self.context.object.initial_offset_t), rig_name=rig_name))
+                             initial_offset_q=Quaternion.from_str(initial_offset_q),
+                             initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
             self.clip_infos = clip_infos
         return self.clip_infos
 
@@ -782,13 +794,17 @@ class NewClipExporter(bpy.types.Operator):
             current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
                                         clip_info.explicit_namespaces,
                                         clip_info.reference_namespace_hash, clip_info.initial_offset_q,
-                                        clip_info.initial_offset_t, source_filename, False, False)
+                                        clip_info.initial_offset_t, source_filename, False, context.object.disable_rig_suffix)
             rig = self.context.object
             snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
                                             self.context.object.additional_snap_frames)
 
-            exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root)
+
+            exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision)
             exporter.create_animation_data()
+            exporter.paletteHolder.try_add_palette_to_palette_values(0)
+            exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
+
             last_frame_influences = defaultdict(int)
             ik_weight_animation_data = defaultdict(dict)
 
@@ -819,7 +835,7 @@ class NewClipExporter(bpy.types.Operator):
 
             for channel in exporter.export_to_channels():
                 current_clip.clip_body.add_channel(new_channel=channel)
-
+            current_clip.clip_body.set_palette_values(exporter.paletteHolder.palette_values)
             current_clip.clip_body.set_clip_length(clip_info.end_frame - clip_info.start_frame)
             current_clip.update_duration(clip_info.end_frame - clip_info.start_frame)
 
@@ -870,12 +886,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         # self.layout.operator("s4animtools.create_advanced_control_rig", icon='MESH_CUBE', text="Create Advanced Control Rig (Sim)")
 
         self.layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
+        self.layout.label(text="Use Full Precision means using full precision for all animation data.")
+        self.layout.label(text="Don't enable if you don't know what that means!")
 
-        self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="New Export Clip")
+        self.layout.prop(context.object, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+        self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
 
         self.layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
-        self.layout.operator("s4animtools.export_clip", icon='MESH_CUBE', text="Export Clip")
+        #self.layout.operator("s4animtools.export_clip", icon='MESH_CUBE', text="Export Clip")
 
         # self.layout.operator("s4animtools.sync_rig_to_mesh", icon='MESH_CUBE', text="Sync Rig To Mesh")
         # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
@@ -1077,7 +1096,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 ik_chain_count += 1
 
 
-        print(ik_chain_count, chain_bone)
+       # print(ik_chain_count, chain_bone)
         current_chain_idx = 0
         for idx, item in enumerate(get_ik_targets(obj)):
             if chain_bone == "":
@@ -1201,7 +1220,7 @@ class S4ANIMTOOLS_OT_move_new_element(bpy.types.Operator):
         for i, element in enumerate(elements_to_append):
             to_edit.add()
             to_edit[-1].info = element
-            print(f'adding {element}')
+           # print(f'adding {element}')
 
 
 class IKTarget(PropertyGroup):
@@ -1297,7 +1316,7 @@ class OffsetCalculator(bpy.types.Operator):
         x_matrix = bpy.context.active_object.matrix_world @ active_object_root.matrix
         offset = chair_matrix.inverted() @ x_matrix
 
-        print(offset.to_translation(), offset.to_quaternion())
+       # print(offset.to_translation(), offset.to_quaternion())
         rotation = offset.to_quaternion()
         translation = offset.to_translation()
         bpy.context.active_object.initial_offset_q = ",".join(
@@ -1321,7 +1340,7 @@ class MaintainKeyframe(bpy.types.Operator):
         selected_bone = context.selected_pose_bones[0]
 
         matrix_data = selected_bone.matrix.copy()
-        print(matrix_data)
+        #print(matrix_data)
         if self.direction == "FORWARDS":
             bpy.context.scene.frame_set(context.scene.frame_current + 1)
         else:
@@ -1514,6 +1533,7 @@ def register():
     bpy.types.Object.world_bone = bpy.props.StringProperty()
     bpy.types.Object.relative_rig = bpy.props.StringProperty()
     bpy.types.Object.relative_bone = bpy.props.StringProperty()
+    bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)
 
     # OLD STUFF
     bpy.types.Scene.rig_name = bpy.props.StringProperty()

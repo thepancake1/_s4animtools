@@ -3,7 +3,8 @@ from _s4animtools.frames.frame import Frame
 
 class PaletteFrame(Frame):
     def set_frame_data(self, startTick, frame_data, snap_frame):
-        """Set frame data for the Palette Frame.
+        """
+        Set frame data for the Palette Frame.
         This is unlike the typical frame as the frame
         data consists of indices to the palette array.
         Due to that, these values are never negative or below zero.

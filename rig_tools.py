@@ -56,7 +56,7 @@ class SyncRigToMesh(bpy.types.Operator):
             hashed_name = get_32bit_hash(group_name)
             for bone in bones:
                 if bone.name == group_name:
-                    print("{},{},{}".format(group_name, bone.name, hashed_name))
+                   # print("{},{},{}".format(group_name, bone.name, hashed_name))
                     mat_values = []
                     parent_bone = bone.parent
                     bp1 = bone.matrix

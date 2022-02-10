@@ -8,7 +8,6 @@ from _s4animtools.clip_processing.clip_body import ClipBody
 from _s4animtools.serialization import get_size
 from _s4animtools.serialization.fnv import get_64bithash
 from _s4animtools.rig_namepsaces import SlotAssignment
-
 importlib.reload(_s4animtools.clip_processing.clip_body)
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
@@ -56,12 +55,6 @@ class ClipResource:
         self.slotAssignmentCount = 0
         self.slotAssignments = []
         slot_idx = 0
-        """
-        Declare world ik and actual slot assignments
-        +1 for actual slot assignments because the zeroth index is taken 
-        up by the world iks
-        """
-
         for chain_bone in slot_assignments:
             for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
                 target_rig = slot_assignment.target_rig
