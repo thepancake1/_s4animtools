@@ -9,8 +9,6 @@ class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
     def execute(self, context):
         obj = context.object
         action = obj.animation_data.action
-        d = ["_bind_DB_blanket_Top_L_", "_bind_DB_blanket_Mid_L_", "_bind_DB_blanket_Bottom_L_",
-             "_bind_DB_OpacityPanel_L_", "_bind_DB_blanket_MakeBedFront_L_", "_bind_DB_blanket_MakeBedMid_L_"]
         for group in action.groups:
           #  if group.name.replace("_R_", "_L_") in d:
             oldname = group.name
@@ -50,6 +48,10 @@ class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
                         keyframe.co[1] = current_value * -1
                         #print(current_value)
 
+                if "rotation_euler" in fcurve.data_path:
+                    for keyframe in fcurve.keyframe_points:
+                        current_value = keyframe.co[1]
+                        keyframe.co[1] = current_value * -1
         return {"FINISHED"}
 class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side_sim"
@@ -89,6 +91,8 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
         for group in action.groups:
             oldname = group.name
             group.name = group.name.replace("temp", "")
+
+            print(group.name, oldname)
             for fcurve in group.channels:
                 fcurve.data_path = fcurve.data_path.replace(oldname, group.name)
 
@@ -104,6 +108,17 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
                     for keyframe in fcurve.keyframe_points:
                         current_value = keyframe.co[1]
                         keyframe.co[1] = current_value * multiplier
+
+                            #print(current_value)
+
+                if "_L_" in group.name or "_R_" in group.name:
+                    pass
+                else:
+                    continue
+                if "rotation_euler" in fcurve.data_path:
+                    for keyframe in fcurve.keyframe_points:
+                        current_value = keyframe.co[1]
+                        keyframe.co[1] = current_value * -1
 
                 if "location" in fcurve.data_path:
                     if fcurve.array_index == 2:
@@ -164,7 +179,10 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
                                 keyframe.co[1] = current_value * -1
                                 #print(current_value)
 
-
+                    if "rotation_euler" in fcurve.data_path:
+                            for keyframe in fcurve.keyframe_points:
+                                current_value = keyframe.co[1]
+                                keyframe.co[1] = current_value * -1
                     if "location" in fcurve.data_path:
                         if fcurve.array_index == 2:
                             for keyframe in fcurve.keyframe_points:
