@@ -80,7 +80,7 @@ def determine_ik_slot_targets(rig):
             chain_idx = bone_to_slot_offset_idx[ik_target.chain_bone]
         else:
             chain_idx = ik_target.chain_idx
-
+        print(f"IK target {ik_target.target_obj} is on chain {ik_target.chain_bone}")
         all_constraints[ik_target.chain_bone].append(SlotAssignmentBlender(source_rig=rig,
                                                                        source_bone=ik_target.chain_bone,
                                                                        target_rig=bpy.data.objects[ik_target.target_obj],
@@ -750,8 +750,8 @@ class NewClipExporter(bpy.types.Operator):
     def get_clip_infos(self):
         rig_name = self.context.object.rig_name
         if rig_name == "":
-            self.context.object.rig_name = "x"
-        rig_name = self.context.object.rig_name
+            raise Exception("You need to specify a rig name")
+            return
         initial_offset_t = self.context.object.initial_offset_t
         initial_offset_q = self.context.object.initial_offset_q
         # Set the initial offsets to the default if the user doesn't enter anything.
@@ -981,9 +981,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.prop(obj, "l_foot_fk_ik", text="Left Foot FK/IK")
             self.layout.prop(obj, "r_foot_fk_ik", text="Right Foot FK/IK")
 
-            self.layout.prop(obj, "reset_initial_offset_t")
-            self.layout.prop(obj, "world_rig")
-            self.layout.prop(obj, "world_bone")
+            self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
+            self.layout.prop(obj, "world_rig", text="World Rig")
+            self.layout.prop(obj, "world_bone", text="World Bone")
             self.layout.prop(obj, "use_world_bone_as_root", text="Use World Bone As Root")
 
             self.draw_property_if_not_empty(obj, "parent_events", self.layout)
@@ -1018,14 +1018,13 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
                              "Focus Compatibility Events", self.layout)
 
-            self.layout.prop(obj, "explicit_namespaces")
-            self.layout.prop(obj, "reference_namespace_hash")
-            self.layout.prop(obj, "initial_offset_q")
-            self.layout.prop(obj, "initial_offset_t")
+            self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
+            self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
+            self.layout.prop(obj, "initial_offset_q", text="Initial Offset Q")
+            self.layout.prop(obj, "initial_offset_t", text="Initial Offset T")
 
-            self.layout.prop(obj, "additional_snap_frames")
-            self.layout.prop(obj, "visibility_events")
-            self.layout.prop(obj, "rig_name")  # String for current clip actor
+            self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
+            self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
             self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
 
             layout = self.layout

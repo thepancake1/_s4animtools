@@ -58,6 +58,7 @@ class ClipResource:
         for chain_bone in slot_assignments:
             for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
                 target_rig = slot_assignment.target_rig
+                print("target rig is {}".format(target_rig))
                 target_bone = slot_assignment.target_bone
                 chain_idx = slot_assignment.chain_idx
                 if "subroot" in target_bone:
