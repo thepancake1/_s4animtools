@@ -45,7 +45,7 @@ import _s4animtools.clip_processing.clip_body
 import _s4animtools.clip_processing.f1_palette
 
 CHAIN_STR_IDX = 2
-
+MAX_SUBROOTS = 20
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
 importlib.reload(_s4animtools.animation_exporter.animation)
 importlib.reload(_s4animtools.clip_processing.f1_palette)
@@ -68,17 +68,26 @@ def determine_ik_slot_targets(rig):
     current_bone_idx = defaultdict(int)
 
     for ik_target in get_ik_targets(rig):
-
+        target_bone = ik_target.target_bone
+        is_subroot_bone = False
+        subroot_suffix = 0
+        for subroot_suffix in range(MAX_SUBROOTS):
+            is_subroot_bone = ik_target.target_bone.endswith(f"_{subroot_suffix}")
+            if is_subroot_bone:
+                break
+        if is_subroot_bone:
+            target_bone = ik_target.target_bone.replace(f"_{subroot_suffix}", "_")
         if ik_target.chain_idx == -1:
             chain_idx = bone_to_slot_offset_idx[ik_target.chain_bone]
         else:
             chain_idx = ik_target.chain_idx
+
         all_constraints[ik_target.chain_bone].append(SlotAssignmentBlender(source_rig=rig,
-                                                                                source_bone=ik_target.chain_bone,
-                                                                                target_rig=bpy.data.objects[ik_target.target_obj],
-                                                                                target_bone=ik_target.target_bone,
-                                                                           chain_idx=chain_idx,
-                                                                           slot_assignment_idx=current_bone_idx[ik_target.chain_bone]))
+                                                                       source_bone=ik_target.chain_bone,
+                                                                       target_rig=bpy.data.objects[ik_target.target_obj],
+                                                                       target_bone=target_bone,
+                                                                       chain_idx=chain_idx,
+                                                                       slot_assignment_idx=current_bone_idx[ik_target.chain_bone]))
         current_bone_idx[ik_target.chain_bone] += 1
     #print(",".join(all_constraints))
     return all_constraints
