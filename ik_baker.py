@@ -7,7 +7,12 @@ import time
 START_IDX = 0
 END_IDX = 1
 
+
 def get_ik_targets(obj):
+    """
+    Returns a list of all the IK targets of the given object.
+    Note that this should be ordered so that the root bones are first, then all the other ik targets are last.
+    """
     for ik_target in obj.ik_targets:
         if ik_target.target_bone == "b__ROOT__":
             yield ik_target
@@ -15,8 +20,12 @@ def get_ik_targets(obj):
         if ik_target.target_bone == "b__ROOT__Adjust":
             yield ik_target
     for ik_target in obj.ik_targets:
-        if ik_target.target_bone != "b__ROOT__" and ik_target.target_bone != "b__ROOT__Adjust":
+        if "__subroot__" in ik_target.target_bone:
             yield ik_target
+    for ik_target in obj.ik_targets:
+        if ik_target.target_bone != "b__ROOT__" and ik_target.target_bone != "b__ROOT__Adjust" and "__subroot__" not in\
+            ik_target.target_bone:
+                yield ik_target
 
 class s4animtool_OT_bakeik(bpy.types.Operator):
     """Bake the IK weights"""

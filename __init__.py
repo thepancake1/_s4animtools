@@ -36,7 +36,7 @@ from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRi
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig
 from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
-    LIST_OT_DeleteSpecificIKTarget
+    LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS
 import _s4animtools.animation_exporter.animation
 from _s4animtools.animation_exporter.animation import AnimationExporter
 import _s4animtools.rig.create_rig
@@ -45,7 +45,6 @@ import _s4animtools.clip_processing.clip_body
 import _s4animtools.clip_processing.f1_palette
 
 CHAIN_STR_IDX = 2
-MAX_SUBROOTS = 20
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
 importlib.reload(_s4animtools.animation_exporter.animation)
 importlib.reload(_s4animtools.clip_processing.f1_palette)
@@ -985,6 +984,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.prop(obj, "reset_initial_offset_t")
             self.layout.prop(obj, "world_rig")
             self.layout.prop(obj, "world_bone")
+            self.layout.prop(obj, "use_world_bone_as_root", text="Use World Bone As Root")
 
             self.draw_property_if_not_empty(obj, "parent_events", self.layout)
             self.draw_property_if_not_empty(obj, "sound_events", self.layout)
@@ -1541,6 +1541,8 @@ def register():
     bpy.types.Object.visibility_events = bpy.props.StringProperty()
     bpy.types.Object.world_rig = bpy.props.StringProperty()
     bpy.types.Object.world_bone = bpy.props.StringProperty()
+    bpy.types.Object.use_world_bone_as_root = bpy.props.BoolProperty(default=False)
+
     bpy.types.Object.relative_rig = bpy.props.StringProperty()
     bpy.types.Object.relative_bone = bpy.props.StringProperty()
     bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)

@@ -7,7 +7,7 @@ from _s4animtools.serialization.types.basic import UInt32, Float32, String
 from _s4animtools.clip_processing.clip_body import ClipBody
 from _s4animtools.serialization import get_size
 from _s4animtools.serialization.fnv import get_64bithash
-from _s4animtools.rig_namepsaces import SlotAssignment
+from _s4animtools.slot_assignments import SlotAssignment
 importlib.reload(_s4animtools.clip_processing.clip_body)
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,

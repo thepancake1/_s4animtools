@@ -1,5 +1,6 @@
 import bpy
 from _s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
+MAX_SUBROOTS = 180
 
 class BeginIKMarker(bpy.types.Operator):
     """Move the currently selected script item."""
@@ -148,8 +149,16 @@ class LIST_OT_CreateIKTarget(bpy.types.Operator):
             context.object.ik_targets[-1].ranges.add()
             context.object.ik_idx = len(context.object.ik_targets)
             context.object.ik_targets[-1].chain_bone = chain_bones[i]
-            context.object.ik_targets[-1].target_obj = context.object.rig_name
-            context.object.ik_targets[-1].target_bone = "b__ROOT__"
+            if "__subroot__" in context.object.world_bone and context.object.use_world_bone_as_root:
+                context.object.ik_targets[-1].target_obj = context.object.world_rig
+            else:
+                context.object.ik_targets[-1].target_obj = context.object.rig_name
+            if "__subroot__" in context.object.world_bone and context.object.use_world_bone_as_root:
+                target_bone = context.object.world_bone
+                context.object.ik_targets[-1].target_bone = target_bone
+
+            else:
+                context.object.ik_targets[-1].target_bone = "b__ROOT__"
             context.object.ik_targets[-1].ranges[-1].end_time = context.scene.frame_end
 
 
