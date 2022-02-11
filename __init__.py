@@ -925,7 +925,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.label(text="Don't enable if you don't know what that means!")
 
             self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
-            self.layout.prop(obj, "use_world_bone_as_root", text="Use World Rig and Bone As Root for IK Targets")
+            self.layout.prop(obj, "use_world_bone_as_root", text="Use World Rig and Bone as Root for IK Targets on Object")
             self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
                              text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
             self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
