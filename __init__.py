@@ -44,6 +44,8 @@ from _s4animtools.serialization.types.transforms import Vector3, Quaternion
 import _s4animtools.clip_processing.clip_body
 import _s4animtools.clip_processing.f1_palette
 
+JAW_ANIMATE_DURATION = 100000
+
 CHAIN_STR_IDX = 2
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
 importlib.reload(_s4animtools.animation_exporter.animation)
@@ -665,7 +667,6 @@ class NewClipExporter(bpy.types.Operator):
         """
         start_time = start_frame * (1 / 30)
         frame_time = frame_count * (1 / 30)
-
         variable_to_event = {context.object.parent_events_list: ParentEvent,
                              context.object.sound_events_list: SoundEvent,
                              context.object.snap_events_list: SnapEvent,
@@ -692,17 +693,17 @@ class NewClipExporter(bpy.types.Operator):
                                                                                               start_time)
                 if event == SnapEvent:
                     snap_frames.append(original_timestamp)
-                if event == FocusCompatibilityEvent:
+                elif event == FocusCompatibilityEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
                         _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
                                                                                          start_time)
                         current_clip.add_event(
                             event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
-
                 else:
                     if frame_time >= timeshifted_timestamp >= 0:
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
-
+        if context.object.allow_jaw_animation_for_entire_animation:
+            current_clip.add_event(SuppressLipsyncEvent(0, JAW_ANIMATE_DURATION))
 #                    raise Exception("You're missing parameters for your event..")
 
         if additional_snap_frames != "":
@@ -882,26 +883,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             row.operator('s4animtools.move_new_element', text='Create').args = f"{events_list_name},{idx},create"
 
     def draw(self, context):
-        self.layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
+        obj = context.object
 
-        # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-        self.layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
-        # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
-        self.layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-                             text="Maintain Keyframe").direction = "FORWARDS"
-        self.layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-                             text="Maintain Keyframe Backward").direction = "BACK"
-
-        # self.layout.operator("s4animtools.create_advanced_control_rig", icon='MESH_CUBE', text="Create Advanced Control Rig (Sim)")
-
-        self.layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
-        self.layout.label(text="Use Full Precision means using full precision for all animation data.")
-        self.layout.label(text="Don't enable if you don't know what that means!")
-
-        self.layout.prop(context.object, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
-        self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
-
-        self.layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
         #self.layout.operator("s4animtools.export_clip", icon='MESH_CUBE', text="Export Clip")
 
@@ -925,9 +908,31 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         # row.operator("s4animtools.beginikmarker", text="Add Root Bind").command = "SINGLE,BIND,BEGIN"
         # row.operator("s4animtools.beginikmarker", text="Remove Root Bind").command = "SINGLE,BIND,END"
         #
-        obj = context.object
-
         if obj is not None:
+            layout = self.layout.row()
+
+            layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
+
+            # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
+            layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
+            # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
+            #layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+            #                     text="Maintain Keyframe").direction = "FORWARDS"
+            #layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+            #                     text="Maintain Keyframe Backward").direction = "BACK"
+
+            layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
+            self.layout.label(text="Use Full Precision means using full precision for all animation data.")
+            self.layout.label(text="Don't enable if you don't know what that means!")
+
+            self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+            self.layout.prop(obj, "use_world_bone_as_root", text="Use World Bone As Root")
+            self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
+                             text="Allow Jaw Animation For Entire Animation (Use this for poses)")
+            self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
+
+            self.layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
+
 
             try:
                 selected_bone = bpy.context.selected_pose_bones[0]
@@ -974,17 +979,20 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             except Exception as e:
                 pass
+            layout = self.layout.row()
+            layout.prop(obj, "l_hand_fk_ik", text="Left Hand FK/IK")
 
-            self.layout.prop(obj, "l_hand_fk_ik", text="Left Hand FK/IK")
-
-            self.layout.prop(obj, "r_hand_fk_ik", text="Right Hand FK/IK")
-            self.layout.prop(obj, "l_foot_fk_ik", text="Left Foot FK/IK")
-            self.layout.prop(obj, "r_foot_fk_ik", text="Right Foot FK/IK")
+            layout.prop(obj, "r_hand_fk_ik", text="Right Hand FK/IK")
+            layout.prop(obj, "l_foot_fk_ik", text="Left Foot FK/IK")
+            layout.prop(obj, "r_foot_fk_ik", text="Right Foot FK/IK")
 
             self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
-            self.layout.prop(obj, "world_rig", text="World Rig")
-            self.layout.prop(obj, "world_bone", text="World Bone")
-            self.layout.prop(obj, "use_world_bone_as_root", text="Use World Bone As Root")
+            layout = self.layout.row()
+
+            layout.prop(obj, "world_rig", text="World Rig")
+            layout.prop(obj, "world_bone", text="World Bone")
+
+            self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
 
             self.draw_property_if_not_empty(obj, "parent_events", self.layout)
             self.draw_property_if_not_empty(obj, "sound_events", self.layout)
@@ -1020,8 +1028,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
             self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
-            self.layout.prop(obj, "initial_offset_q", text="Initial Offset Q")
-            self.layout.prop(obj, "initial_offset_t", text="Initial Offset T")
+            layout = self.layout.row()
+
+            layout.prop(obj, "initial_offset_q", text="Initial Offset Q")
+            layout.prop(obj, "initial_offset_t", text="Initial Offset T")
 
             self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
             self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
@@ -1060,16 +1070,20 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             #  row.operator('iktarget.move', text='Down').direction = 'DOWN'
             #  row.operator('iktarget.move', text='Up').direction = 'UP'
             row.operator('iktarget.new', text='New').command = ""
+            layout = self.layout.row()
 
             layout.operator("s4animtools.bakeik", text="Bake IK")
             layout.operator("s4animtools.muteik", text="Mute IK")
             layout.operator("s4animtools.unmuteik", text="Unmute IK")
 
             layout.operator("s4animtools.removeik", text="Remove IK")
+            layout = self.layout.row()
+
             layout.prop(obj, "relative_rig")
             layout.prop(obj, "relative_bone")
+            layout = self.layout.row()
+
             layout.operator("s4animtools.offset_calculator", text="Offset Calculator")
-            layout.operator("s4animtools.initialize_events", text="Initialize Events")
 
         # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
         self.layout.prop(context.scene, "clip_splits")
@@ -1290,17 +1304,26 @@ class InitializeEvents(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        context.object.parent_events_list.add()
-        context.object.sound_events_list.add()
-        context.object.script_events_list.add()
-        context.object.play_effect_events_list.add()
-
-        context.object.stop_effect_events_list.add()
-        context.object.disable_lipsync_events_list.add()
-        context.object.snap_events_list.add()
-        context.object.reaction_events_list.add()
-        context.object.visibility_events_list.add()
-        context.object.focus_compatibility_events_list.add()
+        if len(context.object.parent_events_list == 0):
+            context.object.parent_events_list.add()
+        if len(context.object.sound_events_list == 0):
+            context.object.sound_events_list.add()
+        if len(context.object.script_events_list == 0):
+            context.object.script_events_list.add()
+        if len(context.object.play_effect_events_list == 0):
+            context.object.play_effect_events_list.add()
+        if len(context.object.stop_effect_events_list == 0):
+            context.object.stop_effect_events_list.add()
+        if len(context.object.disable_lipsync_events_list == 0):
+            context.object.disable_lipsync_events_list.add()
+        if len(context.object.snap_events_list == 0):
+            context.object.snap_events_list.add()
+        if len(context.object.reaction_events_list == 0):
+            context.object.reaction_events_list.add()
+        if len(context.object.visibility_events_list == 0):
+            context.object.visibility_events_list.add()
+        if len(context.object.focus_compatibility_events_list == 0):
+            context.object.focus_compatibility_events_list.add()
         return {"FINISHED"}
 
 
@@ -1530,7 +1553,7 @@ def register():
     bpy.types.Object.play_effect_events = bpy.props.StringProperty()
     bpy.types.Object.stop_effect_events = bpy.props.StringProperty()
     bpy.types.Object.disable_lipsync_events = bpy.props.StringProperty()
-
+    bpy.types.Object.allow_jaw_animation_for_entire_animation = bpy.props.BoolProperty(default=False)
     bpy.types.Object.explicit_namespaces = bpy.props.StringProperty()
     bpy.types.Object.reference_namespace_hash = bpy.props.StringProperty()
     bpy.types.Object.initial_offset_q = bpy.props.StringProperty()
