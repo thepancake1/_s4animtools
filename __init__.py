@@ -921,17 +921,18 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             #layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
             #                     text="Maintain Keyframe Backward").direction = "BACK"
 
-            layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
             self.layout.label(text="Use Full Precision means using full precision for all animation data.")
             self.layout.label(text="Don't enable if you don't know what that means!")
 
             self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
             self.layout.prop(obj, "use_world_bone_as_root", text="Use World Bone As Root")
             self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
-                             text="Allow Jaw Animation For Entire Animation (Use this for poses)")
+                             text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
             self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
+            layout = self.layout.row()
+            layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
 
-            self.layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
+            layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
 
             try:

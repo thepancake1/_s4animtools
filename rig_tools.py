@@ -1,13 +1,13 @@
 import io
 import os
-import bpy
 import _s4animtools.serialization
 
 import _s4animtools.serialization
 from _s4animtools.rcol.rcol_wrapper import RCOL
 from _s4animtools.rig.create_rig import Rig
 from _s4animtools.rcol.skin import VertexGroup
-from _s4animtools.serialization.fnv import get_32bit_hash
+from _s4animtools.serialization.fnv import get_32bit_hash, get_64bithash
+import bpy
 
 class ExportRig(bpy.types.Operator):
     bl_idname = "s4animtools.export_rig"
@@ -15,15 +15,22 @@ class ExportRig(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
     def execute(self, context):
         armature = bpy.context.object.data
+        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+
         anim_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
         if not os.path.exists(anim_path):
             os.mkdir(anim_path)
         serialized_rig = Rig().create(armature.edit_bones[:])
         all_data = io.BytesIO()
         _s4animtools.serialization.recursive_write([*serialized_rig.serialize()], all_data)
+        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
-        with open("{}\\{}".format(anim_path, "{}.RIG".format(bpy.context.object.name)), "wb") as file:
+        with open(os.path.join(anim_path, self.get_filename(context)), "wb") as file:
             file.write(all_data.getvalue())
+
+    def get_filename(self, context):
+        return "8EAF13DE!00000000!{}.{}.Rig".format(get_64bithash(context.object.name), context.object.name)
+
 
     def invoke(self, context, event):
 
