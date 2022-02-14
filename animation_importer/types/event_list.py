@@ -2,7 +2,7 @@ import enum
 import os
 import struct
 
-from S4ClipThing.types.basic import uint16, uint32, string, byte
+from _s4animtools.animation_importer.types.basic import uint16, uint32, string, byte
 
 class SizeString:
     def __init__(self):
@@ -138,22 +138,16 @@ class ClipEvent(list):
             clip_events.append(clip_event)
         return clip_events, [vo_clips, effect_events, parent_events, lipsync_events, stop_effect_events, visiblity_events, script_events]
 
-    def dump(self, animation_name, base_path, events):
+    def dump(self, events):
+        data = []
         names = ["SOUNDS", "VFX", "PARENT", "SUPPRESS LIPSYNC", "STOP EFFECT", "VISIBILITY", "SCRIPT"]
-        if ":" in animation_name:
-            animation_name = animation_name.replace(":", "_", 1)
-        if not os.path.exists(base_path):
-            os.mkdir(base_path)
-        if not os.path.exists(os.path.join(base_path, animation_name)):
-            os.mkdir(os.path.join(base_path, animation_name))
-        with open(
-            os.path.join(base_path, animation_name, "animation_events.txt"), "w") as file:
-            for idx, item in enumerate(events):
-                name = names[idx]
-                file.write(f"==={name}===\n")
-                for event in item:
-                    file.write(",".join(event)+"\n")
 
+        for idx, item in enumerate(events):
+            name = names[idx]
+            data.append(f"==={name}===\n")
+            for event in item:
+                data.append(",".join(event)+"\n")
+        return "\n".join(data)
         # print(self.scale, self.offset)
 
     @staticmethod

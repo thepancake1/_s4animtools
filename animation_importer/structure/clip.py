@@ -1,5 +1,5 @@
-from S4ClipThing.types.basic import uint32, float32, uint16
-from S4ClipThing.structure.channel import Channel
+from _s4animtools.animation_importer.types.basic import uint32, float32, uint16
+from _s4animtools.animation_importer.structure.channel import Channel
 
 class S4Clip:
 

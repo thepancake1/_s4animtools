@@ -1,4 +1,4 @@
-from S4ClipThing.types.basic import uint16, uint32, string
+from _s4animtools.animation_importer.types.basic import uint16, uint32, string
 
 
 class SlotAssignment(list):

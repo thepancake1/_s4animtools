@@ -1,6 +1,6 @@
-from S4ClipThing.structure.channel_type import ChannelType
-from S4ClipThing.types.basic import uint32, float32, uint16, byte, intByte
-from S4ClipThing.structure.channel_width import GetWidthForChannelType, GetCountForChannelType
+from _s4animtools.animation_importer.structure.channel_type import ChannelType
+from _s4animtools.animation_importer.types.basic import uint32, float32, uint16, byte, intByte
+from _s4animtools.animation_importer.structure.channel_width import GetWidthForChannelType, GetCountForChannelType
 
 
 class Frame:

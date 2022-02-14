@@ -1,8 +1,8 @@
-from S4ClipThing.types.basic import uint32, float32, string
-from S4ClipThing.types.spatial import Vector3, Quaternion
-from S4ClipThing.structure.definition import Property
-from S4ClipThing.types.ik_configuration import SlotAssignment
-from S4ClipThing.types.event_list import ClipEvent
+from _s4animtools.animation_importer.types.basic import uint32, float32, string
+from _s4animtools.animation_importer.types.spatial import Vector3, Quaternion
+from _s4animtools.animation_importer.structure.definition import Property
+from _s4animtools.animation_importer.types.ik_configuration import SlotAssignment
+from _s4animtools.animation_importer.types.event_list import ClipEvent
 
 
 class Header():

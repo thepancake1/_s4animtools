@@ -2,7 +2,7 @@ import enum
 import os
 import struct
 
-from S4ClipThing.types.basic import uint16, uint32, string, byte
+from _s4animtools.animation_importer.types.basic import uint16, uint32, string, byte
 
 class SizeString:
     def __init__(self):

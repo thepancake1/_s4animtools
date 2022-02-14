@@ -1583,6 +1583,7 @@ def register():
     bpy.types.Object.relative_rig = bpy.props.StringProperty(update=update_initial_offsets)
     bpy.types.Object.relative_bone = bpy.props.StringProperty(update=update_initial_offsets)
     bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.clip_input_directory = bpy.props.StringProperty()
 
     # OLD STUFF
     bpy.types.Scene.rig_name = bpy.props.StringProperty()

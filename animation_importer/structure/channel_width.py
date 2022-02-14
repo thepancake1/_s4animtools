@@ -1,4 +1,4 @@
-from S4ClipThing.structure.channel_type import ChannelType, SubChannelType
+from _s4animtools.animation_importer.structure.channel_type import ChannelType, SubChannelType
 
 def GetTotalBitsForChannel(channel):
     return GetWidthForChannelType(channel) * GetCountForChannelType(channel)

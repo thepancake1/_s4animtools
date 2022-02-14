@@ -1,9 +1,10 @@
 import os
+from collections import defaultdict
 
-from S4ClipThing.types.basic import uint32, float32, uint16, byte, intByte
-from S4ClipThing.structure.channel_type import ChannelType, SubChannelType
-from S4ClipThing.structure.channel_width import GetWidthForChannelType
-from S4ClipThing.structure.frames import Frame
+from _s4animtools.animation_importer.types.basic import uint32, float32, uint16, byte, intByte
+from _s4animtools.animation_importer.structure.channel_type import ChannelType, SubChannelType
+from _s4animtools.animation_importer.structure.channel_width import GetWidthForChannelType
+from _s4animtools.animation_importer.structure.frames import Frame
 class Channel:
     def __str__(self):
         return "{}".format(vars(self))
@@ -49,37 +50,38 @@ class Channel:
         a, b = value
         return a + b
 
-    def dump(self,animation_name, base_path):
+    def dump(self,animation_name):
+        data = defaultdict(list)
+        string_data = defaultdict(str)
         if ":" in animation_name:
             animation_name = animation_name.replace(":", "_", 1)
+        full_data_path = self.bone_name() + "-" + str(self.channelType) + "-" + str(
+            self.channelSubTarget) + ".channel"
 
-        if not os.path.exists(base_path):
-            os.mkdir(base_path)
-        if not os.path.exists(os.path.join(base_path, animation_name)):
-            os.mkdir(os.path.join(base_path, animation_name))
         if len(self.frames) > 0:
-          with open(os.path.join(base_path, animation_name, self.bone_name() + "-" + str(self.channelType) + "-" + str(self.channelSubTarget) +".channel"), "w") as file:
                 #print(self.scale, self.offset)
-                min, max = 9999, -9999
-                for frame in self.frames:
-                    frame_indices = frame.values
+            min, max = 9999, -9999
+            for frame in self.frames:
+                frame_indices = frame.values
 
-                    frame_indices = list(map(self.convert_into_value, frame_indices))
-                   # print(frame_indices)
+                frame_indices = list(map(self.convert_into_value, frame_indices))
 
-                    for frame_val in frame_indices:
-                        if max < frame_val:
-                            max = frame_val
-                        if min > frame_val:
-                            min = frame_val
+                for frame_val in frame_indices:
+                    if max < frame_val:
+                        max = frame_val
+                    if min > frame_val:
+                        min = frame_val
 
-                    frame_indices = list(map(str, frame_indices))
+                frame_indices = list(map(str, frame_indices))
 
-                    file.write("{},{}\n".format(frame.startTick, ",".join(frame_indices)))
-                   # file.write("{}\n".format(frame.flags))
-                #print(min, max)
-                offset = (min + max) / 2
-                scale = (min - max) / 2
-                file.write("{},{}\n".format(offset, scale))
-                file.write("True {},{}".format(self.offset, self.scale))
+                data[full_data_path].append("{},{}\n".format(frame.startTick, ",".join(frame_indices)))
 
+            offset = (min + max) / 2
+            scale = (min - max) / 2
+            data[full_data_path].append("{},{}\n".format(offset, scale))
+            data[full_data_path].append("True {},{}".format(self.offset, self.scale))
+
+        for channel in data.keys():
+            channel_data = "\n".join(data[channel])
+            string_data[channel] = channel_data
+        return string_data

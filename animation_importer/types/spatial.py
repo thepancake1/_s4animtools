@@ -1,4 +1,4 @@
-from S4ClipThing.types.basic import float32
+from _s4animtools.animation_importer.types.basic import float32
 
 class Quaternion(list):
     @staticmethod
