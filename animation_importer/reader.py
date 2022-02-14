@@ -39,19 +39,14 @@ class AnimationImporter:
             with open(file, "rb") as clip_file:
                 header, clip_name, events = Header().deserialize(clip_file)
                 clip, channels = S4Clip().deserialize(clip_file, file.split("/")[-1])
-                self.alL_channel_data_string = defaultdict(str)
+                self.all_channel_data_string = defaultdict(str)
                 self.all_clips_event_strings = defaultdict(str)
-
-
-
                 for channel in channels:
                     bone_data = channel.dump(clip_name)
                     for channel_data in bone_data.keys():
-                        self.alL_channel_data_string[channel_data] = bone_data[channel_data]
+                        self.all_channel_data_string[channel_data] = bone_data[channel_data]
                 events_string = ClipEvent().dump(events)
-                for event in events_string.keys():
-                    for event_string in event:
-                        self.alL_channel_data_string[channel_data] = bone_data[channel_data]
+                self.all_clips_event_strings[clip_name] = events_string
                 self.all_clip_names.append(clip_name)
                 self.read_animation_event_data(round(self.highest_frame/30,6)
         except Exception as e:
