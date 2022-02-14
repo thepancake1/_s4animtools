@@ -699,6 +699,12 @@ class NewClipExporter(bpy.types.Operator):
                                                                                          start_time)
                         current_clip.add_event(
                             event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
+                elif event == SuppressLipsyncEvent:
+                    if frame_time >= timeshifted_timestamp >= 0:
+                        _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
+                                                                                         start_time)
+                        current_clip.add_event(
+                            event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
                 else:
                     if frame_time >= timeshifted_timestamp >= 0:
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
@@ -1305,25 +1311,25 @@ class InitializeEvents(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        if len(context.object.parent_events_list == 0):
+        if len(context.object.parent_events_list) == 0:
             context.object.parent_events_list.add()
-        if len(context.object.sound_events_list == 0):
+        if len(context.object.sound_events_list) == 0:
             context.object.sound_events_list.add()
-        if len(context.object.script_events_list == 0):
+        if len(context.object.script_events_list) == 0:
             context.object.script_events_list.add()
-        if len(context.object.play_effect_events_list == 0):
+        if len(context.object.play_effect_events_list) == 0:
             context.object.play_effect_events_list.add()
-        if len(context.object.stop_effect_events_list == 0):
+        if len(context.object.stop_effect_events_list) == 0:
             context.object.stop_effect_events_list.add()
-        if len(context.object.disable_lipsync_events_list == 0):
+        if len(context.object.disable_lipsync_events_list) == 0:
             context.object.disable_lipsync_events_list.add()
-        if len(context.object.snap_events_list == 0):
+        if len(context.object.snap_events_list) == 0:
             context.object.snap_events_list.add()
-        if len(context.object.reaction_events_list == 0):
+        if len(context.object.reaction_events_list) == 0:
             context.object.reaction_events_list.add()
-        if len(context.object.visibility_events_list == 0):
+        if len(context.object.visibility_events_list) == 0:
             context.object.visibility_events_list.add()
-        if len(context.object.focus_compatibility_events_list == 0):
+        if len(context.object.focus_compatibility_events_list) == 0:
             context.object.focus_compatibility_events_list.add()
         return {"FINISHED"}
 
