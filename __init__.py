@@ -934,6 +934,24 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.prop(obj, "use_world_bone_as_root", text="Use World Rig and Bone as Root for IK Targets on Object")
             self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
                              text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
+            layout = self.layout.row()
+
+            layout.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
+            if len(context.object.relative_rig) > 0:
+                if context.object.relative_rig in bpy.data.objects:
+                    relative_rig_obj = bpy.data.objects[context.object.relative_rig]
+                    layout.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones", text="Initial Offsets Bone")
+            layout = self.layout.row()
+            layout.scale_x= 0.4
+            layout.label(text="Initial Offset Q")
+            layout.scale_x= 0.5
+
+            layout.prop(obj, "initial_offset_q" ,text="")
+            layout.scale_x= 0.4
+            layout.label(text="Initial Offset T")
+
+            layout.prop(obj, "initial_offset_t", text="")
+
             self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
             layout = self.layout.row()
             layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
@@ -996,8 +1014,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
             layout = self.layout.row()
 
-            layout.prop(obj, "world_rig", text="World Rig")
-            layout.prop(obj, "world_bone", text="World Bone")
+
+            layout.prop_search(context.object, "world_rig", context.scene, "objects", text="World Rig")
+            if len(context.object.world_rig) > 0:
+                if context.object.world_rig in bpy.data.objects:
+                    target_bone_obj = bpy.data.objects[obj.world_rig]
+                    layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="World Bone")
 
             self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
 
@@ -1035,10 +1057,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
             self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
-            layout = self.layout.row()
 
-            layout.prop(obj, "initial_offset_q", text="Initial Offset Q")
-            layout.prop(obj, "initial_offset_t", text="Initial Offset T")
 
             self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
             self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
@@ -1084,10 +1103,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.unmuteik", text="Unmute IK")
 
             layout.operator("s4animtools.removeik", text="Remove IK")
-            layout = self.layout.row()
 
-            layout.prop(obj, "relative_rig")
-            layout.prop(obj, "relative_bone")
+
+            layout.scale_x= 1
+
             layout = self.layout.row()
 
             layout.operator("s4animtools.offset_calculator", text="Offset Calculator")
@@ -1101,20 +1120,20 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         self.layout.prop(obj, "disable_rig_suffix")
         # TODO remove this at some point when compatibility with older files isn't an issue. This used to be
         # when each file could only contain one actor.
-        if context.scene.rig_name != "":
-            self.layout.prop(context.scene, "reset_initial_offset_t")
-            self.layout.prop(context.scene, "world_rig")
-            self.layout.prop(context.scene, "world_bone")
-            self.layout.prop(context.scene, "parent_events")
-            self.layout.prop(context.scene, "sound_events")
-            self.layout.prop(context.scene, "explicit_namespaces")
-            self.layout.prop(context.scene, "reference_namespace_hash")
-            self.layout.prop(context.scene, "initial_offset_q")
-            self.layout.prop(context.scene, "initial_offset_t")
-            self.layout.prop(context.scene, "snap_events")
-            self.layout.prop(context.scene, "additional_snap_frames")
-            self.layout.prop(context.scene, "visibility_events")
-            self.layout.prop(context.scene, "rig_name")  # String for current clip actor
+       # if context.scene.rig_name != "":
+       #     self.layout.prop(context.scene, "reset_initial_offset_t")
+       #     self.layout.prop(context.scene, "world_rig")
+       #     self.layout.prop(context.scene, "world_bone")
+       #     self.layout.prop(context.scene, "parent_events")
+       #     self.layout.prop(context.scene, "sound_events")
+       #     self.layout.prop(context.scene, "explicit_namespaces")
+       #     self.layout.prop(context.scene, "reference_namespace_hash")
+       #     self.layout.prop(context.scene, "initial_offset_q")
+       #     self.layout.prop(context.scene, "initial_offset_t")
+       #     self.layout.prop(context.scene, "snap_events")
+       #     self.layout.prop(context.scene, "additional_snap_frames")
+       #     self.layout.prop(context.scene, "visibility_events")
+       #     self.layout.prop(context.scene, "rig_name")  # String for current clip actor
 
     def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
@@ -1334,38 +1353,27 @@ class InitializeEvents(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class OffsetCalculator(bpy.types.Operator):
-    bl_idname = "s4animtools.offset_calculator"
-    bl_label = "Import Rig"
-    bl_options = {"REGISTER", "UNDO"}
+def update_initial_offsets(self, context):
+    active_object_root = context.active_object.pose.bones["b__ROOT__"]
+    if context.object.relative_rig == "":
+        relative_rig = context.active_object
+        relative_bone = root_bone
+    else:
+        relative_rig = bpy.data.objects[context.object.relative_rig]
+        relative_bone = relative_rig.pose.bones[context.object.relative_bone]
+    object_matrix = relative_rig.matrix_world @ relative_bone.matrix
+    x_matrix = context.active_object.matrix_world @ active_object_root.matrix
+    offset = object_matrix.inverted() @ x_matrix
 
-    def determine_relative_bones(self, context, root_bone):
-        if context.object.relative_rig == "":
-            relative_rig = bpy.context.active_object
-            relative_bone = root_bone
-        else:
-            relative_rig = bpy.data.objects[context.object.relative_rig]
-            relative_bone = relative_rig.pose.bones[context.object.relative_bone]
-        return relative_rig, relative_bone
+    rotation = offset.to_quaternion()
+    translation = offset.to_translation()
+    context.active_object.initial_offset_q = ",".join(
+        [str(round(rotation[1], 4)), str(round(rotation[2], 4)), str(round(rotation[3], 4)),
+         str(round(rotation[0], 4))])
+    context.active_object.initial_offset_t = ",".join(
+        [str(round(translation[0], 4)), str(round(translation[1], 4)), str(round(translation[2], 4))])
 
-    def execute(self, context):
-        active_object_root = bpy.context.active_object.pose.bones["b__ROOT__"]
-        relative_rig, relative_bone = self.determine_relative_bones(context, active_object_root)
-        chair_matrix = relative_rig.matrix_world @ relative_bone.matrix
-        x_matrix = bpy.context.active_object.matrix_world @ active_object_root.matrix
-        offset = chair_matrix.inverted() @ x_matrix
-
-       # print(offset.to_translation(), offset.to_quaternion())
-        rotation = offset.to_quaternion()
-        translation = offset.to_translation()
-        bpy.context.active_object.initial_offset_q = ",".join(
-            [str(round(rotation[1], 4)), str(round(rotation[2], 4)), str(round(rotation[3], 4)),
-             str(round(rotation[0], 4))])
-        bpy.context.active_object.initial_offset_t = ",".join(
-            [str(round(translation[0], 4)), str(round(translation[1], 4)), str(round(translation[2], 4))])
-
-        return {"FINISHED"}
-
+    return  None
 
 class MaintainKeyframe(bpy.types.Operator):
     bl_idname = "s4animtools.maintain_keyframe"
@@ -1497,7 +1505,7 @@ classes = (
     ActorProperties, ControllerProperties, StateProperties,
     LIST_OT_NewActor, LIST_OT_DeleteActor, LIST_OT_NewController, LIST_OT_RemoveController, LIST_OT_MoveControllerState,
     PosturePanel, PostureProperties,
-    LIST_OT_NewPosture, LIST_OT_DeletePosture, LIST_OT_MovePosture, OffsetCalculator, StateConnections,
+    LIST_OT_NewPosture, LIST_OT_DeletePosture, LIST_OT_MovePosture, StateConnections,
     LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection,
     LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
@@ -1572,8 +1580,8 @@ def register():
     bpy.types.Object.world_bone = bpy.props.StringProperty()
     bpy.types.Object.use_world_bone_as_root = bpy.props.BoolProperty(default=False)
 
-    bpy.types.Object.relative_rig = bpy.props.StringProperty()
-    bpy.types.Object.relative_bone = bpy.props.StringProperty()
+    bpy.types.Object.relative_rig = bpy.props.StringProperty(update=update_initial_offsets)
+    bpy.types.Object.relative_bone = bpy.props.StringProperty(update=update_initial_offsets)
     bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)
 
     # OLD STUFF
