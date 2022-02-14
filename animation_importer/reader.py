@@ -18,8 +18,8 @@ name_to_event_type = {"SOUNDS": "sound_events_list", "PARENT": "parent_events_li
 class AnimationImporter:
 
 
-    def __init__(self, filepath, context):
-
+    def __init__(self, filepath):
+        self.filepath = filepath
         self.scene = bpy.context.scene
         self.rig_name = "x"
         self.rig_obj = bpy.data.objects[self.rig_name]
@@ -32,53 +32,52 @@ class AnimationImporter:
         self.last_clip_frame_count = 0
         self.clip_splits = {}
         self.clip_timeshifts = {}
+        self.frame_data = {}
+        self.bone_animation_data = defaultdict(defaultdict)
+    def read_clip_file(self, file):
+        try:
+            with open(file, "rb") as clip_file:
+                header, clip_name, events = Header().deserialize(clip_file)
+                clip, channels = S4Clip().deserialize(clip_file, file.split("/")[-1])
+                self.alL_channel_data_string = defaultdict(str)
+                self.all_clips_event_strings = defaultdict(str)
 
-        def read_clip_file(file):
-            try:
-                with open(file, "rb") as clip_file:
-                    header, clip_name, events = Header().deserialize(clip_file)
-                    clip, channels = S4Clip().deserialize(clip_file, file.split("/")[-1])
-                    self.alL_channel_data_string = defaultdict(str)
-                    self.all_clips_event_strings = defaultdict(str)
 
 
+                for channel in channels:
+                    bone_data = channel.dump(clip_name)
+                    for channel_data in bone_data.keys():
+                        self.alL_channel_data_string[channel_data] = bone_data[channel_data]
+                events_string = ClipEvent().dump(events)
+                for event in events_string.keys():
+                    for event_string in event:
+                        self.alL_channel_data_string[channel_data] = bone_data[channel_data]
+                self.all_clip_names.append(clip_name)
+                self.read_animation_event_data(round(self.highest_frame/30,6)
+        except Exception as e:
+            print(e)
 
-                    for channel in channels:
-                        bone_data = channel.dump(clip_name)
-                        for channel_data in bone_data.keys():
-                            self.alL_channel_data_string[channel_data] = bone_data[channel_data]
-                    events_string = ClipEvent().dump(events)
-                    for event in events_string.keys():
-                        for event_string in event:
-                            self.alL_channel_data_string[channel_data] = bone_data[channel_data]
-                    full_data_path = ) + "-" + str(self.channelType) + "-" + str(
-                        self.channelSubTarget) + ".channel"
-                    self.all_clip_names.append(clip_name)
-                    self.read_animation_event_data()
-            except Exception as e:
-                print(e)
-
-            for channel in [channel for channel in all_channel_data_string.keys() if channel.startswith(clip_name) in channel]:
-
-    def animate_one_clip(self, folder, clip_name):
+        for channel in [channel for channel in all_channel_data_string.keys() if channel.startswith(clip_name) in channel]:
+            pass
+    def animate_one_clip(self, file, clip_name):
         for list_name in name_to_event_type.values():
             getattr(self.rig_obj, list_name).clear()
 
-        all_channel_data_string, events_string = self.read_clip_file()
+        all_channel_data_string, events_string = self.read_clip_file(file)
         self.events_string = events_string
         self.read_animation_event_data(round(self.highest_frame / 30, 6))
         for clip_name in self.all_clip_names:
             for channel in [channel for channel in all_channel_data_string.keys() if channel.startswith(clip_name) in channel]:
-                bone_name = all_channel_data_string(os.sep)[-1].split("-")[0]
-                channel_name = file.split("_")[-1].split(".")[0]
+                bone_name = channel(os.sep)[-1].split("-")[0]
+                channel_name = channel.split("_")[-1].split(".")[0]
                 if bone_name in bone_animation_data:
-                    if "SubChannelType.Orientation" in file:
-                        frame_data = bone_animation_data[bone_name]["Orientation"]
+                    if "SubChannelType.Orientation" in channel:
+                        frame_data = self.bone_animation_data[bone_name]["Orientation"]
 
-                    elif "SubChannelType.Translation" in file:
+                    elif "SubChannelType.Translation" in channel:
                         frame_data = bone_animation_data[bone_name]["Translation"]
 
-                    elif "SubChannelType.Scale" in file:
+                    elif "SubChannelType.Scale" in channel:
                         print(bone_animation_data[bone_name])
                         frame_data = bone_animation_data[bone_name]["Scale"]
                     else:
@@ -201,9 +200,7 @@ def animate_one_frame(current_clip_frame, bone):
 
 
 def recursive_bone_animate(bone):
-    global bone_animation_data
-    global current_frame
-    global highest_frame
+
     ob = bone
     bone_name = bone.name
 
