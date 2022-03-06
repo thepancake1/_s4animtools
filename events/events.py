@@ -262,7 +262,7 @@ class StopEffectEvent:
 
     def serialize(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
-                    self.u1, self.u2, self.b1]
+                    self.slot_name, self.u2, self.b1]
 
         serialized_stuff = []
         for value in serialized:
