@@ -231,7 +231,7 @@ class PlayEffectEvent:
         self.timecode = Float32(float(timecode))
         self.effect_name = get_bytes_from_string(effect_name)
         self.actor_hash = get_hash_from_actor_name_or_hash(actor_name_or_hash)
-        self.bone_name_hash = get_hash_from_actor_name_or_hash(bone_name_hash)
+        self.bone_name_hash = get_hash_from_actor_name_or_hash(bone_name_hash, lowercase=True)
         self.u1 = get_int64_from_hex_string_or_int(u1)
         self.u2 = get_int64_from_hex_string_or_int(u2)
         self.slot_name = get_bytes_from_string(slot_name)

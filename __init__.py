@@ -271,12 +271,21 @@ class ClipExporter(bpy.types.Operator):
                     snap_frames.append(timeshifted_frame)
         return snap_frames
 
-    def create_timeshifted_timestamp(self, original_timestamp, start_time):
-        if original_timestamp.endswith("f"):
-            original_timestamp = float(original_timestamp[:-1]) / 30
+    def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
+        if original_timestamp_str.endswith("f") or original_timestamp_str.endswith("fr"):
+            original_timestamp = float(original_timestamp_str[:-1]) / 30
+        elif original_timestamp_str.endswith("e"):
+            original_timestamp = eval(original_timestamp_str[:-1])
         else:
-            original_timestamp = float(original_timestamp)
-        timeshifted_timestamp = original_timestamp - start_time
+            original_timestamp = float(original_timestamp_str)
+
+        # IF it ends with r (relative), then we don't need to shift from absolute to relative,
+        # because we're already in relative
+        if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
+            timeshifted_timestamp = original_timestamp
+        else:
+            timeshifted_timestamp = original_timestamp - start_time
+
         return original_timestamp, timeshifted_timestamp
 
     def execute(self, context):
@@ -721,14 +730,22 @@ class NewClipExporter(bpy.types.Operator):
                     snap_frames.append(timeshifted_frame)
         return snap_frames
 
-    def create_timeshifted_timestamp(self, original_timestamp, start_time):
-        if original_timestamp.endswith("f"):
-            original_timestamp = float(original_timestamp[:-1]) / 30
+    def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
+        if original_timestamp_str.endswith("f") or original_timestamp_str.endswith("fr"):
+            original_timestamp = float(original_timestamp_str[:-1]) / 30
+        elif original_timestamp_str.endswith("e"):
+            original_timestamp = eval(original_timestamp_str[:-1])
         else:
-            original_timestamp = float(original_timestamp)
-        timeshifted_timestamp = original_timestamp - start_time
-        return original_timestamp, timeshifted_timestamp
+            original_timestamp = float(original_timestamp_str)
 
+        # IF it ends with r (relative), then we don't need to shift from absolute to relative,
+        # because we're already in relative
+        if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
+            timeshifted_timestamp = original_timestamp
+        else:
+            timeshifted_timestamp = original_timestamp - start_time
+
+        return original_timestamp, timeshifted_timestamp
     def get_clip_names(self):
         clip_names = []
         clip_input_names = self.context.scene.clip_name.split(",")
@@ -1043,7 +1060,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM)",
                              "Reaction Events", self.layout)
             self.draw_events(obj, "play_effect_events_list", 0.1,
-                             "Parameters (Frame Number/Actor Hash/Bone Name Hash/(always 0)/(almost always 0)/Unique VFX Name)",
+                             "Parameters (Frame Number/VFX Name/Actor Hash/Bone Name Hash/(always 0)/(almost always 0)/Unique VFX Name)",
                              "Play Effect Events", self.layout)
             self.draw_events(obj, "stop_effect_events_list", 0.1,
                              "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
