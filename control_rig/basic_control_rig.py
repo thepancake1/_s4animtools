@@ -61,20 +61,64 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
     def execute(self, context):
         obj = context.object
         action = obj.animation_data.action
-        d = ["_bind_DB_blanket_Top_L_", "_bind_DB_blanket_Mid_L_", "_bind_DB_blanket_Bottom_L_",
-             "_bind_DB_OpacityPanel_L_", "_bind_DB_blanket_MakeBedFront_L_", "_bind_DB_blanket_MakeBedMid_L_"]
-       #for group in action.groups:
-       #  #  if group.name.replace("_R_", "_L_") in d:
-       #    oldname = group.name
 
-       #    group.name = group.name.replace("_R_", "_R_unused").replace("_r_", "_r_unused")
-       #    for fcurve in group.channels:
-       #        fcurve.data_path = fcurve.data_path.replace(oldname, oldname.replace("_R_", "_R_unused").replace("_r_", "_r_unused"))
+        for group in action.groups:
+            oldname = group.name
 
+
+            if "_L_" in group.name or "_l_" in group.name:
+                group.name = group.name.replace("_L_", "_R_temp").replace("_l_", "_r_temp")
+            elif "_R_" in group.name or "_r_" in group.name:
+                group.name = group.name.replace("_R_", "_L_temp").replace("_r_", "_l_temp")
+                for fcurve in group.channels:
+                    action.fcurves.remove(fcurve)
+            if "temp" not in group.name:
+                group.name = group.name + "temp"
 
 
         for group in action.groups:
-            #if group.name in d:
+            oldname = group.name
+            group.name = group.name.replace("temp", "")
+
+            print(group.name, oldname)
+            for fcurve in group.channels:
+                fcurve.data_path = fcurve.data_path.replace(oldname, group.name)
+                if "_R_" in group.name:
+                    pass
+                else:
+                    continue
+                if "rotation_euler" in fcurve.data_path:
+                    multiplier = 1
+                    for keyframe in fcurve.keyframe_points:
+                        current_value = keyframe.co[1]
+                        if "Hand" in fcurve.data_path:
+                            multiplier = -1
+                        keyframe.co[1] = current_value * multiplier
+
+                if "location" in fcurve.data_path:
+                    multiplier = 1
+                    if "Foot" in fcurve.data_path or "LegExport" in fcurve.data_path:
+                        multiplier = -1
+                    if fcurve.array_index == 2:
+                        for keyframe in fcurve.keyframe_points:
+                            current_value = keyframe.co[1]
+                            keyframe.co[1] = current_value * multiplier
+        fcurves = obj.animation_data.action.fcurves
+        for fcurve in fcurves:
+            for kf in fcurve.keyframe_points:
+                kf.interpolation = 'LINEAR'
+        return {"FINISHED"}
+
+class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
+    bl_idname = "s4animtools.flip_left_side_sim"
+    bl_label = "Flip Left Side Animation"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        obj = context.object
+        action = obj.animation_data.action
+
+        for group in action.groups:
             oldname = group.name
 
 
@@ -116,20 +160,29 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
                 else:
                     continue
                 if "rotation_euler" in fcurve.data_path:
+                    multiplier = 1
                     for keyframe in fcurve.keyframe_points:
                         current_value = keyframe.co[1]
-                        keyframe.co[1] = current_value * -1
+                        if "Hand" in fcurve.data_path:
+                            multiplier = -1
+                        keyframe.co[1] = current_value * multiplier
 
                 if "location" in fcurve.data_path:
+                    multiplier = 1
+                    if "Foot" in fcurve.data_path or "LegExport" in fcurve.data_path:
+                        multiplier = -1
                     if fcurve.array_index == 2:
                         for keyframe in fcurve.keyframe_points:
                             current_value = keyframe.co[1]
-                            keyframe.co[1] = current_value * -1
+                            keyframe.co[1] = current_value * multiplier
         fcurves = obj.animation_data.action.fcurves
         for fcurve in fcurves:
             for kf in fcurve.keyframe_points:
                 kf.interpolation = 'LINEAR'
         return {"FINISHED"}
+
+
+
 class CopySelectedLeftSideToRightSide(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side_sim_selected"
     bl_label = "Copy Left Side Animation"

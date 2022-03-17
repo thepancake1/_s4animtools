@@ -33,7 +33,7 @@ import _s4animtools.channels.quaternion_channel
 import _s4animtools.control_rig.basic_control_rig
 import _s4animtools.frames.frame
 from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
-    CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig
+    CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig, FlipLeftSideAnimationToRightSideSim
 from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
     LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS
@@ -937,7 +937,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
 
             # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-            layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
+            layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
+            layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
+
             # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
             #layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
             #                     text="Maintain Keyframe").direction = "FORWARDS"
@@ -1526,7 +1528,7 @@ classes = (
     LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection,
     LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget)
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim)
 
 
 def register():
