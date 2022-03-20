@@ -161,6 +161,7 @@ class SnapEvent:
 
         self.offset_q = quats
         self.offset_t = translations
+        print(quats, translations, actor, timecode)
 
     def serialize(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,

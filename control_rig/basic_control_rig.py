@@ -161,10 +161,11 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
                     continue
                 if "rotation_euler" in fcurve.data_path:
                     multiplier = 1
+                    if "Hand" in fcurve.data_path:
+                        multiplier = -1
                     for keyframe in fcurve.keyframe_points:
                         current_value = keyframe.co[1]
-                        if "Hand" in fcurve.data_path:
-                            multiplier = -1
+
                         keyframe.co[1] = current_value * multiplier
 
                 if "location" in fcurve.data_path:
