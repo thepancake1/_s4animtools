@@ -1132,8 +1132,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             layout = self.layout.row()
 
-            layout.operator("s4animtools.offset_calculator", text="Offset Calculator")
-
         # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
         self.layout.prop(context.scene, "clip_splits")
         self.layout.prop(context.scene, "clip_name_prefix")  # clip_name_prefix

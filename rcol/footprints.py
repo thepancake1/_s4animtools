@@ -31,6 +31,60 @@ class PolygonHeightOverride:
             serialized_stuff.append(serialied)
         return serialized_stuff
 
+class FootprintPolyFlags:
+    def __init__(self):
+        self.for_placement = False
+        self.for_pathing = False
+        self.is_enabled = False
+        self.discouraged = False
+        self.landing_strip = False
+        self.no_raycast= False
+        self.placement_slotted = False
+        self.encouraged = False
+        self.terrain_cutout = False
+
+    @property
+    def bitfield(self):
+        return  (int(self.terrain_cutout) >> 8) + (int(self.encouraged) >> 7) + (int(self.placement_slotted) >> 6) + \
+                (int(self.no_raycast) >> 5) + (int(self.landing_strip) >> 4) + (int(self.discouraged) >> 3) + \
+                (int(self.is_enabled) >> 2) + (int(self.for_pathing) >> 1) + int(self.for_placement)
+
+    @bitfield.setter
+    def bitfield(self, value):
+        bitstring = "{:08b}".format(value)
+        print(bitstring)
+        self.terrain_cutout = bitstring[-9]
+        self.encouraged = bitstring[-8]
+        self.placement_slotted = bitstring[-7]
+        self.no_raycast = bitstring[-6]
+        self.landing_strip = bitstring[-5]
+        self.discouraged = bitstring[-4]
+        self.is_enabled = bitstring[-3]
+        self.for_pathing = bitstring[-2]
+        self.for_placement = bitstring[-1]
+        print(str(self))
+    def __str__(self):
+        return "Terrain Cutout: {}\n" \
+               "Encouraged: {}\n" \
+               "Placement Slotted: {}\n" \
+               "No Raycast: {}\n" \
+               "Landing Strip: {}\n" \
+               "Discouraged: {}\n" \
+               "Is Enabled: {}\n" \
+               "For Pathing: {}\n" \
+               "For Placement: {}\n".format(self.terrain_cutout, self.encouraged, self.placement_slotted, self.no_raycast, self.landing_strip,
+                                            self.discouraged, self.is_enabled, self.for_pathing, self.for_placement)
+    def read(self, reader:StreamReader):
+        self.bitfield = reader.u32()
+
+    def serialize(self):
+        data = [UInt32(self.bitfield)]
+
+        serialized_stuff = []
+        for value in data:
+            serialied = value.serialize()
+            serialized_stuff.append(serialied)
+        return serialized_stuff
 
 class BoundingBox:
     def __init__(self):
@@ -43,11 +97,11 @@ class BoundingBox:
 
     def read(self, reader:StreamReader):
         self.min_x = reader.float32()
+        self.min_z = reader.float32()
         self.max_x = reader.float32()
+        self.max_z = reader.float32()
         self.min_y = reader.float32()
         self.max_y = reader.float32()
-        self.min_z = reader.float32()
-        self.max_z = reader.float32()
         return self
     def serialize(self):
         data = [Float32(self.min_x), Float32(self.max_x), Float32(self.min_y), Float32(self.max_y),

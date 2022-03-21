@@ -190,7 +190,8 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             ob = bpy.data.objects.new(footprint_obj_name, me)
             point_count = len(footprint_area.points)
             bounding_box = footprint_area.bounding_box
-            max_y = bounding_box.max_y
+            print(bounding_box.min_x, bounding_box.max_x, bounding_box.min_y, bounding_box.max_y, bounding_box.min_z, bounding_box.max_z)
+            min_y, max_y = bounding_box.min_y, bounding_box.max_y
             for idx, point in enumerate(footprint_area.points):
                 vertices.append((point.x, -point.z, 0))
                 if idx < point_count - 1:
@@ -207,8 +208,18 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             ob.show_name = True
             me.update()
             bpy.context.collection.objects.link(ob)
-            ob.location.z = 
-           #bpy.ops.object.select_all(action='DESELECT')
+            ob.location.z = min_y
+            bpy.ops.object.select_all(action='DESELECT')
+            ob.select_set(True)
+            bpy.context.view_layer.objects.active = ob
+
+            bpy.ops.object.modifier_add(type='SOLIDIFY')
+            bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y)
+            bpy.context.object.modifiers["Solidify"].offset = 1
+            bpy.context.object.modifiers["Solidify"].use_even_offset = True
+            bpy.context.object.modifiers["Solidify"].use_quality_normals = True
+            bpy.context.object.modifiers["Solidify"].use_rim = True
+        #bpy.ops.object.select_all(action='DESELECT')
            #ob.select_set(True)
            #bpy.context.view_layer.objects.active = ob
            #bpy.ops.object.mode_set(mode='EDIT')
