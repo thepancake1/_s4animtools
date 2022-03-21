@@ -985,20 +985,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout = self.layout.row()
             layout.prop(obj, "is_none", text = "None")
             layout.prop(obj, "is_walls", text = "Walls")
-            layout.prop(obj, "is_sims", text = "Sims")
+            layout.prop(obj, "is_objects", text = "Objects")
+
             layout = self.layout.row()
+            layout.prop(obj, "is_sims", text = "Sims")
 
             layout.prop(obj, "is_roofs", text = "Roof")
             layout.prop(obj, "is_fences", text = "Fence")
-            layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
             layout = self.layout.row()
 
+            layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
             layout.prop(obj, "is_objects_of_same_type", text = "Objects of Same Type")
             layout.prop(obj, "is_reserved_space", text = "Reserved Space")
-            layout.prop(obj, "is_foundations", text = "Foundations")
 
             layout = self.layout.row()
 
+            layout.prop(obj, "is_foundations", text = "Foundations")
             layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
             layout.prop(obj, "is_trim", text = "Trim")
 

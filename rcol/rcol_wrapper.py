@@ -168,6 +168,59 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
     bl_label = "Import Footprint"
     bl_options = {"REGISTER", "UNDO"}
 
+
+    def setup_properties(self, obj, footprint, context):
+        obj.is_footprint = True
+        obj.for_placement = footprint.area_type_flags.for_placement
+        obj.for_pathing = footprint.area_type_flags.for_pathing
+        obj.is_enabled = footprint.area_type_flags.is_enabled
+        obj.discouraged = footprint.area_type_flags.discouraged
+        obj.landing_strip = footprint.area_type_flags.landing_strip
+        obj.no_raycast = footprint.area_type_flags.no_raycast
+        obj.placement_slotted = footprint.area_type_flags.placement_slotted
+        obj.encouraged = footprint.area_type_flags.encouraged
+        obj.terrain_cutout = footprint.area_type_flags.terrain_cutout
+
+        obj.is_none = footprint.intersection_object_type.none
+        obj.is_walls = footprint.intersection_object_type.walls
+        obj.is_objects = footprint.intersection_object_type.objects
+        obj.is_sims = footprint.intersection_object_type.sims
+        obj.is_roofs = footprint.intersection_object_type.roofs
+        obj.is_fences = footprint.intersection_object_type.fences
+        obj.is_modular_stairs = footprint.intersection_object_type.modular_stairs
+        obj.is_objects_of_same_type = footprint.intersection_object_type.objects_of_same_type
+        obj.is_reserved_space = footprint.intersection_object_type.reserved_space
+        obj.is_foundations = footprint.intersection_object_type.foundations
+        obj.is_fenestration_node = footprint.intersection_object_type.fenestration_node
+        obj.is_trim = footprint.intersection_object_type.trim
+
+        obj.ignores_none = footprint.allow_intersection_types.none
+        obj.ignores_walls = footprint.allow_intersection_types.walls
+        obj.ignores_objects = footprint.allow_intersection_types.objects
+        obj.ignores_sims = footprint.allow_intersection_types.sims
+        obj.ignores_roofs = footprint.allow_intersection_types.roofs
+        obj.ignores_fences = footprint.allow_intersection_types.fences
+        obj.ignores_modular_stairs = footprint.allow_intersection_types.modular_stairs
+        obj.ignores_objects_of_same_type = footprint.allow_intersection_types.objects_of_same_type
+        obj.ignores_reserved_space = footprint.allow_intersection_types.reserved_space
+        obj.ignores_foundations = footprint.allow_intersection_types.foundations
+        obj.ignores_fenestration_node = footprint.allow_intersection_types.fenestration_node
+        obj.ignores_trim = footprint.allow_intersection_types.trim
+
+
+        obj.terrain = footprint.surface_type_flags.terrain
+        obj.floor = footprint.surface_type_flags.floor
+        obj.pool = footprint.surface_type_flags.pool
+        obj.pond = footprint.surface_type_flags.pond
+        obj.fence_post = footprint.surface_type_flags.fence_post
+        obj.any_surface = footprint.surface_type_flags.any_surface
+        obj.air = footprint.surface_type_flags.air
+        obj.roof = footprint.surface_type_flags.roof
+
+        obj.slope = footprint.surface_attribute_flags.slope
+        obj.outside = footprint.surface_attribute_flags.outside
+        obj.inside = footprint.surface_attribute_flags.inside
+
     def execute(self, context):
         armature = bpy.context.object.data
         reader = StreamReader(self.filepath)
@@ -219,6 +272,7 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             bpy.context.object.modifiers["Solidify"].use_even_offset = True
             bpy.context.object.modifiers["Solidify"].use_quality_normals = True
             bpy.context.object.modifiers["Solidify"].use_rim = True
+            self.setup_properties(ob, footprint_area, context)
         #bpy.ops.object.select_all(action='DESELECT')
            #ob.select_set(True)
            #bpy.context.view_layer.objects.active = ob
