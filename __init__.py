@@ -64,6 +64,7 @@ importlib.reload(_s4animtools.clip_processing.clip_header)
 importlib.reload(_s4animtools.control_rig.basic_control_rig)
 importlib.reload(_s4animtools.ik_manager)
 importlib.reload(_s4animtools.clip_processing.clip_body)
+importlib.reload(_s4animtools.rcol.rcol_wrapper)
 
 def determine_ik_slot_targets(rig):
     all_constraints = defaultdict(list)

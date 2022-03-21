@@ -173,8 +173,50 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
         reader = StreamReader(self.filepath)
         print(self.filepath)
         rcol = RCOL().read(reader)
+        footprint_chunk = None
         for chunk in rcol.chunk_data:
-            print(chunk)
+            if isinstance(chunk, Footprint):
+                footprint_chunk = chunk
+                break
+
+        footprint_areas = footprint_chunk.footprint_areas
+
+        for footprint_area in footprint_areas:
+            vertices = []
+            edges = []
+            faces = []
+            footprint_obj_name = hex(footprint_area.name_hash) + " Footprint"
+            me = bpy.data.meshes.new(footprint_obj_name)
+            ob = bpy.data.objects.new(footprint_obj_name, me)
+            point_count = len(footprint_area.points)
+            bounding_box = footprint_area.bounding_box
+            max_y = bounding_box.max_y
+            for idx, point in enumerate(footprint_area.points):
+                vertices.append((point.x, -point.z, 0))
+                if idx < point_count - 1:
+                    edges.append((idx, idx+1))
+                else:
+                    edges.append((idx, 0))
+
+            for idx in range(0, point_count-3, 3):
+                faces.append((idx, idx+1, idx+2))
+            if point_count != idx:
+                faces.append((point_count-1, 0, point_count-2))
+
+            me.from_pydata(vertices, [], faces)
+            ob.show_name = True
+            me.update()
+            bpy.context.collection.objects.link(ob)
+            ob.location.z = 
+           #bpy.ops.object.select_all(action='DESELECT')
+           #ob.select_set(True)
+           #bpy.context.view_layer.objects.active = ob
+           #bpy.ops.object.mode_set(mode='EDIT')
+
+           #bpy.ops.mesh.select_all(action='SELECT')
+
+           #bpy.ops.mesh.normals_make_consistent(inside=False)
+           #bpy.ops.object.mode_set(mode='OBJECT')
 
         return {"FINISHED"}
 

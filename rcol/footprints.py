@@ -179,7 +179,7 @@ class Footprint:
                 self.slot_areas.append(Area().read(reader))
             self.minimum_height = reader.float32()
             self.maximum_height = reader.float32()
-
+        return self
     def serialize(self):
         serialized_stuff = []
         if self.template_key.t != 0:
