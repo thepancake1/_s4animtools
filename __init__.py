@@ -936,6 +936,73 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         # row.operator("s4animtools.beginikmarker", text="Remove Root Bind").command = "SINGLE,BIND,END"
         #
         if obj is not None:
+            layout = self.layout
+            layout.prop(obj, "is_footprint", text = "Is Footprint Object")
+            layout = self.layout.row()
+            self.layout.label(text="Footprint is in: ")
+            layout = self.layout.row()
+
+            layout.prop(obj, "slope", text = "Slope")
+            layout.prop(obj, "outside", text = "Outside")
+            layout.prop(obj, "inside", text = "Inside")
+
+            self.layout.label(text="Footprint is of Type: ")
+
+            layout = self.layout.row()
+            layout.prop(obj, "for_placement", text = "For PLacement")
+            layout.prop(obj, "for_pathing", text = "For Pathing")
+            layout.prop(obj, "is_enabled", text = "Is Enabled")
+            layout = self.layout.row()
+
+            layout.prop(obj, "discouraged", text = "Discouraged")
+            layout.prop(obj, "landing_strip", text = "Landing Strip")
+            layout.prop(obj, "no_raycast", text = "No Raycast")
+            layout = self.layout.row()
+
+            layout.prop(obj, "placement_slotted", text = "Placement Slotted")
+            layout.prop(obj, "encouraged", text = "Encouraged")
+            layout.prop(obj, "terrain_cutout", text = "Terrain Cutout")
+
+
+            self.layout.label(text="Footprint is of Surface Type: ")
+
+            layout = self.layout.row()
+            layout.prop(obj, "terrain", text = "Terrain")
+            layout.prop(obj, "floor", text = "Floor")
+            layout.prop(obj, "pool", text = "Pool")
+            layout = self.layout.row()
+
+            layout.prop(obj, "pond", text = "Pond")
+            layout.prop(obj, "fence_post", text = "Fence Post")
+            layout.prop(obj, "any_surface", text = "Any Surface")
+            layout = self.layout.row()
+
+            layout.prop(obj, "air", text = "Air")
+            layout.prop(obj, "roof", text = "Roof")
+
+            self.layout.label(text="Footprint ignores Surface Types: ")
+
+            layout = self.layout.row()
+            layout.prop(obj, "is_none", text = "None")
+            layout.prop(obj, "is_walls", text = "Walls")
+            layout.prop(obj, "is_sims", text = "Sims")
+            layout = self.layout.row()
+
+            layout.prop(obj, "is_roofs", text = "Roof")
+            layout.prop(obj, "is_fences", text = "Fence")
+            layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
+            layout = self.layout.row()
+
+            layout.prop(obj, "is_objects_of_same_type", text = "Objects of Same Type")
+            layout.prop(obj, "is_reserved_space", text = "Reserved Space")
+            layout.prop(obj, "is_foundations", text = "Foundations")
+
+            layout = self.layout.row()
+
+            layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
+            layout.prop(obj, "is_trim", text = "Trim")
+
+
             layout = self.layout.row()
             layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
             layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
@@ -1556,7 +1623,59 @@ def register():
         setattr(bpy.types.PoseBone, f"ik_rot_{ik_idx}", bpy.props.FloatVectorProperty(default=(0,0,0,1), size=4, min=-1, max=1))
         setattr(bpy.types.PoseBone, f"ik_weight_{ik_idx}", bpy.props.FloatProperty(min=0, max=1))
 
+    bpy.types.Object.is_footprint = bpy.props.BoolProperty(default=False)
 
+    bpy.types.Object.for_placement = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.for_pathing = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_enabled = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.discouraged = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.landing_strip = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.no_raycast = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.placement_slotted = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.encouraged = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.terrain_cutout = bpy.props.BoolProperty(default=False)
+
+
+
+
+    bpy.types.Object.slope = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.outside = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.inside = bpy.props.BoolProperty(default=False)
+
+    bpy.types.Object.terrain = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.floor = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.pool = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.pond = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.fence_post = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.any_surface = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.air = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.roof = bpy.props.BoolProperty(default=False)
+
+    bpy.types.Object.is_none = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_walls = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_objects = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_sims = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_roofs = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_fences = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_modular_stairs = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_objects_of_same_type = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_reserved_space = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_foundations = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_fenestration_node = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_trim = bpy.props.BoolProperty(default=False)
+
+    bpy.types.Object.ignores_none = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_walls = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_objects = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_sims = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_roofs = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_fences = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_modular_stairs = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_objects_of_same_type = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_reserved_space = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_foundations = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_fenestration_node = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_trim = bpy.props.BoolProperty(default=False)
     # One for IK, zero for fk
     bpy.types.Object.l_hand_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
     bpy.types.Object.r_hand_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
