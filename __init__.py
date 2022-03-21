@@ -949,7 +949,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.label(text="Footprint is of Type: ")
 
             layout = self.layout.row()
-            layout.prop(obj, "for_placement", text = "For PLacement")
+            layout.prop(obj, "for_placement", text = "For Placement")
             layout.prop(obj, "for_pathing", text = "For Pathing")
             layout.prop(obj, "is_enabled", text = "Is Enabled")
             layout = self.layout.row()
@@ -980,7 +980,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.prop(obj, "air", text = "Air")
             layout.prop(obj, "roof", text = "Roof")
 
-            self.layout.label(text="Footprint ignores Surface Types: ")
+            self.layout.label(text="Footprint Is Of Object Type: ")
 
             layout = self.layout.row()
             layout.prop(obj, "is_none", text = "None")
@@ -1002,6 +1002,27 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
             layout.prop(obj, "is_trim", text = "Trim")
 
+            self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
+
+            layout = self.layout.row()
+            layout.prop(obj, "ignores_none", text = "None")
+            layout.prop(obj, "ignores_walls", text = "Walls")
+            layout.prop(obj, "ignores_sims", text = "Sims")
+            layout = self.layout.row()
+
+            layout.prop(obj, "ignores_roofs", text = "Roof")
+            layout.prop(obj, "ignores_fences", text = "Fence")
+            layout.prop(obj, "ignores_modular_stairs", text = "Modular Stairs")
+            layout = self.layout.row()
+
+            layout.prop(obj, "ignores_objects_of_same_type", text = "Objects of Same Type")
+            layout.prop(obj, "ignores_reserved_space", text = "Reserved Space")
+            layout.prop(obj, "ignores_foundations", text = "Foundations")
+
+            layout = self.layout.row()
+
+            layout.prop(obj, "ignores_fenestration_node", text = "Fenestration Node")
+            layout.prop(obj, "ignores_trim", text = "Trim")
 
             layout = self.layout.row()
             layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
