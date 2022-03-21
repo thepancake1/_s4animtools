@@ -252,11 +252,11 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
                 else:
                     edges.append((idx, 0))
 
-            for idx in range(0, point_count-3, 3):
-                faces.append((idx, idx+1, idx+2))
-            if point_count != idx:
-                faces.append((point_count-1, 0, point_count-2))
-
+            #for idx in range(0, point_count-3, 3):
+            #    faces.append((idx, idx+1, idx+2))
+            #if point_count != idx:
+              #  faces.append((point_count-1, 0, point_count-2))
+            faces.append(list(range(0, point_count)))
             me.from_pydata(vertices, [], faces)
             ob.show_name = True
             me.update()
@@ -267,8 +267,8 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             bpy.context.view_layer.objects.active = ob
 
             bpy.ops.object.modifier_add(type='SOLIDIFY')
-            bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y)
-            bpy.context.object.modifiers["Solidify"].offset = 1
+            bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y) + 0.1
+            bpy.context.object.modifiers["Solidify"].offset = -1
             bpy.context.object.modifiers["Solidify"].use_even_offset = True
             bpy.context.object.modifiers["Solidify"].use_quality_normals = True
             bpy.context.object.modifiers["Solidify"].use_rim = True

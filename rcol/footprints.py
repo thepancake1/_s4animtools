@@ -61,7 +61,7 @@ class FootprintPolyFlags:
         self.is_enabled = bitstring[-3] == "1"
         self.for_pathing = bitstring[-2] == "1"
         self.for_placement = bitstring[-1] == "1"
-        print(str(self))
+       # print(str(self))
     def __str__(self):
         return "Terrain Cutout: {}\n" \
                "Encouraged: {}\n" \
@@ -123,7 +123,7 @@ class IntersectionFlags:
         self.objects = bitstring[-3] == "1"
         self.walls = bitstring[-2] == "1"
         self.none = bitstring[-1] == "1"
-        print(str(self))
+       # print(str(self))
     def __str__(self):
         return "Trim: {}\n" \
                "Fenestration Node: {}\n" \
@@ -181,7 +181,7 @@ class SurfaceTypeFlags:
         self.pool = bitstring[-3] == "1"
         self.floor = bitstring[-2] == "1"
         self.terrain = bitstring[-1] == "1"
-        print(str(self))
+       # print(str(self))
     def __str__(self):
         return "Roof: {}\n" \
                "Air: {}\n" \
@@ -196,7 +196,7 @@ class SurfaceTypeFlags:
 
     def read(self, reader:StreamReader):
         self.bitfield = reader.u32()
-        print(self)
+        #print(self)
         return self
     def serialize(self):
         data = [UInt32(self.bitfield)]
@@ -224,7 +224,7 @@ class SurfaceAttributeFlags:
         self.slope = bitstring[-3] == "1"
         self.outside = bitstring[-2] == "1"
         self.inside = bitstring[-1] == "1"
-        print(str(self))
+       # print(str(self))
     def __str__(self):
         return "Inside: {}\n" \
                "Outside: {}\n" \
@@ -233,7 +233,7 @@ class SurfaceAttributeFlags:
 
     def read(self, reader:StreamReader):
         self.bitfield = reader.u32()
-        print(self)
+       # print(self)
         return self
     def serialize(self):
         data = [UInt32(self.bitfield)]
