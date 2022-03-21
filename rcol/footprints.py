@@ -52,7 +52,6 @@ class FootprintPolyFlags:
     @bitfield.setter
     def bitfield(self, value):
         bitstring = "{:32b}".format(value)
-        print(bitstring)
         self.terrain_cutout = bitstring[-9] == "1"
         self.encouraged = bitstring[-8] == "1"
         self.placement_slotted = bitstring[-7] == "1"
@@ -112,7 +111,6 @@ class IntersectionFlags:
     @bitfield.setter
     def bitfield(self, value):
         bitstring = "{:32b}".format(value)
-        print(bitstring)
         self.trim = bitstring[-12] == "1"
         self.fenestration_node = bitstring[-11] == "1"
         self.foundations = bitstring[-10] == "1"
@@ -155,64 +153,50 @@ class IntersectionFlags:
             serialized_stuff.append(serialied)
         return serialized_stuff
 
-class IntersectionFlags:
+class SurfaceTypeFlags:
     def __init__(self):
-        self.none = False
-        self.walls = False
-        self.objects = False
-        self.sims = False
-        self.roofs = False
-        self.fences = False
-        self.modular_stairs = False
-        self.objects_of_same_type = False
-        self.reserved_space = False
-        self.foundations = False
-        self.fenestration_node = False
-        self.trim = False
+        self.terrain = False
+        self.floor = False
+        self.pool = False
+        self.pond = False
+        self.fence_post = False
+        self.any_surface = False
+        self.air = False
+        self.roof = False
 
     @property
     def bitfield(self):
-        return  (int(self.trim) >> 11) + (int(self.fenestration_node) >> 10) + (int(self.foundations) >> 9)  + \
-                (int(self.reserved_space) >> 8) + (int(self.objects_of_same_type) >> 7) + (int(self.modular_stairs) >> 6) + \
-                (int(self.fences) >> 5) + (int(self.roofs) >> 4) + (int(self.sims) >> 3) + \
-                (int(self.objects) >> 2) + (int(self.walls) >> 1) + int(self.none)
+        return (int(self.roof) >> 7) + (int(self.air) >> 6) + (int(self.any_surface) >> 5) + \
+                (int(self.fence_post) >> 4) + (int(self.pond) >> 3) + (int(self.pool) >> 2) + \
+                (int(self.floor) >> 1) + (int(self.terrain) >> 0)
 
     @bitfield.setter
     def bitfield(self, value):
         bitstring = "{:32b}".format(value)
-        print(bitstring)
-        self.trim = bitstring[-12] == "1"
-        self.fenestration_node = bitstring[-11] == "1"
-        self.foundations = bitstring[-10] == "1"
-        self.reserved_space = bitstring[-9] == "1"
-        self.objects_of_same_type = bitstring[-8] == "1"
-        self.modular_stairs = bitstring[-7] == "1"
-        self.fences = bitstring[-6] == "1"
-        self.roofs = bitstring[-5] == "1"
-        self.sims = bitstring[-4] == "1"
-        self.objects = bitstring[-3] == "1"
-        self.walls = bitstring[-2] == "1"
-        self.none = bitstring[-1] == "1"
+        self.roof = bitstring[-8] == "1"
+        self.air = bitstring[-7] == "1"
+        self.any_surface = bitstring[-6] == "1"
+        self.fence_post = bitstring[-5] == "1"
+        self.pond = bitstring[-4] == "1"
+        self.pool = bitstring[-3] == "1"
+        self.floor = bitstring[-2] == "1"
+        self.terrain = bitstring[-1] == "1"
         print(str(self))
     def __str__(self):
-        return "Trim: {}\n" \
-               "Fenestration Node: {}\n" \
-               "Foundations: {}\n" \
-               "Reserved Space: {}\n" \
-               "Objects of Same Type: {}\n" \
-               "Modular Stairs: {}\n" \
-               "Fences: {}\n" \
-               "Roofs: {}\n" \
-               "Sims: {}\n" \
-               "Objects: {}\n" \
-               "Walls: {}\n" \
-               "None: {}\n".format(self.trim, self.fenestration_node, self.foundations, self.reserved_space,
-                                   self.objects_of_same_type, self.modular_stairs, self.fences, self.roofs, self.sims,
-        self.objects, self.walls, self.none)
+        return "Roof: {}\n" \
+               "Air: {}\n" \
+               "Any Surface: {}\n" \
+               "FencePost: {}\n" \
+               "Pond: {}\n" \
+               "Pool: {}\n" \
+               "Floor: {}\n" \
+               "Terrain: {}\n".format(self.roof, self.air, self.any_surface, self.fence_post, self.pond,
+                                      self.pool, self.floor, self.terrain)
 
 
     def read(self, reader:StreamReader):
         self.bitfield = reader.u32()
+        print(self)
         return self
     def serialize(self):
         data = [UInt32(self.bitfield)]
@@ -222,6 +206,44 @@ class IntersectionFlags:
             serialied = value.serialize()
             serialized_stuff.append(serialied)
         return serialized_stuff
+
+class SurfaceAttributeFlags:
+    def __init__(self):
+        self.inside = False
+        self.outside = False
+        self.slope = False
+
+    @property
+    def bitfield(self):
+        return (int(self.slope) >> 2) + \
+                (int(self.outside) >> 1) + (int(self.inside) >> 0)
+
+    @bitfield.setter
+    def bitfield(self, value):
+        bitstring = "{:32b}".format(value)
+        self.slope = bitstring[-3] == "1"
+        self.outside = bitstring[-2] == "1"
+        self.inside = bitstring[-1] == "1"
+        print(str(self))
+    def __str__(self):
+        return "Inside: {}\n" \
+               "Outside: {}\n" \
+               "Slope: {}\n".format(self.inside, self.outside, self.slope)
+
+
+    def read(self, reader:StreamReader):
+        self.bitfield = reader.u32()
+        print(self)
+        return self
+    def serialize(self):
+        data = [UInt32(self.bitfield)]
+
+        serialized_stuff = []
+        for value in data:
+            serialied = value.serialize()
+            serialized_stuff.append(serialied)
+        return serialized_stuff
+
 
 class BoundingBox:
     def __init__(self):
@@ -299,8 +321,8 @@ class Area:
             self.points.append(Point().read(reader))
         self.intersection_object_type = IntersectionFlags().read(reader)
         self.allow_intersection_types =   IntersectionFlags().read(reader)
-        self.surface_type_flags =  reader.u32()
-        self.surface_attribute_flags =  reader.u32()
+        self.surface_type_flags =  SurfaceTypeFlags().read(reader)
+        self.surface_attribute_flags =  SurfaceAttributeFlags().read(reader)
         self.deprected_level_offset =  reader.u8()
         self.bounding_box = BoundingBox().read(reader)
         return self
