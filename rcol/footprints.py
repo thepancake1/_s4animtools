@@ -51,17 +51,17 @@ class FootprintPolyFlags:
 
     @bitfield.setter
     def bitfield(self, value):
-        bitstring = "{:08b}".format(value)
+        bitstring = "{:32b}".format(value)
         print(bitstring)
-        self.terrain_cutout = bitstring[-9]
-        self.encouraged = bitstring[-8]
-        self.placement_slotted = bitstring[-7]
-        self.no_raycast = bitstring[-6]
-        self.landing_strip = bitstring[-5]
-        self.discouraged = bitstring[-4]
-        self.is_enabled = bitstring[-3]
-        self.for_pathing = bitstring[-2]
-        self.for_placement = bitstring[-1]
+        self.terrain_cutout = bitstring[-9] == "1"
+        self.encouraged = bitstring[-8] == "1"
+        self.placement_slotted = bitstring[-7] == "1"
+        self.no_raycast = bitstring[-6] == "1"
+        self.landing_strip = bitstring[-5] == "1"
+        self.discouraged = bitstring[-4] == "1"
+        self.is_enabled = bitstring[-3] == "1"
+        self.for_pathing = bitstring[-2] == "1"
+        self.for_placement = bitstring[-1] == "1"
         print(str(self))
     def __str__(self):
         return "Terrain Cutout: {}\n" \
@@ -156,7 +156,7 @@ class Area:
     def read(self, reader:StreamReader):
         self.name_hash = reader.u32()
         self.priority =  reader.u8()
-        self.area_type_flags = reader.u32()
+        self.area_type_flags = FootprintPolyFlags().read(reader)
         point_count = reader.u8()
         for i in range(point_count):
             self.points.append(Point().read(reader))
