@@ -1,10 +1,13 @@
 import math
-
+from _s4animtools.rcol.footprints import Footprint
+from _s4animtools.serialization.types.tgi import TGI
 from _s4animtools.rcol.skin import Skin
-from _s4animtools.serialization.types.basic import UInt32, UInt64, Bytes
+from _s4animtools.serialization.types.basic import UInt32, Bytes
 from _s4animtools.serialization import get_size
-
-
+from _s4animtools.stream import StreamReader
+import bpy
+from bpy_extras.io_utils import ImportHelper
+from bpy.types import Operator
 def get_combined_len(value):
     size = 0
     if isinstance(value, list):
@@ -19,8 +22,8 @@ class ChunkInfo:
         self.chunk_size = chunk_size
 
     def read(self, stream):
-        self.chunk_position = UInt32.deserialize(stream.read(4))
-        self.chunk_size = UInt32.deserialize(stream.read(4))
+        self.chunk_position = stream.u32()
+        self.chunk_size = stream.u32()
         return self
 
     def serialize(self):
@@ -34,64 +37,56 @@ class ChunkInfo:
     def __repr__(self):
         return "{}".format(vars(self))
 
-class TGI:
-    def __init__(self):
-        self.i = 0
-        self.t = 0
-        self.g = 0
 
-    def read(self, stream):
-        self.i = UInt64.deserialize(stream.read(8))
-        self.t = UInt32.deserialize(stream.read(4))
-        self.g = UInt32.deserialize(stream.read(4))
-        return self
-
-    def serialize(self):
-        data = [UInt64(self.i), UInt32(self.t), UInt32(self.g)]
-        serialized_stuff = []
-        for value in data:
-            serialized_stuff.append(value.serialize())
-
-        return serialized_stuff
-
-    def __repr__(self):
-        return "{}".format(vars(self))
 class RCOL:
     def __init__(self):
         self.version = 0
         self.public_chunks = 0
         self.index3 = 0
-        self.external_count = 0
-        self.internal_count = 0
         self.internal_tgis = []
         self.external_tgis = []
         self.chunk_info = []
         self.chunk_data = []
+
+    @property
+    def internal_count(self):
+        return len(self.internal_tgis)
+
+    @property
+    def external_count(self):
+        return len(self.external_tgis)
+
     def read(self, stream):
-        self.version = UInt32.deserialize(stream.read(4))
-        self.public_chunks = UInt32.deserialize(stream.read(4))
-        self.index3 = UInt32.deserialize(stream.read(4))
-        self.external_count = UInt32.deserialize(stream.read(4))
-        self.internal_count = UInt32.deserialize(stream.read(4))
-        for i in range(self.internal_count):
+        self.version = stream.u32()
+        self.public_chunks = stream.u32()
+        self.index3 = stream.u32()
+        external_count = stream.u32()
+        internal_count = stream.u32()
+
+        if internal_count > 1000 or external_count > 1000:
+            print("Probably garbage or not an RCOL file. Bailing.")
+            return self
+        for i in range(internal_count):
             self.internal_tgis.append(TGI().read(stream))
-        for i in range(self.external_count):
+        for i in range(external_count):
             self.external_tgis.append(TGI().read(stream))
         for i in range(self.internal_count):
             self.chunk_info.append(ChunkInfo().read(stream))
         for i in range(self.internal_count):
             stream.seek(self.chunk_info[i].chunk_position)
-            data = stream.read(4)
+            data = stream.u32(raw=True)
             stream.seek(self.chunk_info[i].chunk_position)
-            if "SKIN" in data.decode("ascii"):
+            tag = data.decode("ascii")
+            if "SKIN" in tag:
                 chunk_data = Skin().read(stream)
                # print(stream.tell())
+            elif "FTPT" in tag:
+                chunk_data = Footprint().read(stream)
 
             else:
                 chunk_data = Bytes(stream.read(self.chunk_info[i].chunk_size))
             self.chunk_data.append(chunk_data)
-
-        print(vars(self))
+        return self
 
     def align_dword_boundaries(self, header_size):
         chunk_info_size = 8
@@ -167,6 +162,22 @@ class RCOL:
         # Pad to next DWORD between chunks
         serialized_stuff.append(self.align_dword_boundaries(total_len))
         return serialized_stuff
+
+class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
+    bl_idname = "s4animtools.import_footprint"
+    bl_label = "Import Footprint"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        armature = bpy.context.object.data
+        reader = StreamReader(self.filepath)
+        print(self.filepath)
+        rcol = RCOL().read(reader)
+        for chunk in rcol.chunk_data:
+            print(chunk)
+
+        return {"FINISHED"}
+
 
 if __name__ == "__main__":
     pass

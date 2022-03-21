@@ -4,7 +4,7 @@ import time
 import math
 import importlib
 from _s4animtools.serialization.fnv import get_64bithash
-from _s4animtools.rig_constants import grips, grips_mapping
+from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint
 from _s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from _s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent
@@ -17,11 +17,7 @@ from _s4animtools.asm.states import StateProperties, LIST_OT_NewState, LIST_OT_D
     StatePanel, ControllerProperties, LIST_OT_NewController, LIST_OT_RemoveController, LIST_OT_MoveControllerState, \
     PostureProperties, PosturePanel, LIST_OT_NewPosture, LIST_OT_DeletePosture, LIST_OT_MovePosture, StateConnections, \
     LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection, LIST_OT_MoveStateConnection
-from bpy_extras.io_utils import ImportHelper
-from mathutils import Vector, Quaternion
-from bpy.props import IntProperty, CollectionProperty, FloatProperty
-from bpy.types import PropertyGroup
-from collections import defaultdict
+
 from _s4animtools.rig.create_rig import create_rig_with_context
 import _s4animtools.clip_processing.clip_header
 import _s4animtools.rig
@@ -43,6 +39,11 @@ import _s4animtools.rig.create_rig
 from _s4animtools.serialization.types.transforms import Vector3, Quaternion
 import _s4animtools.clip_processing.clip_body
 import _s4animtools.clip_processing.f1_palette
+from bpy_extras.io_utils import ImportHelper
+from mathutils import Vector, Quaternion
+from bpy.props import IntProperty, CollectionProperty, FloatProperty
+from bpy.types import PropertyGroup
+from collections import defaultdict
 
 JAW_ANIMATE_DURATION = 100000
 
@@ -248,8 +249,6 @@ class ClipExporter(bpy.types.Operator):
                                                                                                   start_time)
                     if event == SnapEvent:
                         snap_frames.append(timeshifted_timestamp)
-                        current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
-
                     if event == FocusCompatibilityEvent:
                         if frame_time >= timeshifted_timestamp >= 0:
                             _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
@@ -704,6 +703,8 @@ class NewClipExporter(bpy.types.Operator):
                                                                                               start_time)
                 if event == SnapEvent:
                     snap_frames.append(original_timestamp)
+                    current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
+
                 elif event == FocusCompatibilityEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
                         _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
@@ -935,7 +936,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         #
         if obj is not None:
             layout = self.layout.row()
-
+            layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
             layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
 
             # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
@@ -1530,7 +1531,7 @@ classes = (
     LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection,
     LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim)
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint)
 
 
 def register():

@@ -1,6 +1,4 @@
 from _s4animtools.serialization.types.basic import UInt32, Bytes, Float32
-
-
 class VertexGroup:
     def __init__(self, name, matrix):
         self.name = name
