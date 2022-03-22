@@ -4,7 +4,7 @@ import time
 import math
 import importlib
 from _s4animtools.serialization.fnv import get_64bithash
-from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint
+from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint
 from _s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from _s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent
@@ -935,99 +935,104 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         # row.operator("s4animtools.beginikmarker", text="Add Root Bind").command = "SINGLE,BIND,BEGIN"
         # row.operator("s4animtools.beginikmarker", text="Remove Root Bind").command = "SINGLE,BIND,END"
         #
+        self.layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
+        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
+        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
+
         if obj is not None:
             layout = self.layout
+
             layout.prop(obj, "is_footprint", text = "Is Footprint Object")
+            if obj.is_footprint:
+                layout = self.layout.row()
+                self.layout.label(text="Footprint is in: ")
+                layout = self.layout.row()
+
+                layout.prop(obj, "slope", text = "Slope")
+                layout.prop(obj, "outside", text = "Outside")
+                layout.prop(obj, "inside", text = "Inside")
+
+                self.layout.label(text="Footprint is of Type: ")
+
+                layout = self.layout.row()
+                layout.prop(obj, "for_placement", text = "For Placement")
+                layout.prop(obj, "for_pathing", text = "For Pathing")
+                layout.prop(obj, "is_enabled", text = "Is Enabled")
+                layout = self.layout.row()
+
+                layout.prop(obj, "discouraged", text = "Discouraged")
+                layout.prop(obj, "landing_strip", text = "Landing Strip")
+                layout.prop(obj, "no_raycast", text = "No Raycast")
+                layout = self.layout.row()
+
+                layout.prop(obj, "placement_slotted", text = "Placement Slotted")
+                layout.prop(obj, "encouraged", text = "Encouraged")
+                layout.prop(obj, "terrain_cutout", text = "Terrain Cutout")
+
+
+                self.layout.label(text="Footprint is of Surface Type: ")
+
+                layout = self.layout.row()
+                layout.prop(obj, "terrain", text = "Terrain")
+                layout.prop(obj, "floor", text = "Floor")
+                layout.prop(obj, "pool", text = "Pool")
+                layout = self.layout.row()
+
+                layout.prop(obj, "pond", text = "Pond")
+                layout.prop(obj, "fence_post", text = "Fence Post")
+                layout.prop(obj, "any_surface", text = "Any Surface")
+                layout = self.layout.row()
+
+                layout.prop(obj, "air", text = "Air")
+                layout.prop(obj, "roof", text = "Roof")
+
+                self.layout.label(text="Footprint Is Of Object Type: ")
+
+                layout = self.layout.row()
+                layout.prop(obj, "is_none", text = "None")
+                layout.prop(obj, "is_walls", text = "Walls")
+                layout.prop(obj, "is_objects", text = "Objects")
+
+                layout = self.layout.row()
+                layout.prop(obj, "is_sims", text = "Sims")
+
+                layout.prop(obj, "is_roofs", text = "Roof")
+                layout.prop(obj, "is_fences", text = "Fence")
+                layout = self.layout.row()
+
+                layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
+                layout.prop(obj, "is_objects_of_same_type", text = "Objects of Same Type")
+                layout.prop(obj, "is_reserved_space", text = "Reserved Space")
+
+                layout = self.layout.row()
+
+                layout.prop(obj, "is_foundations", text = "Foundations")
+                layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
+                layout.prop(obj, "is_trim", text = "Trim")
+
+                self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
+
+                layout = self.layout.row()
+                layout.prop(obj, "ignores_none", text = "None")
+                layout.prop(obj, "ignores_walls", text = "Walls")
+                layout.prop(obj, "ignores_sims", text = "Sims")
+                layout = self.layout.row()
+
+                layout.prop(obj, "ignores_roofs", text = "Roof")
+                layout.prop(obj, "ignores_fences", text = "Fence")
+                layout.prop(obj, "ignores_modular_stairs", text = "Modular Stairs")
+                layout = self.layout.row()
+
+                layout.prop(obj, "ignores_objects_of_same_type", text = "Objects of Same Type")
+                layout.prop(obj, "ignores_reserved_space", text = "Reserved Space")
+                layout.prop(obj, "ignores_foundations", text = "Foundations")
+
+                layout = self.layout.row()
+
+                layout.prop(obj, "ignores_fenestration_node", text = "Fenestration Node")
+                layout.prop(obj, "ignores_trim", text = "Trim")
+
             layout = self.layout.row()
-            self.layout.label(text="Footprint is in: ")
-            layout = self.layout.row()
-
-            layout.prop(obj, "slope", text = "Slope")
-            layout.prop(obj, "outside", text = "Outside")
-            layout.prop(obj, "inside", text = "Inside")
-
-            self.layout.label(text="Footprint is of Type: ")
-
-            layout = self.layout.row()
-            layout.prop(obj, "for_placement", text = "For Placement")
-            layout.prop(obj, "for_pathing", text = "For Pathing")
-            layout.prop(obj, "is_enabled", text = "Is Enabled")
-            layout = self.layout.row()
-
-            layout.prop(obj, "discouraged", text = "Discouraged")
-            layout.prop(obj, "landing_strip", text = "Landing Strip")
-            layout.prop(obj, "no_raycast", text = "No Raycast")
-            layout = self.layout.row()
-
-            layout.prop(obj, "placement_slotted", text = "Placement Slotted")
-            layout.prop(obj, "encouraged", text = "Encouraged")
-            layout.prop(obj, "terrain_cutout", text = "Terrain Cutout")
-
-
-            self.layout.label(text="Footprint is of Surface Type: ")
-
-            layout = self.layout.row()
-            layout.prop(obj, "terrain", text = "Terrain")
-            layout.prop(obj, "floor", text = "Floor")
-            layout.prop(obj, "pool", text = "Pool")
-            layout = self.layout.row()
-
-            layout.prop(obj, "pond", text = "Pond")
-            layout.prop(obj, "fence_post", text = "Fence Post")
-            layout.prop(obj, "any_surface", text = "Any Surface")
-            layout = self.layout.row()
-
-            layout.prop(obj, "air", text = "Air")
-            layout.prop(obj, "roof", text = "Roof")
-
-            self.layout.label(text="Footprint Is Of Object Type: ")
-
-            layout = self.layout.row()
-            layout.prop(obj, "is_none", text = "None")
-            layout.prop(obj, "is_walls", text = "Walls")
-            layout.prop(obj, "is_objects", text = "Objects")
-
-            layout = self.layout.row()
-            layout.prop(obj, "is_sims", text = "Sims")
-
-            layout.prop(obj, "is_roofs", text = "Roof")
-            layout.prop(obj, "is_fences", text = "Fence")
-            layout = self.layout.row()
-
-            layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
-            layout.prop(obj, "is_objects_of_same_type", text = "Objects of Same Type")
-            layout.prop(obj, "is_reserved_space", text = "Reserved Space")
-
-            layout = self.layout.row()
-
-            layout.prop(obj, "is_foundations", text = "Foundations")
-            layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
-            layout.prop(obj, "is_trim", text = "Trim")
-
-            self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
-
-            layout = self.layout.row()
-            layout.prop(obj, "ignores_none", text = "None")
-            layout.prop(obj, "ignores_walls", text = "Walls")
-            layout.prop(obj, "ignores_sims", text = "Sims")
-            layout = self.layout.row()
-
-            layout.prop(obj, "ignores_roofs", text = "Roof")
-            layout.prop(obj, "ignores_fences", text = "Fence")
-            layout.prop(obj, "ignores_modular_stairs", text = "Modular Stairs")
-            layout = self.layout.row()
-
-            layout.prop(obj, "ignores_objects_of_same_type", text = "Objects of Same Type")
-            layout.prop(obj, "ignores_reserved_space", text = "Reserved Space")
-            layout.prop(obj, "ignores_foundations", text = "Foundations")
-
-            layout = self.layout.row()
-
-            layout.prop(obj, "ignores_fenestration_node", text = "Fenestration Node")
-            layout.prop(obj, "ignores_trim", text = "Trim")
-
-            layout = self.layout.row()
-            layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
             layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
 
             # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
@@ -1620,7 +1625,8 @@ classes = (
     LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection,
     LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint)
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,
+    OT_S4ANIMTOOLS_VisualizeFootprint)
 
 
 def register():

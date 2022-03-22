@@ -286,5 +286,46 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
 
+class OT_S4ANIMTOOLS_VisualizeFootprint(bpy.types.Operator):
+    bl_idname = "s4animtools.visualize_footprint"
+    bl_label = "Visualize Footprint"
+    bl_options = {"REGISTER", "UNDO"}
+
+    command: bpy.props.StringProperty()
+
+    def execute(self, context):
+        if "Green_Visualization_Color" not in bpy.data.materials:
+            green_material = bpy.data.materials.new("Green_Visualization_Color")
+            green_material.use_nodes = True
+            tree = green_material.node_tree
+            nodes = tree.nodes
+            bsdf = nodes["Principled BSDF"]
+            bsdf.inputs["Base Color"].default_value = (0, 1, 0, 1)
+            green_material.diffuse_color = (0, 1, 0, 1)
+        if "Red_Visualization_Color" not in bpy.data.materials:
+            green_material = bpy.data.materials.new("Red_Visualization_Color")
+            green_material.use_nodes = True
+            tree = green_material.node_tree
+            nodes = tree.nodes
+            bsdf = nodes["Principled BSDF"]
+            bsdf.inputs["Base Color"].default_value = (1, 0, 0, 1)
+            green_material.diffuse_color = (1, 0, 0, 1)
+
+        red_material = bpy.data.materials["Red_Visualization_Color"]
+        green_material = bpy.data.materials["Green_Visualization_Color"]
+        for obj in bpy.data.objects:
+            if obj.is_footprint:
+                if self.command == "for_placement":
+                    if obj.for_placement:
+                        obj.active_material = green_material
+                    else:
+                        obj.active_material = red_material
+                elif self.command == "for_pathing":
+                    if obj.for_pathing:
+                        obj.active_material = green_material
+                    else:
+                        obj.active_material = red_material
+        return {"FINISHED"}
+
 if __name__ == "__main__":
     pass
