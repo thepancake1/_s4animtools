@@ -40,7 +40,7 @@ class ChunkInfo:
 
 class RCOL:
     def __init__(self):
-        self.version = 0
+        self.version = 3
         self.public_chunks = 0
         self.index3 = 0
         self.internal_tgis = []
@@ -60,6 +60,7 @@ class RCOL:
         self.version = stream.u32()
         self.public_chunks = stream.u32()
         self.index3 = stream.u32()
+        print(self.version, self.public_chunks, self.index3)
         external_count = stream.u32()
         internal_count = stream.u32()
 
@@ -147,9 +148,31 @@ class RCOL:
                     self.chunk_data[i].matrices.append(flattened_matrix)
 
 
+    def change_chunk_position_size(self, chunk_idx, position, size):
+        chunk_info = self.chunk_info[chunk_idx]
+        chunk_info.chunk_position = position
+        chunk_info.chunk_size = size
+
+    def update_chunk_position_size_automatically(self, chunk_idx):
+        offset = self.serialize_to_get_current_offset(chunk_idx)
+        self.change_chunk_position_size(chunk_idx, self.serialize_to_get_current_offset(chunk_idx), len(self.chunk_data[chunk_idx].serialize()))
+    def serialize_to_get_current_offset(self, chunk_idx):
+        data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
+                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info, *self.chunk_data[:chunk_idx-1]]
+
+        serialized_stuff = []
+        total_len = 0
+        for value in data:
+            serialied = value.serialize()
+            serialized_stuff.append(serialied)
+            total_len += get_combined_len(serialied)
+        # Pad to next DWORD between chunks
+        return total_len
+
+
     def serialize(self):
         data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
-                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis]
+                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info, *self.chunk_data]
 
         serialized_stuff = []
         total_len = 0
@@ -166,6 +189,128 @@ class RCOL:
 class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
     bl_idname = "s4animtools.import_footprint"
     bl_label = "Import Footprint"
+    bl_options = {"REGISTER", "UNDO"}
+
+
+    def setup_properties(self, obj, footprint, context):
+        obj.is_footprint = True
+        obj.for_placement = footprint.area_type_flags.for_placement
+        obj.for_pathing = footprint.area_type_flags.for_pathing
+        obj.is_enabled = footprint.area_type_flags.is_enabled
+        obj.discouraged = footprint.area_type_flags.discouraged
+        obj.landing_strip = footprint.area_type_flags.landing_strip
+        obj.no_raycast = footprint.area_type_flags.no_raycast
+        obj.placement_slotted = footprint.area_type_flags.placement_slotted
+        obj.encouraged = footprint.area_type_flags.encouraged
+        obj.terrain_cutout = footprint.area_type_flags.terrain_cutout
+
+        obj.is_none = footprint.intersection_object_type.none
+        obj.is_walls = footprint.intersection_object_type.walls
+        obj.is_objects = footprint.intersection_object_type.objects
+        obj.is_sims = footprint.intersection_object_type.sims
+        obj.is_roofs = footprint.intersection_object_type.roofs
+        obj.is_fences = footprint.intersection_object_type.fences
+        obj.is_modular_stairs = footprint.intersection_object_type.modular_stairs
+        obj.is_objects_of_same_type = footprint.intersection_object_type.objects_of_same_type
+        obj.is_reserved_space = footprint.intersection_object_type.reserved_space
+        obj.is_foundations = footprint.intersection_object_type.foundations
+        obj.is_fenestration_node = footprint.intersection_object_type.fenestration_node
+        obj.is_trim = footprint.intersection_object_type.trim
+
+        obj.ignores_none = footprint.allow_intersection_types.none
+        obj.ignores_walls = footprint.allow_intersection_types.walls
+        obj.ignores_objects = footprint.allow_intersection_types.objects
+        obj.ignores_sims = footprint.allow_intersection_types.sims
+        obj.ignores_roofs = footprint.allow_intersection_types.roofs
+        obj.ignores_fences = footprint.allow_intersection_types.fences
+        obj.ignores_modular_stairs = footprint.allow_intersection_types.modular_stairs
+        obj.ignores_objects_of_same_type = footprint.allow_intersection_types.objects_of_same_type
+        obj.ignores_reserved_space = footprint.allow_intersection_types.reserved_space
+        obj.ignores_foundations = footprint.allow_intersection_types.foundations
+        obj.ignores_fenestration_node = footprint.allow_intersection_types.fenestration_node
+        obj.ignores_trim = footprint.allow_intersection_types.trim
+
+
+        obj.terrain = footprint.surface_type_flags.terrain
+        obj.floor = footprint.surface_type_flags.floor
+        obj.pool = footprint.surface_type_flags.pool
+        obj.pond = footprint.surface_type_flags.pond
+        obj.fence_post = footprint.surface_type_flags.fence_post
+        obj.any_surface = footprint.surface_type_flags.any_surface
+        obj.air = footprint.surface_type_flags.air
+        obj.roof = footprint.surface_type_flags.roof
+
+        obj.slope = footprint.surface_attribute_flags.slope
+        obj.outside = footprint.surface_attribute_flags.outside
+        obj.inside = footprint.surface_attribute_flags.inside
+
+    def execute(self, context):
+        reader = StreamReader(self.filepath)
+        print(self.filepath)
+        rcol = RCOL().read(reader)
+        footprint_chunk = None
+        for chunk in rcol.chunk_data:
+            if isinstance(chunk, Footprint):
+                footprint_chunk = chunk
+                break
+
+        footprint_areas = footprint_chunk.footprint_areas
+
+        for footprint_area in footprint_areas:
+            vertices = []
+            edges = []
+            faces = []
+            footprint_obj_name = hex(footprint_area.name_hash) + " Footprint"
+            me = bpy.data.meshes.new(footprint_obj_name)
+            ob = bpy.data.objects.new(footprint_obj_name, me)
+            point_count = len(footprint_area.points)
+            bounding_box = footprint_area.bounding_box
+            print(bounding_box.min_x, bounding_box.max_x, bounding_box.min_y, bounding_box.max_y, bounding_box.min_z, bounding_box.max_z)
+            min_y, max_y = bounding_box.min_y, bounding_box.max_y
+            for idx, point in enumerate(footprint_area.points):
+                vertices.append((point.x, -point.z, 0))
+                if idx < point_count - 1:
+                    edges.append((idx, idx+1))
+                else:
+                    edges.append((idx, 0))
+
+            #for idx in range(0, point_count-3, 3):
+            #    faces.append((idx, idx+1, idx+2))
+            #if point_count != idx:
+              #  faces.append((point_count-1, 0, point_count-2))
+            faces.append(list(range(0, point_count)))
+            me.from_pydata(vertices, [], faces)
+            ob.show_name = True
+            me.update()
+            bpy.context.collection.objects.link(ob)
+            ob.location.z = min_y
+            bpy.ops.object.select_all(action='DESELECT')
+            ob.select_set(True)
+            bpy.context.view_layer.objects.active = ob
+
+            bpy.ops.object.modifier_add(type='SOLIDIFY')
+            bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y) + 0.1
+            bpy.context.object.modifiers["Solidify"].offset = -1
+            bpy.context.object.modifiers["Solidify"].use_even_offset = True
+            bpy.context.object.modifiers["Solidify"].use_quality_normals = True
+            bpy.context.object.modifiers["Solidify"].use_rim = True
+            self.setup_properties(ob, footprint_area, context)
+        #bpy.ops.object.select_all(action='DESELECT')
+           #ob.select_set(True)
+           #bpy.context.view_layer.objects.active = ob
+           #bpy.ops.object.mode_set(mode='EDIT')
+
+           #bpy.ops.mesh.select_all(action='SELECT')
+
+           #bpy.ops.mesh.normals_make_consistent(inside=False)
+           #bpy.ops.object.mode_set(mode='OBJECT')
+
+        return {"FINISHED"}
+
+
+class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator, ImportHelper):
+    bl_idname = "s4animtools.export_footprint"
+    bl_label = "Export Footprint"
     bl_options = {"REGISTER", "UNDO"}
 
 

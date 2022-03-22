@@ -103,25 +103,25 @@ class IntersectionFlags:
 
     @property
     def bitfield(self):
-        return  (int(self.trim) >> 11) + (int(self.fenestration_node) >> 10) + (int(self.foundations) >> 9)  + \
-                (int(self.reserved_space) >> 8) + (int(self.objects_of_same_type) >> 7) + (int(self.modular_stairs) >> 6) + \
-                (int(self.fences) >> 5) + (int(self.roofs) >> 4) + (int(self.sims) >> 3) + \
-                (int(self.objects) >> 2) + (int(self.walls) >> 1) + int(self.none)
+        return  (int(self.trim) >> 12) + (int(self.fenestration_node) >> 11) + (int(self.foundations) >> 10)  + \
+                (int(self.reserved_space) >> 9) + (int(self.objects_of_same_type) >> 8) + (int(self.modular_stairs) >> 7) + \
+                (int(self.fences) >> 6) + (int(self.roofs) >> 5) + (int(self.sims) >> 4) + \
+                (int(self.objects) >> 3) + (int(self.walls) >> 2) + int(self.none)
 
     @bitfield.setter
     def bitfield(self, value):
         bitstring = "{:32b}".format(value)
-        self.trim = bitstring[-12] == "1"
-        self.fenestration_node = bitstring[-11] == "1"
-        self.foundations = bitstring[-10] == "1"
-        self.reserved_space = bitstring[-9] == "1"
-        self.objects_of_same_type = bitstring[-8] == "1"
-        self.modular_stairs = bitstring[-7] == "1"
-        self.fences = bitstring[-6] == "1"
-        self.roofs = bitstring[-5] == "1"
-        self.sims = bitstring[-4] == "1"
-        self.objects = bitstring[-3] == "1"
-        self.walls = bitstring[-2] == "1"
+        self.trim = bitstring[-13] == "1"
+        self.fenestration_node = bitstring[-12] == "1"
+        self.foundations = bitstring[-11] == "1"
+        self.reserved_space = bitstring[-10] == "1"
+        self.objects_of_same_type = bitstring[-9] == "1"
+        self.modular_stairs = bitstring[-8] == "1"
+        self.fences = bitstring[-7] == "1"
+        self.roofs = bitstring[-6] == "1"
+        self.sims = bitstring[-5] == "1"
+        self.objects = bitstring[-4] == "1"
+        self.walls = bitstring[-3] == "1"
         self.none = bitstring[-1] == "1"
        # print(str(self))
     def __str__(self):

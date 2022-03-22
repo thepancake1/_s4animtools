@@ -36,7 +36,7 @@ from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_C
 import _s4animtools.animation_exporter.animation
 from _s4animtools.animation_exporter.animation import AnimationExporter
 import _s4animtools.rig.create_rig
-from _s4animtools.serialization.types.transforms import Vector3, Quaternion
+from _s4animtools.serialization.types.transforms import Vector3, Quaternion4
 import _s4animtools.clip_processing.clip_body
 import _s4animtools.clip_processing.f1_palette
 from bpy_extras.io_utils import ImportHelper
@@ -700,6 +700,8 @@ class NewClipExporter(bpy.types.Operator):
                     raise Exception(
                         f"Your event has incomplete parameters. Expected {event.arg_count} parameters. Got {parameter_length}")
                 original_timestamp = parameters[0].strip()
+                if original_timestamp.startswith("//"):
+                    continue
                 original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
                                                                                               start_time)
                 if event == SnapEvent:
@@ -799,7 +801,7 @@ class NewClipExporter(bpy.types.Operator):
                     ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
                              explicit_namespaces=self.get_explicit_namespaces(),
                              reference_namespace_hash=self.get_reference_namespace_hash(),
-                             initial_offset_q=Quaternion.from_str(initial_offset_q),
+                             initial_offset_q=Quaternion4.from_str(initial_offset_q),
                              initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
             self.clip_infos = clip_infos
         return self.clip_infos
