@@ -96,6 +96,7 @@ class IntersectionFlags:
         self.fences = False
         self.modular_stairs = False
         self.objects_of_same_type = False
+        self.columns = False
         self.reserved_space = False
         self.foundations = False
         self.fenestration_node = False
@@ -103,8 +104,8 @@ class IntersectionFlags:
 
     @property
     def bitfield(self):
-        return  (int(self.trim) >> 12) + (int(self.fenestration_node) >> 11) + (int(self.foundations) >> 10)  + \
-                (int(self.reserved_space) >> 9) + (int(self.objects_of_same_type) >> 8) + (int(self.modular_stairs) >> 7) + \
+        return  (int(self.trim) >> 13) + (int(self.fenestration_node) >> 12) + (int(self.foundations) >> 11)  + \
+                (int(self.reserved_space) >> 10) + (int(self.columns) >> 9) + (int(self.objects_of_same_type) >> 8) + (int(self.modular_stairs) >> 7) + \
                 (int(self.fences) >> 6) + (int(self.roofs) >> 5) + (int(self.sims) >> 4) + \
                 (int(self.objects) >> 3) + (int(self.walls) >> 2) + int(self.none)
 
@@ -115,13 +116,15 @@ class IntersectionFlags:
         self.fenestration_node = bitstring[-12] == "1"
         self.foundations = bitstring[-11] == "1"
         self.reserved_space = bitstring[-10] == "1"
-        self.objects_of_same_type = bitstring[-9] == "1"
-        self.modular_stairs = bitstring[-8] == "1"
-        self.fences = bitstring[-7] == "1"
-        self.roofs = bitstring[-6] == "1"
-        self.sims = bitstring[-5] == "1"
-        self.objects = bitstring[-4] == "1"
-        self.walls = bitstring[-3] == "1"
+        self.columns = bitstring[-9] == "1"
+
+        self.objects_of_same_type = bitstring[-8] == "1"
+        self.modular_stairs = bitstring[-7] == "1"
+        self.fences = bitstring[-6] == "1"
+        self.roofs = bitstring[-5] == "1"
+        self.sims = bitstring[-4] == "1"
+        self.objects = bitstring[-3] == "1"
+        self.walls = bitstring[-2] == "1"
         self.none = bitstring[-1] == "1"
        # print(str(self))
     def __str__(self):
@@ -129,6 +132,7 @@ class IntersectionFlags:
                "Fenestration Node: {}\n" \
                "Foundations: {}\n" \
                "Reserved Space: {}\n" \
+               "Columns: {}\n"\
                "Objects of Same Type: {}\n" \
                "Modular Stairs: {}\n" \
                "Fences: {}\n" \
@@ -136,7 +140,7 @@ class IntersectionFlags:
                "Sims: {}\n" \
                "Objects: {}\n" \
                "Walls: {}\n" \
-               "None: {}\n".format(self.trim, self.fenestration_node, self.foundations, self.reserved_space,
+               "None: {}\n".format(self.trim, self.fenestration_node, self.foundations, self.reserved_space, self.columns,
                                    self.objects_of_same_type, self.modular_stairs, self.fences, self.roofs, self.sims,
         self.objects, self.walls, self.none)
 

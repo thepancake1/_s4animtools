@@ -997,16 +997,17 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 layout = self.layout.row()
                 layout.prop(obj, "is_sims", text = "Sims")
-
                 layout.prop(obj, "is_roofs", text = "Roof")
                 layout.prop(obj, "is_fences", text = "Fence")
                 layout = self.layout.row()
 
                 layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
                 layout.prop(obj, "is_objects_of_same_type", text = "Objects of Same Type")
-                layout.prop(obj, "is_reserved_space", text = "Reserved Space")
+                layout.prop(obj, "is_columns", text = "Columns")
+
 
                 layout = self.layout.row()
+                layout.prop(obj, "is_reserved_space", text = "Reserved Space")
 
                 layout.prop(obj, "is_foundations", text = "Foundations")
                 layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
@@ -1017,19 +1018,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout = self.layout.row()
                 layout.prop(obj, "ignores_none", text = "None")
                 layout.prop(obj, "ignores_walls", text = "Walls")
-                layout.prop(obj, "ignores_sims", text = "Sims")
+                layout.prop(obj, "is_objects", text = "Objects")
+
                 layout = self.layout.row()
+                layout.prop(obj, "ignores_sims", text = "Sims")
 
                 layout.prop(obj, "ignores_roofs", text = "Roof")
                 layout.prop(obj, "ignores_fences", text = "Fence")
+                layout = self.layout.row()
                 layout.prop(obj, "ignores_modular_stairs", text = "Modular Stairs")
-                layout = self.layout.row()
-
                 layout.prop(obj, "ignores_objects_of_same_type", text = "Objects of Same Type")
-                layout.prop(obj, "ignores_reserved_space", text = "Reserved Space")
-                layout.prop(obj, "ignores_foundations", text = "Foundations")
+                layout.prop(obj, "ignores_columns", text = "Columns")
 
                 layout = self.layout.row()
+                layout.prop(obj, "ignores_reserved_space", text = "Reserved Space")
+
+                layout.prop(obj, "ignores_foundations", text = "Foundations")
 
                 layout.prop(obj, "ignores_fenestration_node", text = "Fenestration Node")
                 layout.prop(obj, "ignores_trim", text = "Trim")
@@ -1690,6 +1694,8 @@ def register():
     bpy.types.Object.is_fences = bpy.props.BoolProperty(default=False)
     bpy.types.Object.is_modular_stairs = bpy.props.BoolProperty(default=False)
     bpy.types.Object.is_objects_of_same_type = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_columns = bpy.props.BoolProperty(default=False)
+
     bpy.types.Object.is_reserved_space = bpy.props.BoolProperty(default=False)
     bpy.types.Object.is_foundations = bpy.props.BoolProperty(default=False)
     bpy.types.Object.is_fenestration_node = bpy.props.BoolProperty(default=False)
@@ -1703,6 +1709,8 @@ def register():
     bpy.types.Object.ignores_fences = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_modular_stairs = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_objects_of_same_type = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_columns = bpy.props.BoolProperty(default=False)
+
     bpy.types.Object.ignores_reserved_space = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_foundations = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_fenestration_node = bpy.props.BoolProperty(default=False)
