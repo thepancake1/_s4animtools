@@ -1,4 +1,4 @@
-from _s4animtools.serialization.types.basic import UInt32, Float32
+from _s4animtools.serialization.types.basic import UInt32, Float32, Serializable
 from _s4animtools.serialization.types.basic import Byte, Bytes
 from _s4animtools.serialization.types.tgi import TGI
 from _s4animtools.stream import StreamReader
@@ -11,7 +11,7 @@ def get_combined_len(value):
         return len(value)
     return size
 
-class PolygonHeightOverride:
+class PolygonHeightOverride(Serializable):
     def __init__(self):
         self.name_hash = 0
         self.height = 0
@@ -25,13 +25,12 @@ class PolygonHeightOverride:
         data = [UInt32(self.name_hash), UInt32(self.height)]
 
         serialized_stuff = []
-        total_len = 0
         for value in data:
             serialied = value.serialize()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
-class FootprintPolyFlags:
+class FootprintPolyFlags(Serializable):
     def __init__(self):
         self.for_placement = False
         self.for_pathing = False
@@ -86,7 +85,7 @@ class FootprintPolyFlags:
         return serialized_stuff
 
 
-class IntersectionFlags:
+class IntersectionFlags(Serializable):
     def __init__(self):
         self.none = False
         self.walls = False
@@ -157,7 +156,7 @@ class IntersectionFlags:
             serialized_stuff.append(serialied)
         return serialized_stuff
 
-class SurfaceTypeFlags:
+class SurfaceTypeFlags(Serializable):
     def __init__(self):
         self.terrain = False
         self.floor = False
@@ -211,7 +210,7 @@ class SurfaceTypeFlags:
             serialized_stuff.append(serialied)
         return serialized_stuff
 
-class SurfaceAttributeFlags:
+class SurfaceAttributeFlags(Serializable):
     def __init__(self):
         self.inside = False
         self.outside = False
@@ -249,7 +248,7 @@ class SurfaceAttributeFlags:
         return serialized_stuff
 
 
-class BoundingBox:
+class BoundingBox(Serializable):
     def __init__(self):
         self.min_x = 0
         self.max_x = 0
@@ -278,7 +277,7 @@ class BoundingBox:
         return serialized_stuff
 
 
-class Point:
+class Point(Serializable):
     def __init__(self):
         self.x = 0
         self.z = 0
@@ -299,16 +298,16 @@ class Point:
             serialized_stuff.append(serialied)
         return serialized_stuff
 
-class Area:
+class Area(Serializable):
     def __init__(self):
         self.name_hash = 0
         self.priority = 0
-        self.area_type_flags = 0
+        self.area_type_flags = FootprintPolyFlags()
         self.points = []
-        self.intersection_object_type = 0
-        self.allow_intersection_types = 0
-        self.surface_type_flags = 0
-        self.surface_attribute_flags = 0
+        self.intersection_object_type = IntersectionFlags()
+        self.allow_intersection_types = IntersectionFlags()
+        self.surface_type_flags = SurfaceTypeFlags()
+        self.surface_attribute_flags = SurfaceAttributeFlags()
         self.deprected_level_offset = 0
         self.bounding_box = BoundingBox()
 
@@ -332,22 +331,23 @@ class Area:
         return self
 
     def serialize(self):
-        data = [UInt32(self.name_hash), Byte(self.priority), UInt32(self.area_type_flags),
+        data = [UInt32(self.name_hash), Byte(self.priority), UInt32(self.area_type_flags.bitfield),
                 Byte(self.point_count), *self.points,
-                UInt32(self.intersection_object_type), UInt32(self.allow_intersection_types),
-                UInt32(self.surface_type_flags), UInt32(self.surface_attribute_flags),
+                UInt32(self.intersection_object_type.bitfield), UInt32(self.allow_intersection_types.bitfield),
+                UInt32(self.surface_type_flags.bitfield), UInt32(self.surface_attribute_flags.bitfield),
                 Byte(self.deprected_level_offset), self.bounding_box]
 
         serialized_stuff = []
-        total_len = 0
+        idx = 0
         for value in data:
+            print(idx)
+            idx+= 1
             serialied = value.serialize()
             serialized_stuff.append(serialied)
-            total_len += get_combined_len(serialied)
         return serialized_stuff
 
 
-class Footprint:
+class Footprint(Serializable):
     def __init__(self, identifier=0):
         self.identifier = identifier
         self.version = 0
@@ -374,7 +374,7 @@ class Footprint:
         return len(self.slot_areas)
 
     def read(self, reader:StreamReader):
-        self.identifier = reader.u32()
+        self.identifier = reader.read(4)
         self.version = reader.u32()
         self.template_key = TGI().read(reader)
         if self.template_key.t != 0:

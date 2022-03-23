@@ -4,7 +4,8 @@ import time
 import math
 import importlib
 from _s4animtools.serialization.fnv import get_64bithash
-from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint
+from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
+    OT_S4ANIMTOOLS_ExportFootprint
 from _s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from _s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent
@@ -938,6 +939,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         # row.operator("s4animtools.beginikmarker", text="Remove Root Bind").command = "SINGLE,BIND,END"
         #
         self.layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
+        self.layout.operator("s4animtools.export_footprint", icon="MESH_CUBE", text="Export Footprint")
+
         self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
         self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
 
@@ -1631,7 +1634,7 @@ classes = (
     LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection,
     LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint)
 
 

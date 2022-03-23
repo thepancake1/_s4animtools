@@ -8,9 +8,13 @@ an 8, 16, 32, or 64 bit integer, or a string.
 
 class Bytes:
     def __init__(self, value):
+        if not isinstance(value, bytes):
+            raise Exception("Bytes value is not bytes")
         self.value = value
 
     def serialize(self):
+        if not isinstance(self.value, bytes):
+            raise Exception("Bytes value is not bytes")
         return self.value
 
 
@@ -81,4 +85,9 @@ class String:
     def serialize(self):
         return self.value.encode("ascii")
 
-
+class Serializable:
+    def serialize(self):
+        raise Exception
+    @property
+    def value(self):
+        return self.serialize()

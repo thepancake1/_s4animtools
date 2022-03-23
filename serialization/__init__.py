@@ -43,6 +43,8 @@ def recursive_write(input_element, stream):
 
     This assumes that the stream has a write function.
     """
+    print(input_element)
+    print(type(input_element))
     if isinstance(input_element, list) or isinstance(input_element, tuple):
         for child_element in input_element:
             recursive_write(child_element, stream)

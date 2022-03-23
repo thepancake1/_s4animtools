@@ -1,5 +1,9 @@
+import io
 import math
-from _s4animtools.rcol.footprints import Footprint
+import os
+import traceback
+
+from _s4animtools.rcol.footprints import Footprint, Area
 from _s4animtools.serialization.types.tgi import TGI
 from _s4animtools.rcol.skin import Skin
 from _s4animtools.serialization.types.basic import UInt32, Bytes
@@ -8,6 +12,7 @@ from _s4animtools.stream import StreamReader
 import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
+import _s4animtools
 def get_combined_len(value):
     size = 0
     if isinstance(value, list):
@@ -155,7 +160,7 @@ class RCOL:
 
     def update_chunk_position_size_automatically(self, chunk_idx):
         offset = self.serialize_to_get_current_offset(chunk_idx)
-        self.change_chunk_position_size(chunk_idx, self.serialize_to_get_current_offset(chunk_idx), len(self.chunk_data[chunk_idx].serialize()))
+        self.change_chunk_position_size(chunk_idx, self.serialize_to_get_current_offset(chunk_idx), get_size(self.chunk_data[chunk_idx].value))
     def serialize_to_get_current_offset(self, chunk_idx):
         data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
                 UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info, *self.chunk_data[:chunk_idx-1]]
@@ -179,11 +184,10 @@ class RCOL:
         for value in data:
             serialied = value.serialize()
             serialized_stuff.append(serialied)
-            total_len += get_combined_len(serialied)
           #  print(total_len, serialied)
         #print(total_len)
         # Pad to next DWORD between chunks
-        serialized_stuff.append(self.align_dword_boundaries(total_len))
+        #serialized_stuff.append(self.align_dword_boundaries(total_len))
         return serialized_stuff
 
 class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
@@ -317,7 +321,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator, ImportHelper):
     bl_options = {"REGISTER", "UNDO"}
 
 
-    def get_properties(self, obj, footprint, context):
+    def create_area(self, obj, footprint, context):
         footprint.area_type_flags.for_placement = obj.for_placement
         footprint.area_type_flags.for_pathing = obj.for_pathing
         footprint.area_type_flags.is_enabled = obj.is_enabled
@@ -369,8 +373,9 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator, ImportHelper):
         footprint.surface_attribute_flags.outside = obj.outside
         footprint.surface_attribute_flags.inside = obj.inside
 
+
+
     def execute(self, context):
-        armature = bpy.context.object.data
         reader = StreamReader(self.filepath)
         print(self.filepath)
         rcol = RCOL().read(reader)
@@ -379,57 +384,28 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator, ImportHelper):
             if isinstance(chunk, Footprint):
                 footprint_chunk = chunk
                 break
-
         footprint_areas = footprint_chunk.footprint_areas
 
-        for footprint_area in footprint_areas:
-            vertices = []
-            edges = []
-            faces = []
-            footprint_obj_name = hex(footprint_area.name_hash) + " Footprint"
-            me = bpy.data.meshes.new(footprint_obj_name)
-            ob = bpy.data.objects.new(footprint_obj_name, me)
-            point_count = len(footprint_area.points)
-            bounding_box = footprint_area.bounding_box
-            print(bounding_box.min_x, bounding_box.max_x, bounding_box.min_y, bounding_box.max_y, bounding_box.min_z, bounding_box.max_z)
-            min_y, max_y = bounding_box.min_y, bounding_box.max_y
-            for idx, point in enumerate(footprint_area.points):
-                vertices.append((point.x, -point.z, 0))
-                if idx < point_count - 1:
-                    edges.append((idx, idx+1))
-                else:
-                    edges.append((idx, 0))
+        for obj in bpy.data.objects:
+            if obj.is_footprint:
+                area = Area()
+                self.create_area(obj, area, context)
+                footprint_areas.append(area)
+        rcol.update_chunk_position_size_automatically(0)
 
-            #for idx in range(0, point_count-3, 3):
-            #    faces.append((idx, idx+1, idx+2))
-            #if point_count != idx:
-              #  faces.append((point_count-1, 0, point_count-2))
-            faces.append(list(range(0, point_count)))
-            me.from_pydata(vertices, [], faces)
-            ob.show_name = True
-            me.update()
-            bpy.context.collection.objects.link(ob)
-            ob.location.z = min_y
-            bpy.ops.object.select_all(action='DESELECT')
-            ob.select_set(True)
-            bpy.context.view_layer.objects.active = ob
+        all_data = io.BytesIO()
+        anim_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
+        if not os.path.exists(anim_path):
+            os.mkdir(anim_path)
+        try:
+            _s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
+        except:
+            print(traceback.format_exc())
 
-            bpy.ops.object.modifier_add(type='SOLIDIFY')
-            bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y) + 0.1
-            bpy.context.object.modifiers["Solidify"].offset = -1
-            bpy.context.object.modifiers["Solidify"].use_even_offset = True
-            bpy.context.object.modifiers["Solidify"].use_quality_normals = True
-            bpy.context.object.modifiers["Solidify"].use_rim = True
-            self.setup_properties(ob, footprint_area, context)
-        #bpy.ops.object.select_all(action='DESELECT')
-           #ob.select_set(True)
-           #bpy.context.view_layer.objects.active = ob
-           #bpy.ops.object.mode_set(mode='EDIT')
+        with open(os.path.join(anim_path, "footprint.binary"), "wb") as file:
+            file.write(all_data.getvalue())
 
-           #bpy.ops.mesh.select_all(action='SELECT')
-
-           #bpy.ops.mesh.normals_make_consistent(inside=False)
-           #bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
         return {"FINISHED"}
 

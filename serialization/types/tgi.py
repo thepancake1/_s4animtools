@@ -1,8 +1,8 @@
-from _s4animtools.serialization.types.basic import UInt32
+from _s4animtools.serialization.types.basic import UInt32, Serializable
 from _s4animtools.serialization.types.basic import UInt64
 
 
-class TGI:
+class TGI(Serializable):
     def __init__(self):
         self.i = 0
         self.t = 0

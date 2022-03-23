@@ -56,6 +56,6 @@ class StreamReader:
             return self.stream[self.current_pos-length:self.current_pos].decode("utf-8")
         except UnicodeDecodeError:
             return "Unreadable Name"
-    def skip(self,byte_count):
+    def read(self, byte_count):
         self.current_pos += byte_count
         return self.stream[self.current_pos - byte_count: self.current_pos]
