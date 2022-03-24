@@ -12,6 +12,8 @@ from _s4animtools.stream import StreamReader
 import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
+from math import radians
+from mathutils import Vector
 import _s4animtools
 def get_combined_len(value):
     size = 0
@@ -294,10 +296,19 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             bpy.ops.object.select_all(action='DESELECT')
             ob.select_set(True)
             bpy.context.view_layer.objects.active = ob
+            down = Vector((0, 0, -1))
+            test_angle = radians(89)
+            faces = [f for f in me.polygons
+                     if f.normal.angle(down) < test_angle]
+            bpy.ops.object.mode_set(mode='EDIT')
+
+            if len(faces) > 0:
+                bpy.ops.mesh.flip_normals()
+            bpy.ops.object.mode_set(mode='OBJECT')
 
             bpy.ops.object.modifier_add(type='SOLIDIFY')
             bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y) + 0.1
-            bpy.context.object.modifiers["Solidify"].offset = -1
+            bpy.context.object.modifiers["Solidify"].offset = 1
             bpy.context.object.modifiers["Solidify"].use_even_offset = True
             bpy.context.object.modifiers["Solidify"].use_quality_normals = True
             bpy.context.object.modifiers["Solidify"].use_rim = True
