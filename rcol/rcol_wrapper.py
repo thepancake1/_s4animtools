@@ -311,7 +311,7 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             bpy.ops.object.mode_set(mode='OBJECT')
 
             bpy.ops.object.modifier_add(type='SOLIDIFY')
-            bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y) + 0.1
+            bpy.context.object.modifiers["Solidify"].thickness = abs(max_y - min_y)
             bpy.context.object.modifiers["Solidify"].offset = 1
             bpy.context.object.modifiers["Solidify"].use_even_offset = True
             bpy.context.object.modifiers["Solidify"].use_quality_normals = True
@@ -376,19 +376,19 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
         footprint.intersection_object_type.fenestration_node = obj.is_fenestration_node
         footprint.intersection_object_type.trim = obj.is_trim
 
-        footprint.intersection_object_type.none = obj.ignores_none
-        footprint.intersection_object_type.walls = obj.ignores_walls
-        footprint.intersection_object_type.objects = obj.ignores_objects
-        footprint.intersection_object_type.sims = obj.ignores_sims
-        footprint.intersection_object_type.roofs = obj.ignores_roofs
-        footprint.intersection_object_type.fences = obj.ignores_fences
-        footprint.intersection_object_type.modular_stairs = obj.ignores_modular_stairs
-        footprint.intersection_object_type.objects_of_same_type = obj.ignores_objects_of_same_type
-        footprint.intersection_object_type.columns = obj.ignores_columns
-        footprint.intersection_object_type.reserved_space = obj.ignores_reserved_space
-        footprint.intersection_object_type.foundations = obj.ignores_foundations
-        footprint.intersection_object_type.fenestration_node = obj.ignores_fenestration_node
-        footprint.intersection_object_type.trim = obj.ignores_trim
+        footprint.allow_intersection_types.none = obj.ignores_none
+        footprint.allow_intersection_types.walls = obj.ignores_walls
+        footprint.allow_intersection_types.objects = obj.ignores_objects
+        footprint.allow_intersection_types.sims = obj.ignores_sims
+        footprint.allow_intersection_types.roofs = obj.ignores_roofs
+        footprint.allow_intersection_types.fences = obj.ignores_fences
+        footprint.allow_intersection_types.modular_stairs = obj.ignores_modular_stairs
+        footprint.allow_intersection_types.objects_of_same_type = obj.ignores_objects_of_same_type
+        footprint.allow_intersection_types.columns = obj.ignores_columns
+        footprint.allow_intersection_types.reserved_space = obj.ignores_reserved_space
+        footprint.allow_intersection_types.foundations = obj.ignores_foundations
+        footprint.allow_intersection_types.fenestration_node = obj.ignores_fenestration_node
+        footprint.allow_intersection_types.trim = obj.ignores_trim
 
         footprint.surface_type_flags.terrain = obj.terrain
         footprint.surface_type_flags.floor = obj.floor

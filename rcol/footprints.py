@@ -44,9 +44,9 @@ class FootprintPolyFlags(Serializable):
 
     @property
     def bitfield(self):
-        return  (int(self.terrain_cutout) >> 8) + (int(self.encouraged) >> 7) + (int(self.placement_slotted) >> 6) + \
-                (int(self.no_raycast) >> 5) + (int(self.landing_strip) >> 4) + (int(self.discouraged) >> 3) + \
-                (int(self.is_enabled) >> 2) + (int(self.for_pathing) >> 1) + int(self.for_placement)
+        return  (int(self.terrain_cutout) << 8) + (int(self.encouraged) << 7) + (int(self.placement_slotted) << 6) + \
+                (int(self.no_raycast) << 5) + (int(self.landing_strip) << 4) + (int(self.discouraged) << 3) + \
+                (int(self.is_enabled) << 2) + (int(self.for_pathing) << 1) + int(self.for_placement)
 
     @bitfield.setter
     def bitfield(self, value):
@@ -103,10 +103,10 @@ class IntersectionFlags(Serializable):
 
     @property
     def bitfield(self):
-        return  (int(self.trim) >> 13) + (int(self.fenestration_node) >> 12) + (int(self.foundations) >> 11)  + \
-                (int(self.reserved_space) >> 10) + (int(self.columns) >> 9) + (int(self.objects_of_same_type) >> 8) + (int(self.modular_stairs) >> 7) + \
-                (int(self.fences) >> 6) + (int(self.roofs) >> 5) + (int(self.sims) >> 4) + \
-                (int(self.objects) >> 3) + (int(self.walls) >> 2) + int(self.none)
+        return  (int(self.trim) << 12) + (int(self.fenestration_node) << 11) + (int(self.foundations) << 10)  + \
+                (int(self.reserved_space) << 9) + (int(self.columns) << 8) + (int(self.objects_of_same_type) << 7) + (int(self.modular_stairs) << 6) + \
+                (int(self.fences) << 5) + (int(self.roofs) << 4) + (int(self.sims) << 3) + \
+                (int(self.objects) << 2) + (int(self.walls) << 1) + int(self.none)
 
     @bitfield.setter
     def bitfield(self, value):
@@ -169,9 +169,9 @@ class SurfaceTypeFlags(Serializable):
 
     @property
     def bitfield(self):
-        return (int(self.roof) >> 7) + (int(self.air) >> 6) + (int(self.any_surface) >> 5) + \
-                (int(self.fence_post) >> 4) + (int(self.pond) >> 3) + (int(self.pool) >> 2) + \
-                (int(self.floor) >> 1) + (int(self.terrain) >> 0)
+        return (int(self.roof) << 7) + (int(self.air) << 6) + (int(self.any_surface) << 5) + \
+                (int(self.fence_post) << 4) + (int(self.pond) << 3) + (int(self.pool) << 2) + \
+                (int(self.floor) << 1) + (int(self.terrain) << 0)
 
     @bitfield.setter
     def bitfield(self, value):
@@ -218,8 +218,8 @@ class SurfaceAttributeFlags(Serializable):
 
     @property
     def bitfield(self):
-        return (int(self.slope) >> 2) + \
-                (int(self.outside) >> 1) + (int(self.inside) >> 0)
+        return (int(self.slope) << 2) + \
+                (int(self.outside) << 1) + (int(self.inside) << 0)
 
     @bitfield.setter
     def bitfield(self, value):
