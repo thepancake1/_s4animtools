@@ -336,7 +336,22 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
 
-    def create_area(self, obj, footprint, points, context):
+    def get_bounding_box_points(self, points):
+        min_x, max_x, min_z, max_z = 999, -999, 999, -999
+
+        for point in points:
+            if point[0] < min_x:
+                min_x = point[0]
+            if point[0] > max_x:
+                max_x = point[0]
+
+            if point[1] < min_z:
+                min_z = point[1]
+            if point[1] > max_z:
+                max_z = point[1]
+        return min_x, max_x, min_z, max_z
+    def  create_area(self, obj, footprint, points, context):
+        footprint.name_hash = hash_name_or_get_hash(obj.name.split(" ")[0]).value
         footprint.area_type_flags.for_placement = obj.for_placement
         footprint.area_type_flags.for_pathing = obj.for_pathing
         footprint.area_type_flags.is_enabled = obj.is_enabled
@@ -393,6 +408,10 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             new_point.x = point[0]
             new_point.z = point[1]
             footprint.points.append(new_point)
+        footprint.bounding_box.min_y, footprint.bounding_box.max_y = obj.location.z, obj.location.z + obj.dimensions.z
+
+        footprint.bounding_box.min_x, footprint.bounding_box.max_x, footprint.bounding_box.min_z, footprint.bounding_box.max_z = self.get_bounding_box_points(
+            points)
 
     def execute(self, context):
         instance_id = hash_name_or_get_hash_64(context.scene.footprint_name)
@@ -407,7 +426,8 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
         rcol.internal_tgis.append(new_tgi)
         footprint_areas = footprint_chunk.footprint_areas
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-
+        min_height = 9999
+        max_height = -999
         for obj in bpy.data.objects:
             if obj.is_footprint:
                 points = self.sort_vertices_clockwise(obj)
@@ -415,7 +435,14 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
 
                 area = Area()
                 self.create_area(obj, area, points, context)
+
                 footprint_areas.append(area)
+                if area.bounding_box.max_y > max_height:
+                    max_height = area.bounding_box.max_y
+                if area.bounding_box.min_y < min_height:
+                    min_height = area.bounding_box.min_y
+        footprint_chunk.minimum_height, footprint_chunk.maximum_height = min_height, max_height
+
         rcol.update_chunk_position_size_automatically(0)
 
         all_data = io.BytesIO()

@@ -266,8 +266,8 @@ class BoundingBox(Serializable):
         self.max_y = reader.float32()
         return self
     def serialize(self):
-        data = [Float32(self.min_x), Float32(self.max_x), Float32(self.min_y), Float32(self.max_y),
-                Float32(self.max_z), Float32(self.max_z)]
+        data = [Float32(self.min_x), Float32(self.min_z), Float32(self.max_x), Float32(self.max_z),
+                Float32(self.min_y), Float32(self.max_y)]
 
         serialized_stuff = []
         total_len = 0
