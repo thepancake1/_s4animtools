@@ -1025,7 +1025,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout = self.layout.row()
                 layout.prop(obj, "ignores_none", text = "None")
                 layout.prop(obj, "ignores_walls", text = "Walls")
-                layout.prop(obj, "is_objects", text = "Objects")
+                layout.prop(obj, "ignores_objects", text = "Objects")
 
                 layout = self.layout.row()
                 layout.prop(obj, "ignores_sims", text = "Sims")
