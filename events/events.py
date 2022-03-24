@@ -1,7 +1,6 @@
-import _s4animtools
 from _s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Byte, UInt64
 
-from _s4animtools.serialization.fnv import get_32bit_hash
+from _s4animtools.serialization.fnv import hash_name_or_get_hash
 
 
 def get_null_terminated_string(string):
@@ -18,13 +17,6 @@ def get_bytes_from_string(string):
     except UnicodeEncodeError:
         raise Exception("Your sound or effect name has non-ascii characters. Please remove this if you want to export.")
     return Bytes(get_null_terminated_string(ascii_string))
-
-
-def get_hash_from_actor_name_or_hash(string, lowercase=False):
-    if string.startswith("0x"):
-        return UInt32(int(string.strip(), 16))
-    else:
-        return UInt32(get_32bit_hash(string.strip(), lowercase=lowercase))
 
 
 def get_int_from_hex_string_or_int(string):
@@ -50,13 +42,13 @@ class ParentEvent:
         self.header1 = UInt32(1)
         self.header2 = UInt32(0xc6)
         self.timecode = Float32(float(timecode))
-        self.child_actor = get_hash_from_actor_name_or_hash(child_actor)
+        self.child_actor = hash_name_or_get_hash(child_actor)
         if parent_actor.lstrip() != "0":
-            self.parent_actor = get_hash_from_actor_name_or_hash(parent_actor)
+            self.parent_actor = hash_name_or_get_hash(parent_actor)
         else:
             self.parent_actor = UInt32(0)
         if parent_actor_bone.lstrip() != "0":
-            self.parent_actor_bone = get_hash_from_actor_name_or_hash(parent_actor_bone, lowercase=True)
+            self.parent_actor_bone = hash_name_or_get_hash(parent_actor_bone, lowercase=True)
         else:
             self.parent_actor_bone = UInt32(0)
         self.unused_entry = UInt32(0)
@@ -150,7 +142,7 @@ class SnapEvent:
         self.header1 = UInt32(2)
         self.header2 = UInt32(134)
         self.timecode = Float32(float(timecode))
-        self.actor = get_hash_from_actor_name_or_hash(actor)
+        self.actor = hash_name_or_get_hash(actor)
         translations = []
         quats = []
 
@@ -184,7 +176,7 @@ class VisibilityEvent:
         self.header1 = UInt32(1)
         self.header2 = UInt32(0x6)
         self.timecode = Float32(float(timecode))
-        self.actor_name = get_hash_from_actor_name_or_hash(actor_name)
+        self.actor_name = hash_name_or_get_hash(actor_name)
         self.visible = Byte(int(visible))
 
     def serialize(self):
@@ -231,8 +223,8 @@ class PlayEffectEvent:
         self.header2 = UInt32(0)
         self.timecode = Float32(float(timecode))
         self.effect_name = get_bytes_from_string(effect_name)
-        self.actor_hash = get_hash_from_actor_name_or_hash(actor_name_or_hash)
-        self.bone_name_hash = get_hash_from_actor_name_or_hash(bone_name_hash, lowercase=True)
+        self.actor_hash = hash_name_or_get_hash(actor_name_or_hash)
+        self.bone_name_hash = hash_name_or_get_hash(bone_name_hash, lowercase=True)
         self.u1 = get_int64_from_hex_string_or_int(u1)
         self.u2 = get_int64_from_hex_string_or_int(u2)
         self.slot_name = get_bytes_from_string(slot_name)
@@ -257,8 +249,8 @@ class StopEffectEvent:
         self.header1 = UInt32(2)
         self.header2 = UInt32(0)
         self.timecode = Float32(float(timecode))
-        self.slot_name = get_hash_from_actor_name_or_hash(slot_name)
-        self.u2 = get_hash_from_actor_name_or_hash(u2)
+        self.slot_name = hash_name_or_get_hash(slot_name)
+        self.u2 = hash_name_or_get_hash(u2)
         self.b1 = Byte(int(b1))
 
     def serialize(self):

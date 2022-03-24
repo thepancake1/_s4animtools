@@ -1,3 +1,6 @@
+from _s4animtools.serialization.types.basic import UInt64, UInt32
+
+
 def get_addon_path():
     """
     I don't think this is used anywhere.
@@ -59,3 +62,18 @@ def get_64bithash(to_hash, lowercase=True):
         hval = hval ^ byte
     return "{}".format(str(hex(hval))[2:].upper()).zfill(8)
 
+def get_64bithash_as_int(to_hash, lowercase=True):
+    # TODO why am I doing this
+    return int(get_64bithash(to_hash, lowercase), 16)
+
+def hash_name_or_get_hash(string, lowercase=False):
+    if string.startswith("0x"):
+        return UInt32(int(string.strip(), 16))
+    else:
+        return UInt32(get_32bit_hash(string.strip(), lowercase=lowercase))
+
+def hash_name_or_get_hash_64(string, lowercase=False):
+    if string.startswith("0x"):
+        return UInt64(int(string.strip(), 16))
+    else:
+        return UInt64(get_64bithash_as_int(string.strip(), lowercase=lowercase))

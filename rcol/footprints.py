@@ -348,9 +348,9 @@ class Area(Serializable):
 
 
 class Footprint(Serializable):
-    def __init__(self, identifier=0):
+    def __init__(self, identifier=b"FTPT"):
         self.identifier = identifier
-        self.version = 0
+        self.version = 12
         self.template_key = TGI()
         self.min_height_overrides = []
         self.max_height_overrides = []
@@ -394,8 +394,9 @@ class Footprint(Serializable):
             slot_area_count = reader.u8()
             for i in range(slot_area_count):
                 self.slot_areas.append(Area().read(reader))
-            self.minimum_height = reader.float32()
             self.maximum_height = reader.float32()
+
+            self.minimum_height = reader.float32()
         return self
     def serialize(self):
         serialized_stuff = []

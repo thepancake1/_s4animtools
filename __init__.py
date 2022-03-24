@@ -943,6 +943,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
         self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
         self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
+        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Terrain Footprints").command="terrain"
+        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Floor Footprints").command="floor"
+        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pool Footprints").command="pool"
+        self.layout.prop(context.scene, "footprint_name", text="Footprint Name Or Hash")
 
         if obj is not None:
             layout = self.layout
@@ -1797,6 +1801,7 @@ def register():
     bpy.types.Scene.clip_name_prefix = bpy.props.StringProperty()
     bpy.types.Scene.clip_splits = bpy.props.StringProperty()
 
+    bpy.types.Scene.footprint_name = bpy.props.StringProperty()
 
 def unregister():
     from bpy.utils import unregister_class

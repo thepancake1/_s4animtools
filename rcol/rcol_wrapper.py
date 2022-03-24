@@ -2,8 +2,9 @@ import io
 import math
 import os
 import traceback
+import _s4animtools
 
-from _s4animtools.rcol.footprints import Footprint, Area
+from _s4animtools.rcol.footprints import Footprint, Area, Point
 from _s4animtools.serialization.types.tgi import TGI
 from _s4animtools.rcol.skin import Skin
 from _s4animtools.serialization.types.basic import UInt32, Bytes
@@ -14,7 +15,10 @@ from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
 from math import radians
 from mathutils import Vector
-import _s4animtools
+import bmesh
+from _s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash, hash_name_or_get_hash_64
+
+from math import pi
 def get_combined_len(value):
     size = 0
     if isinstance(value, list):
@@ -48,7 +52,7 @@ class ChunkInfo:
 class RCOL:
     def __init__(self):
         self.version = 3
-        self.public_chunks = 0
+        self.public_chunks = 1
         self.index3 = 0
         self.internal_tgis = []
         self.external_tgis = []
@@ -326,13 +330,13 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
 
-class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator, ImportHelper):
+class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
     bl_idname = "s4animtools.export_footprint"
     bl_label = "Export Footprint"
     bl_options = {"REGISTER", "UNDO"}
 
 
-    def create_area(self, obj, footprint, context):
+    def create_area(self, obj, footprint, points, context):
         footprint.area_type_flags.for_placement = obj.for_placement
         footprint.area_type_flags.for_pathing = obj.for_pathing
         footprint.area_type_flags.is_enabled = obj.is_enabled
@@ -384,23 +388,33 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator, ImportHelper):
         footprint.surface_attribute_flags.outside = obj.outside
         footprint.surface_attribute_flags.inside = obj.inside
 
-
+        for point in points:
+            new_point = Point()
+            new_point.x = point[0]
+            new_point.z = point[1]
+            footprint.points.append(new_point)
 
     def execute(self, context):
-        reader = StreamReader(self.filepath)
-        print(self.filepath)
-        rcol = RCOL().read(reader)
-        footprint_chunk = None
-        for chunk in rcol.chunk_data:
-            if isinstance(chunk, Footprint):
-                footprint_chunk = chunk
-                break
+        instance_id = hash_name_or_get_hash_64(context.scene.footprint_name)
+
+        rcol = RCOL()
+        footprint_chunk = Footprint()
+        rcol.chunk_data.append(footprint_chunk)
+        rcol.chunk_info.append(ChunkInfo(0,0))
+        new_tgi = TGI()
+        new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.value
+        print(new_tgi)
+        rcol.internal_tgis.append(new_tgi)
         footprint_areas = footprint_chunk.footprint_areas
+        bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
         for obj in bpy.data.objects:
             if obj.is_footprint:
+                points = self.sort_vertices_clockwise(obj)
+                bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+
                 area = Area()
-                self.create_area(obj, area, context)
+                self.create_area(obj, area, points, context)
                 footprint_areas.append(area)
         rcol.update_chunk_position_size_automatically(0)
 
@@ -413,13 +427,31 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator, ImportHelper):
         except:
             print(traceback.format_exc())
 
-        with open(os.path.join(anim_path, "footprint.binary"), "wb") as file:
+
+        with open(os.path.join(anim_path, f"D382BF57!80000000!{hex(new_tgi.i).upper()[2:]}.Footprint.binary"), "wb") as file:
             file.write(all_data.getvalue())
 
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
         return {"FINISHED"}
 
+    def sort_vertices_clockwise(self, obj):
+        points = []
+        # from https://blender.stackexchange.com/questions/241880/vertex-ordering-in-mesh-object-created-from-curve-with-bevel-object
+        me = obj.data
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        up = Vector((0, -1))
+        verts = bm.verts[:]
+        verts.sort(key=lambda v: pi - up.angle_signed(v.co.xy))
+        verts.insert(0, verts.pop())
+        for i, v in enumerate(verts):
+            v.index = i
+            points.append((v.co[0], -v.co[1]))
+        bm.verts.sort()
+        bm.to_mesh(me)
+        me.update()
+        return points
 
 class OT_S4ANIMTOOLS_VisualizeFootprint(bpy.types.Operator):
     bl_idname = "s4animtools.visualize_footprint"
@@ -457,6 +489,21 @@ class OT_S4ANIMTOOLS_VisualizeFootprint(bpy.types.Operator):
                         obj.active_material = red_material
                 elif self.command == "for_pathing":
                     if obj.for_pathing:
+                        obj.active_material = green_material
+                    else:
+                        obj.active_material = red_material
+                elif self.command == "pool":
+                    if obj.pool:
+                        obj.active_material = green_material
+                    else:
+                        obj.active_material = red_material
+                elif self.command == "terrain":
+                    if obj.terrain:
+                        obj.active_material = green_material
+                    else:
+                        obj.active_material = red_material
+                elif self.command == "floor":
+                    if obj.floor:
                         obj.active_material = green_material
                     else:
                         obj.active_material = red_material
