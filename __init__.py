@@ -706,8 +706,9 @@ class NewClipExporter(bpy.types.Operator):
                 original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
                                                                                               start_time)
                 if event == SnapEvent:
-                    snap_frames.append(original_timestamp)
-                    current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
+                    if frame_time >= timeshifted_timestamp >= 0:
+                        snap_frames.append(timeshifted_timestamp)
+                        current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
 
                 elif event == FocusCompatibilityEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
