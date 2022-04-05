@@ -294,7 +294,7 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
         constraints.extend(self.add_hold_copy_constraints(obj, self.RIGHT_LEG_TARGET, self.RIGHT_LEG_TARGET[:-4] + IK_suffix, self.RIGHT_LEG_BAKED))
         bpy.context.view_layer.update()
 
-       # bpy.ops.nla.bake(frame_start=context.scene.frame_start, frame_end=context.scene.frame_end, only_selected=True, visual_keying=True, clear_constraints=False, use_current_action=True, bake_types={'POSE'})
+        bpy.ops.nla.bake(frame_start=context.scene.frame_start, frame_end=context.scene.frame_end, only_selected=True, visual_keying=True, clear_constraints=False, use_current_action=True, bake_types={'POSE'})
 
 
         for bone in [*self.LEFT_ARM_BAKED,self.LEFT_ARM_TARGET,
@@ -314,7 +314,6 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
                          *self.RIGHT_LEG_BAKED]:
                 bone = bpy.context.object.pose.bones[bone]
                 data_path = f'pose.bones["{bone}"]["location"]'
-                # Create FCurve for IK/FK toggle
                 action = animation_data.action
                 for pos in range(3):
                     fc = action.fcurves.find(data_path, index=pos)

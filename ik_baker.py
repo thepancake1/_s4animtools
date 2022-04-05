@@ -123,6 +123,9 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
                     matrix_data = src_matrix.inverted() @ target_matrix
                     rotation_data = matrix_data.to_quaternion()
                     translation_data = matrix_data.to_translation()
+
+                    if i == 0:
+                        print(translation_data, rotation_data)
                     for axis_idx, value in enumerate(translation_data):
                         positions[(chain_bone, target_bone, target_rig)][axis_idx].extend([i, value])
                     for axis_idx, value in enumerate(rotation_data):
