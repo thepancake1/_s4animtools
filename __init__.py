@@ -1047,7 +1047,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.prop(obj, "ignores_trim", text = "Trim")
 
             layout.operator("s4animtools.create_bone_selectors", icon='MESH_CUBE', text="Create Bone Selectors")
-
+            layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
+            layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
             layout.prop(obj, "select_slots", text = "Slots")
             layout.prop(obj, "select_cas", text = "CAS")
             layout.prop(obj, "select_left", text = "Left Side")
@@ -1062,6 +1063,17 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.prop(obj, "select_left_first_fingers", text = "Left First Fingers")
             layout.prop(obj, "select_left_second_fingers", text = "Left Second Fingers")
             layout.prop(obj, "select_left_third_fingers", text = "Left Third Fingers")
+
+            layout.prop(obj, "select_right_pinky", text = "Right Pinky")
+            layout.prop(obj, "select_right_ring", text = "Right Ring")
+            layout.prop(obj, "select_right_middle", text = "Right Middle")
+            layout.prop(obj, "select_right_index", text = "Right Index")
+            layout.prop(obj, "select_right_thumb", text = "Right Thumb")
+            layout.prop(obj, "select_right_fingers", text = "Right Fingers")
+
+            layout.prop(obj, "select_right_first_fingers", text = "Right First Fingers")
+            layout.prop(obj, "select_right_second_fingers", text = "Right Second Fingers")
+            layout.prop(obj, "select_right_third_fingers", text = "Right Third Fingers")
 
             layout = self.layout.row()
             layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
@@ -1633,6 +1645,150 @@ class ExportAnimationStateMachine(bpy.types.Operator):
 
         return {"FINISHED"}
 
+def is_slot_bone(bone):
+    return "slot" in bone.name.lower()
+
+def is_cas_bone(bone):
+    return "cas" in bone.name.lower()
+
+def is_left_bone(bone):
+    return "_l_" in bone.name.lower()
+
+def is_right_bone(bone):
+    return "_r_" in bone.name.lower()
+
+def check_if_finger_bone(bone):
+    if bone.parent is not None:
+        if "hand" in bone.parent.name.lower():
+            return True
+        if bone.parent.parent is not None:
+            if "hand" in bone.parent.parent.name.lower():
+                return True
+
+            if bone.parent.parent.parent is not None:
+
+                if "hand" in bone.parent.parent.parent.name.lower():
+                    print(bone.name)
+                    return True
+    return False
+
+def is_left_pinky_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "pinky" in bone.name.lower() and is_left_bone(bone)
+
+def is_left_ring_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "ring" in bone.name.lower() and is_left_bone(bone)
+
+def is_left_mid_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "mid" in bone.name.lower() and is_left_bone(bone)
+
+def is_left_index_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "index" in bone.name.lower() and is_left_bone(bone)
+
+def is_left_thumb_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "thumb" in bone.name.lower() and is_left_bone(bone)
+
+def is_slot_bone(bone):
+    return "slot" in bone.name
+
+def is_first_left_finger_joint(bone):
+    if is_left_pinky_bone(bone) or is_left_ring_bone(bone) or is_left_mid_bone(bone) or is_left_index_bone(
+            bone) or is_left_thumb_bone(bone):
+        if "0" in bone.name:
+            return True
+
+    return False
+
+def is_second_left_finger_joint(bone):
+    if is_left_pinky_bone(bone) or is_left_ring_bone(bone) or is_left_mid_bone(bone) or is_left_index_bone(
+            bone) or is_left_thumb_bone(bone):
+        if "1" in bone.name:
+            return True
+
+    return False
+
+def is_third_left_finger_joint(bone):
+    if is_left_pinky_bone(bone) or is_left_ring_bone(bone) or is_left_mid_bone(bone) or is_left_index_bone(
+            bone) or is_left_thumb_bone(bone):
+        if "2" in bone.name:
+            return True
+
+    return False
+
+def is_left_finger_joint(bone):
+    if is_left_pinky_bone(bone) or is_left_ring_bone(bone) or is_left_mid_bone(bone) or is_left_index_bone(
+            bone) or is_left_thumb_bone(bone):
+        return True
+
+    return False
+
+def is_right_pinky_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "pinky" in bone.name.lower() and is_right_bone(bone)
+
+def is_right_ring_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "ring" in bone.name.lower() and is_right_bone(bone)
+
+def is_right_mid_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "mid" in bone.name.lower() and is_right_bone(bone)
+
+def is_right_index_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "index" in bone.name.lower() and is_right_bone(bone)
+
+def is_right_thumb_bone(bone):
+    if not check_if_finger_bone(bone):
+        return False
+    return "thumb" in bone.name.lower() and is_right_bone(bone)
+
+
+def is_first_right_finger_joint(bone):
+    if is_right_pinky_bone(bone) or is_right_ring_bone(bone) or is_right_mid_bone(bone) or is_right_index_bone(
+            bone) or is_right_thumb_bone(bone):
+        if "0" in bone.name:
+            return True
+
+    return False
+
+def is_second_right_finger_joint(bone):
+    if is_right_pinky_bone(bone) or is_right_ring_bone(bone) or is_right_mid_bone(bone) or is_right_index_bone(
+            bone) or is_right_thumb_bone(bone):
+        if "1" in bone.name:
+            return True
+
+    return False
+
+def is_third_right_finger_joint(bone):
+    if is_right_pinky_bone(bone) or is_right_ring_bone(bone) or is_right_mid_bone(bone) or is_right_index_bone(
+            bone) or is_right_thumb_bone(bone):
+        if "2" in bone.name:
+            return True
+
+    return False
+
+def is_right_finger_joint(bone):
+    if is_right_pinky_bone(bone) or is_right_ring_bone(bone) or is_right_mid_bone(bone) or is_right_index_bone(
+            bone) or is_right_thumb_bone(bone):
+        return True
+
+    return False
+
+
 class OT_S4ANIMTOOLS_CreateBoneSelectors(bpy.types.Operator):
     bl_idname = "s4animtools.create_bone_selectors"
     bl_label = "Create Bone Selectors"
@@ -1657,91 +1813,6 @@ class OT_S4ANIMTOOLS_CreateBoneSelectors(bpy.types.Operator):
             else:
                 setattr(bone, bone_group_name, False)
 
-    def is_slot_bone(self, bone):
-        return "slot" in bone.name.lower()
-
-    def is_cas_bone(self, bone):
-        return "cas" in bone.name.lower()
-
-    def is_left_bone(self, bone):
-        return "_l_" in bone.name.lower()
-
-    def is_right_bone(self, bone):
-        return "_r_" in bone.name.lower()
-
-    def check_if_finger_bone(self, bone):
-        if bone.parent is not None:
-            if "hand" in bone.parent.name.lower():
-                return True
-            if bone.parent.parent is not None:
-                if "hand" in bone.parent.parent.name.lower():
-                    return True
-
-                if bone.parent.parent.parent is not None:
-
-                    if "hand" in bone.parent.parent.parent.name.lower():
-                        print(bone.name)
-                        return True
-        return False
-
-    def is_left_pinky_bone(self, bone):
-        if not self.check_if_finger_bone(bone):
-            return False
-        return "pinky" in bone.name.lower() and self.is_left_bone(bone)
-
-    def is_left_ring_bone(self, bone):
-        if not self.check_if_finger_bone(bone):
-            return False
-        return "ring" in bone.name.lower() and self.is_left_bone(bone)
-
-    def is_left_mid_bone(self, bone):
-        if not self.check_if_finger_bone(bone):
-            return False
-        return "mid" in bone.name.lower() and self.is_left_bone(bone)
-
-    def is_left_index_bone(self, bone):
-        if not self.check_if_finger_bone(bone):
-            return False
-        return "index" in bone.name.lower() and self.is_left_bone(bone)
-
-    def is_left_thumb_bone(self, bone):
-        if not self.check_if_finger_bone(bone):
-            return False
-        return "thumb" in bone.name.lower() and self.is_left_bone(bone)
-
-    def is_slot_bone(self, bone):
-        return "slot" in bone.name
-
-    def is_first_left_finger_joint(self,bone):
-        if self.is_left_pinky_bone(bone) or self.is_left_ring_bone(bone) or self.is_left_mid_bone(bone) or self.is_left_index_bone(
-                bone) or self.is_left_thumb_bone(bone):
-            if "0" in bone.name:
-                return True
-
-        return False
-
-    def is_second_left_finger_joint(self, bone):
-        if self.is_left_pinky_bone(bone) or self.is_left_ring_bone(bone) or self.is_left_mid_bone(bone) or self.is_left_index_bone(
-                bone) or self.is_left_thumb_bone(bone):
-            if "1" in bone.name:
-                return True
-
-        return False
-
-    def is_third_left_finger_joint(self, bone):
-        if self.is_left_pinky_bone(bone) or self.is_left_ring_bone(bone) or self.is_left_mid_bone(bone) or self.is_left_index_bone(
-                bone) or self.is_left_thumb_bone(bone):
-            if "2" in bone.name:
-                return True
-
-        return False
-
-    def is_left_finger_joint(self, bone):
-        if self.is_left_pinky_bone(bone) or self.is_left_ring_bone(bone) or self.is_left_mid_bone(bone) or self.is_left_index_bone(
-                bone) or self.is_left_thumb_bone(bone):
-            return True
-
-        return False
 
     def execute(self, context):
         obj = context.object
@@ -1749,24 +1820,122 @@ class OT_S4ANIMTOOLS_CreateBoneSelectors(bpy.types.Operator):
         while len(obj.pose.bone_groups) > 0:
             bpy.ops.pose.group_remove()
 
-        self.assign_bones_to_group_if_match(obj, self.is_slot_bone, "is_slot")
-        self.assign_bones_to_group_if_match(obj, self.is_cas_bone, "is_cas")
-        self.assign_bones_to_group_if_match(obj, self.is_left_bone, "is_left")
-        self.assign_bones_to_group_if_match(obj, self.is_right_bone, "is_right")
-        self.assign_bones_to_group_if_match(obj, self.is_left_pinky_bone, "is_left_pinky")
-        self.assign_bones_to_group_if_match(obj, self.is_left_ring_bone, "is_left_ring")
-        self.assign_bones_to_group_if_match(obj, self.is_left_mid_bone, "is_left_middle")
-        self.assign_bones_to_group_if_match(obj, self.is_left_index_bone, "is_left_index")
-        self.assign_bones_to_group_if_match(obj, self.is_left_thumb_bone, "is_left_thumb")
-        self.assign_bones_to_group_if_match(obj, self.is_first_left_finger_joint, "is_left_first_finger")
-        self.assign_bones_to_group_if_match(obj, self.is_second_left_finger_joint, "is_left_second_finger")
-        self.assign_bones_to_group_if_match(obj, self.is_third_left_finger_joint, "is_left_third_finger")
-        self.assign_bones_to_group_if_match(obj, self.is_left_finger_joint, "is_left_finger")
-
+        self.assign_bones_to_group_if_match(obj, is_slot_bone, "is_slot")
+        self.assign_bones_to_group_if_match(obj, is_cas_bone, "is_cas")
+        self.assign_bones_to_group_if_match(obj, is_left_bone, "is_left")
+        self.assign_bones_to_group_if_match(obj, is_right_bone, "is_right")
+        self.assign_bones_to_group_if_match(obj, is_left_pinky_bone, "is_left_pinky")
+        self.assign_bones_to_group_if_match(obj, is_left_ring_bone, "is_left_ring")
+        self.assign_bones_to_group_if_match(obj, is_left_mid_bone, "is_left_middle")
+        self.assign_bones_to_group_if_match(obj, is_left_index_bone, "is_left_index")
+        self.assign_bones_to_group_if_match(obj, is_left_thumb_bone, "is_left_thumb")
+        self.assign_bones_to_group_if_match(obj, is_first_left_finger_joint, "is_left_first_finger")
+        self.assign_bones_to_group_if_match(obj, is_second_left_finger_joint, "is_left_second_finger")
+        self.assign_bones_to_group_if_match(obj, is_third_left_finger_joint, "is_left_third_finger")
+        self.assign_bones_to_group_if_match(obj, is_right_finger_joint, "is_right_finger")
+        self.assign_bones_to_group_if_match(obj, is_right_pinky_bone, "is_right_pinky")
+        self.assign_bones_to_group_if_match(obj, is_right_ring_bone, "is_right_ring")
+        self.assign_bones_to_group_if_match(obj, is_right_mid_bone, "is_right_middle")
+        self.assign_bones_to_group_if_match(obj, is_right_index_bone, "is_right_index")
+        self.assign_bones_to_group_if_match(obj, is_right_thumb_bone, "is_right_thumb")
+        self.assign_bones_to_group_if_match(obj, is_first_right_finger_joint, "is_right_first_finger")
+        self.assign_bones_to_group_if_match(obj, is_second_right_finger_joint, "is_right_second_finger")
+        self.assign_bones_to_group_if_match(obj, is_third_right_finger_joint, "is_right_third_finger")
+        self.assign_bones_to_group_if_match(obj, is_right_finger_joint, "is_right_finger")
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_CreateFingerIK(bpy.types.Operator):
+    bl_idname = "s4animtools.create_finger_ik"
+    bl_label = "Create Bone Selectors"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def create_ik_constraint(self, from_target):
+        ik_constraint = from_target.constraints.new('IK')
+        ik_constraint.chain_count = 3
+        return ik_constraint
 
 
+    def execute(self, context):
+        obj = context.object
+
+        for bone in obj.pose.bones:
+            if is_third_right_finger_joint(bone) or is_third_left_finger_joint(bone):
+                self.create_ik_constraint(bone)
+        return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_CreateIKRig(bpy.types.Operator):
+    bl_idname = "s4animtools.create_ik_rig"
+    bl_label = "Create IK Rig"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        arm = context.object.data
+        bones_with_ik_targets = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__"]
+        ik_targets_to_poles = {"b__L_Hand__": "b__L_ArmExportPole__",
+                               "b__R_Hand__": "b__R_ArmExportPole__",
+                               "b__L_Foot__": "b__L_LegExportPole__",
+                               "b__R_Foot__": "b__R_LegExportPole__",
+                               }
+        reset_parents = ["b__L_LegExportPole__", "b__R_LegExportPole__"]
+
+        hold = "Hold"
+        ik = "IK"
+
+        bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+        edit_bones = arm.edit_bones[:]
+        for b in edit_bones:
+            if b.name in reset_parents:
+                if b.parent.name != "b__Pelvis__":
+                    for b2 in edit_bones:
+                        if b2.name == "b__ROOT__":
+                            b.parent = b2
+
+        for b in edit_bones:
+            if "Hold" in b.name:
+                arm.edit_bones.remove(b)
+            elif "IK" in b.name:
+                arm.edit_bones.remove(b)
+
+        edit_bones = arm.edit_bones[:]
+
+        for b in edit_bones:
+            if b.name in bones_with_ik_targets:
+                print(b.name)
+
+                cb = arm.edit_bones.new(b.name + hold)
+                cb.head = b.head
+                cb.tail = b.tail
+                cb.matrix = b.matrix
+                cb.parent = b.parent
+
+                cb = arm.edit_bones.new(b.name + ik)
+                cb.parent = arm.edit_bones["b__ROOT__"]
+
+                cb.head = b.head
+                cb.tail = b.tail
+                cb.head = Vector((0, 0, 0))
+                cb.tail = Vector((0, 0.1, 0))
+                cb.matrix = b.matrix
+
+        bpy.ops.object.mode_set(mode='POSE', toggle=False)
+        arm = bpy.context.object
+        for possible_IK_target in bones_with_ik_targets:
+            if possible_IK_target + hold in arm.pose.bones:
+                bone = arm.pose.bones[possible_IK_target + hold]
+                ik_constraint = bone.constraints.new('IK')
+                ik_constraint.target = arm
+                ik_constraint.subtarget = possible_IK_target + ik
+                ik_constraint.use_rotation = False
+                ik_constraint.pole_target = arm
+                ik_constraint.pole_subtarget = ik_targets_to_poles[possible_IK_target]
+                ik_constraint.chain_count = 3
+            if possible_IK_target in arm.pose.bones:
+                bone = arm.pose.bones[possible_IK_target]
+                copyrot_constraint = bone.constraints.new('COPY_ROTATION')
+                copyrot_constraint.target = arm
+                copyrot_constraint.subtarget = possible_IK_target + ik
+
+        return {"FINISHED"}
 # unused = (ScriptItem, SoundItem, LIST_OT_NewScriptEvent, LIST_OT_MoveScriptEvent, LIST_OT_DeleteScriptEvent,
 #          LIST_OT_NewSoundEvent, LIST_OT_MoveSoundEvent, LIST_OT_DeleteSoundEvent,
 #          ScriptEventsPanel, SoundEventsPanel, ActorProperties, LIST_OT_NewActor, LIST_OT_DeleteActor,
@@ -1790,7 +1959,7 @@ classes = (
     LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
-    OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors)
+    OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig)
 
 def update_selected_bones(self, context):
     ui_toggle_to_bone_attribute = {"select_slots" : "is_slot", "select_cas" : "is_cas", "select_left" : "is_left",
@@ -1800,16 +1969,25 @@ def update_selected_bones(self, context):
                                "select_left_first_fingers" : "is_left_first_finger",
                                    "select_left_second_fingers" : "is_left_second_finger",
                                    "select_left_third_fingers" : "is_left_third_finger",
-                                   "select_left_fingers" : "is_left_finger"}
+                                   "select_left_fingers" : "is_left_finger",
+                                   "select_right_pinky": "is_right_pinky",
+                                   "select_right_ring": "is_right_ring", "select_right_middle": "is_right_middle",
+                                   "select_right_index": "is_right_index", "select_right_thumb": "is_right_thumb",
+                                   "select_right_first_fingers": "is_right_first_finger",
+                                   "select_right_second_fingers": "is_right_second_finger",
+                                   "select_right_third_fingers": "is_right_third_finger",
+                                   "select_right_fingers": "is_right_finger"
+                                   }
     bpy.ops.object.mode_set(mode='POSE')
-
+    for bone in context.object.pose.bones:
+        bone.bone.hide = True
     bpy.ops.pose.select_all(action='DESELECT')
     for ui_toggle, bone_attrib in ui_toggle_to_bone_attribute.items():
         if getattr(context.object, ui_toggle):
             for bone in context.object.pose.bones:
                 if getattr(bone, bone_attrib):
                     print(getattr(bone, bone_attrib))
-                    bone.bone.select = True
+                    bone.bone.hide = False
 
 
 def register():
@@ -1988,6 +2166,16 @@ def register():
     bpy.types.Object.select_left_third_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
     bpy.types.Object.select_left_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
 
+    bpy.types.Object.select_right_pinky = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_right_ring = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_right_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_right_index = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_right_thumb = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+
+    bpy.types.Object.select_right_first_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_right_second_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_right_third_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_right_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
 
     bpy.types.PoseBone.is_slot = bpy.props.BoolProperty(default=False)
     bpy.types.PoseBone.is_cas = bpy.props.BoolProperty(default=False)
@@ -2001,8 +2189,15 @@ def register():
     bpy.types.PoseBone.is_left_first_finger = bpy.props.BoolProperty(default=False)
     bpy.types.PoseBone.is_left_second_finger = bpy.props.BoolProperty(default=False)
     bpy.types.PoseBone.is_left_third_finger = bpy.props.BoolProperty(default=False)
-
-    bpy.types.PoseBone.is_left_finger = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_pinky = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_ring = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_middle = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_index = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_thumb = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_first_finger = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_second_finger = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_third_finger = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_right_finger = bpy.props.BoolProperty(default=False)
 
 def unregister():
     from bpy.utils import unregister_class
