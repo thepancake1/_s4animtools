@@ -1052,7 +1052,11 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.prop(obj, "select_slots", text = "Slots")
             layout.prop(obj, "select_cas", text = "CAS")
             layout.prop(obj, "select_left", text = "Left Side")
+            layout.prop(obj, "select_middle", text = "Middle")
+
             layout.prop(obj, "select_right", text = "Right Side")
+            layout.prop(obj, "select_mouth", text = "Mouth")
+
             layout.prop(obj, "select_left_pinky", text = "Left Pinky")
             layout.prop(obj, "select_left_ring", text = "Left Ring")
             layout.prop(obj, "select_left_middle", text = "Left Middle")
@@ -1657,6 +1661,20 @@ def is_left_bone(bone):
 def is_right_bone(bone):
     return "_r_" in bone.name.lower()
 
+def is_middle_bone(bone):
+    if is_left_bone(bone):
+        return False
+    if is_right_bone(bone):
+        return False
+    return True
+def is_mouth(bone):
+    if bone.parent is None:
+        return False
+    if bone.parent.name == "b__CAS_LowerMouthArea__":
+        return True
+    if bone.parent.name == "b__CAS_UpperMouthArea__":
+        return True
+    return False
 def check_if_finger_bone(bone):
     if bone.parent is not None:
         if "hand" in bone.parent.name.lower():
@@ -1842,6 +1860,10 @@ class OT_S4ANIMTOOLS_CreateBoneSelectors(bpy.types.Operator):
         self.assign_bones_to_group_if_match(obj, is_second_right_finger_joint, "is_right_second_finger")
         self.assign_bones_to_group_if_match(obj, is_third_right_finger_joint, "is_right_third_finger")
         self.assign_bones_to_group_if_match(obj, is_right_finger_joint, "is_right_finger")
+        self.assign_bones_to_group_if_match(obj, is_middle_bone, "is_middle")
+        self.assign_bones_to_group_if_match(obj, is_mouth, "is_mouth")
+
+
         return {"FINISHED"}
 
 class OT_S4ANIMTOOLS_CreateFingerIK(bpy.types.Operator):
@@ -1963,7 +1985,8 @@ classes = (
 
 def update_selected_bones(self, context):
     ui_toggle_to_bone_attribute = {"select_slots" : "is_slot", "select_cas" : "is_cas", "select_left" : "is_left",
-                               "select_right" : "is_right", "select_left_pinky" : "is_left_pinky",
+                               "select_right" : "is_right", "select_middle" : "is_middle", "select_mouth" : "is_mouth",
+                                   "select_left_pinky" : "is_left_pinky",
                                "select_left_ring" : "is_left_ring","select_left_middle" : "is_left_middle",
                                "select_left_index" : "is_left_index","select_left_thumb" : "is_left_thumb",
                                "select_left_first_fingers" : "is_left_first_finger",
@@ -1980,14 +2003,14 @@ def update_selected_bones(self, context):
                                    }
     bpy.ops.object.mode_set(mode='POSE')
     for bone in context.object.pose.bones:
-        bone.bone.hide = True
+        bone.bone.hide = False
     bpy.ops.pose.select_all(action='DESELECT')
     for ui_toggle, bone_attrib in ui_toggle_to_bone_attribute.items():
         if getattr(context.object, ui_toggle):
             for bone in context.object.pose.bones:
                 if getattr(bone, bone_attrib):
                     print(getattr(bone, bone_attrib))
-                    bone.bone.hide = False
+                    bone.bone.hide = True
 
 
 def register():
@@ -2155,6 +2178,9 @@ def register():
     bpy.types.Object.select_cas = bpy.props.BoolProperty(default=False, update=update_selected_bones)
     bpy.types.Object.select_left = bpy.props.BoolProperty(default=False, update=update_selected_bones)
     bpy.types.Object.select_right = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+    bpy.types.Object.select_mouth = bpy.props.BoolProperty(default=False, update=update_selected_bones)
+
     bpy.types.Object.select_left_pinky = bpy.props.BoolProperty(default=False, update=update_selected_bones)
     bpy.types.Object.select_left_ring = bpy.props.BoolProperty(default=False, update=update_selected_bones)
     bpy.types.Object.select_left_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
@@ -2181,6 +2207,9 @@ def register():
     bpy.types.PoseBone.is_cas = bpy.props.BoolProperty(default=False)
     bpy.types.PoseBone.is_left = bpy.props.BoolProperty(default=False)
     bpy.types.PoseBone.is_right = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_middle = bpy.props.BoolProperty(default=False)
+    bpy.types.PoseBone.is_mouth = bpy.props.BoolProperty(default=False)
+
     bpy.types.PoseBone.is_left_pinky = bpy.props.BoolProperty(default=False)
     bpy.types.PoseBone.is_left_ring = bpy.props.BoolProperty(default=False)
     bpy.types.PoseBone.is_left_middle = bpy.props.BoolProperty(default=False)
