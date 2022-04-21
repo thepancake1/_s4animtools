@@ -1,3 +1,4 @@
+from _s4animtools.serialization.types.basic import UInt32
 from _s4animtools.rig_constants import slot
 from _s4animtools.channels.translation_channel import Vector3Channel
 from _s4animtools.channels.quaternion_channel import QuaternionChannel
@@ -8,6 +9,9 @@ from collections import defaultdict
 from mathutils import Vector, Quaternion
 from _s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
+import _s4animtools
+
+F4_QuaternionIdentity = 17
 
 F3 = 3
 F4 = 4
@@ -274,6 +278,12 @@ class AnimationExporter:
                                                                                                        frame_idx=frame_idx,
                                                                                                        start_frame=start_frame,
                                                                                                        force=force)
+                elif source_bone.name == "loco":
+                    self.animate_bone_relative_to_other_bone(source_bone=source_bone,
+                                                             target_rig=self.source_rig,
+                                                             target_bone=self.root_bone, frame_idx=frame_idx,
+                                                             start_frame=start_frame,
+                                                             force=force)
                 else:
                     self.animate_bone_relative_to_other_bone(source_bone=source_bone,
                                                              target_rig=self.world_rig,
@@ -364,7 +374,22 @@ class AnimationExporter:
         Note that if an IK channel does not have any keyframes,
         it will not be exported.
         """
-        if bone.name != "b__ROOT__":
+        if bone.name == "loco":
+            animation_data = self.animated_frame_data[bone.name]
+            if len(animation_data.get_translation_channel().items()) > 0:
+                location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
+                location_channel._target = UInt32(720414894)
+                translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3, loco_channel=True)
+
+                location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
+
+                self.exported_channels.append(location_channel)
+                rotation_channel = _s4animtools.channels.quaternion_channel.QuaternionChannel("loco", F4_QuaternionIdentity, 2)
+                rotation_channel.set_channel_data(0, 1, {}, self.snap_frames)
+                rotation_channel._target = UInt32(720414894)
+                self.exported_channels.append(rotation_channel)
+
+        if bone.name != "b__ROOT__" and bone.name != "loco":
             animation_data = self.animated_frame_data[bone.name]
 
             if len(animation_data.get_translation_channel().items()) > 0:
@@ -433,7 +458,7 @@ class AnimationExporter:
                 continue
             self.recursively_export_bone_animation_to_channels(child)
 
-    def get_f1_palette_for_channel(self, channel, axis_count, axis_order=None):
+    def get_f1_palette_for_channel(self, channel, axis_count, axis_order=None, loco_channel=False):
         original_values = defaultdict(list)
         if axis_order is None:
             if axis_count == 3:
@@ -445,6 +470,8 @@ class AnimationExporter:
             values = []
 
             for axis in range(axis_count):
+                if axis != 2 and loco_channel:
+                    data[axis_order[axis]] = 0
                 original_values[frame].append(data[axis_order[axis]])
                 index = self.paletteHolder.try_add_palette_to_palette_values(data[axis])
                 values.append(index)

@@ -63,6 +63,8 @@ class ClipResource:
                 chain_idx = slot_assignment.chain_idx
                 if "subroot" in target_bone:
                     target_bone = "b__ROOT__"
+                if "loco" in target_bone:
+                    target_bone = "b__ROOT__"
                 if target_bone.endswith("Adjust"):
                     target_bone = target_bone.replace("Adjust", "")
                 if chain_idx == -1:
