@@ -146,9 +146,7 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
                         if old_fc is not None:
                             obj.animation_data.action.fcurves.remove(old_fc)
                     data_path = f'pose.bones["{potential_ik_bone.name}"].ik_weight_{idx}'
-                    old_fc = obj.animation_data.action.fcurves.find(data_path)
-                    if old_fc is not None:
-                        obj.animation_data.action.fcurves.remove(old_fc)
+                    s4animtool_OT_bakeik.find_and_remove(data_path, obj)
             current_bone_idx = defaultdict(int)
 
             for idx, item in enumerate(get_ik_targets(obj)):
@@ -182,9 +180,7 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
                 target_rig = bpy.data.objects[item.target_obj]
 
                 data_path = f'pose.bones["{chain_bone.name}"].ik_weight_{current_bone_idx[chain_bone]}'
-                old_fc = obj.animation_data.action.fcurves.find(data_path)
-                if old_fc is not None:
-                    obj.animation_data.action.fcurves.remove(old_fc)
+                s4animtool_OT_bakeik.find_and_remove(data_path, obj)
                 fc = obj.animation_data.action.fcurves.new(data_path)
 
 
@@ -224,22 +220,18 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
 
     @staticmethod
     def remove_IK(obj):
-        for scn_obj in bpy.data.objects:
-            split = scn_obj.name.split(" ")
-            if len(split) >= 2:
-                if split[0] == obj.name.strip() and split[1] == "IK":
-                    bpy.data.objects.remove(scn_obj, do_unlink=True)
-        for bone in obj.pose.bones:
-            for constraint in bone.constraints[:]:
-                if constraint.type == "COPY_TRANSFORMS":
-                    if constraint.name.startswith("IKFollow"):
-                        bone.constraints.remove(constraint)
-        bpy.context.view_layer.update()
-        for fcu in obj.animation_data.action.fcurves[:]:
-            for bone in obj.pose.bones:
-                try:
 
-                    if fcu.data_path.startswith('pose.bones["{}"].constraints["{}'.format(bone.name, "IKFollow")):
-                        obj.animation_data.action.fcurves.remove(fcu)
-                except:
-                    pass
+        for bone in obj.pose.bones:
+            for weight_idx in range(0, 9):
+                print(weight_idx)
+                s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_weight_{weight_idx}', obj)
+                for i in range(3):
+                    s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_pos_{weight_idx}', obj, index=i)
+                for i in range(4):
+
+                    s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_rot_{weight_idx}', obj, index=i)
+    @staticmethod
+    def find_and_remove(data_path, obj, index=0):
+        old_fc = obj.animation_data.action.fcurves.find(data_path, index=index)
+        if old_fc is not None:
+            obj.animation_data.action.fcurves.remove(old_fc)
