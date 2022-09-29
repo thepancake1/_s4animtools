@@ -183,6 +183,31 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class AdjustProportionsOfControlRigToTargetRig(bpy.types.Operator):
+    bl_idname = "s4animtools.adjust_proportions_of_control_rig_to_target_rig"
+    bl_label = "Adjust Proportions of Control Rig to Target Rig"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        import bpy
+
+        rig_name = "x"
+
+        source_rig = bpy.data.objects["x.001"]
+
+        target_rig = bpy.data.objects[rig_name]
+        bpy.ops.object.mode_set(mode='EDIT')
+
+        for bone in target_rig.data.edit_bones:
+            for source_bone in source_rig.data.edit_bones:
+
+                if source_bone.name == bone.name:
+                    bone.head = source_bone.head
+                    bone.tail = source_bone.tail
+
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+
 
 class CopySelectedLeftSideToRightSide(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side_sim_selected"
