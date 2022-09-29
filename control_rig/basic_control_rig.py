@@ -326,22 +326,22 @@ class CopyBakedAnimationToControlRig(bpy.types.Operator):
         bpy.ops.pose.select_all(action='DESELECT')
         constraints = []
         IK_suffix = "IK"
-        self.add_single_copy_constraint(obj, context.object.pose.bones[self.LEFT_ARM_TARGET],
+        self.add_single_copy_constraint(obj, context.object.pose.bones[self.LEFT_HAND],
                                         context.object.pose.bones[self.LEFT_ARM_IK])
         self.mute_all_constraints(context.object.pose.bones[self.LEFT_HAND])
         self.mute_all_constraints(context.object.pose.bones[self.LEFT_ARM_TARGET])
 
-        self.add_single_copy_constraint(obj, context.object.pose.bones[self.RIGHT_ARM_TARGET],
+        self.add_single_copy_constraint(obj, context.object.pose.bones[self.RIGHT_HAND],
                                         context.object.pose.bones[self.RIGHT_ARM_IK])
         self.mute_all_constraints(context.object.pose.bones[self.RIGHT_HAND])
         self.mute_all_constraints(context.object.pose.bones[self.RIGHT_ARM_TARGET])
 
-        self.add_single_copy_constraint(obj, context.object.pose.bones[self.LEFT_LEG_TARGET],
+        self.add_single_copy_constraint(obj, context.object.pose.bones[self.LEFT_FOOT],
                                         context.object.pose.bones[self.LEFT_LEG_IK])
         self.mute_all_constraints(context.object.pose.bones[self.LEFT_FOOT])
         self.mute_all_constraints(context.object.pose.bones[self.LEFT_LEG_TARGET])
 
-        self.add_single_copy_constraint(obj, context.object.pose.bones[self.RIGHT_LEG_TARGET],
+        self.add_single_copy_constraint(obj, context.object.pose.bones[self.RIGHT_FOOT],
                                         context.object.pose.bones[self.RIGHT_LEG_IK])
         self.mute_all_constraints(context.object.pose.bones[self.RIGHT_FOOT])
         self.mute_all_constraints(context.object.pose.bones[self.RIGHT_LEG_TARGET])
