@@ -1087,10 +1087,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
 
             # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
-            #layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-            #                     text="Maintain Keyframe").direction = "FORWARDS"
-            #layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-            #                     text="Maintain Keyframe Backward").direction = "BACK"
+            layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                                 text="Maintain Keyframe").direction = "FORWARDS"
+            layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                                 text="Maintain Keyframe Backward").direction = "BACK"
 
             self.layout.label(text="Use Full Precision means using full precision for all animation data.")
             self.layout.label(text="Don't enable if you don't know what that means!")
@@ -1347,7 +1347,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             sub.prop_search(item, "target_obj", context.scene, "objects")
             sub = row.row(align=True)
 
-            if item.target_obj is not "":
+            if item.target_obj !=  "":
                 target_obj = bpy.data.objects[item.target_obj]
                 sub.prop_search(item, "target_bone", target_obj.pose, "bones")
         except:
@@ -2232,8 +2232,10 @@ def register():
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
-        unregister_class(cls)
-
+        try:
+            unregister_class(cls)
+        except:
+            pass
     for ik_idx in range(-1, 11):
         pos, rot = getattr(bpy.types.PoseBone, f"ik_pos_{ik_idx}"), getattr(bpy.types.PoseBone, f"ik_rot_{ik_idx}")
         del pos
@@ -2260,7 +2262,6 @@ def unregister():
     del bpy.types.Object.world_rig
     del bpy.types.Object.world_bone
     del bpy.types.Object.reaction_events
-    del bpy.types.Object.visibility_events
     del bpy.types.Object.play_effect_events
     del bpy.types.Object.stop_effect_events
     del bpy.types.Object.disable_lipsync_events
