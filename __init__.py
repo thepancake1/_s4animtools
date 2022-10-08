@@ -33,7 +33,7 @@ from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRi
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig, FlipLeftSideAnimationToRightSideSim
 from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
-    LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS
+    LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget
 import _s4animtools.animation_exporter.animation
 from _s4animtools.animation_exporter.animation import AnimationExporter
 import _s4animtools.rig.create_rig
@@ -1350,6 +1350,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             if item.target_obj !=  "":
                 target_obj = bpy.data.objects[item.target_obj]
                 sub.prop_search(item, "target_bone", target_obj.pose, "bones")
+                if item.target_bone == "":
+                    sub.operator('s4animtools.guesstarget', text="Guess").command = "{},{}".format(item.chain_bone, item.target_obj)
+
         except:
             pass
 
@@ -1968,7 +1971,7 @@ classes = (
     S4ANIMTOOLS_PT_MainPanel,
     TimeRange,
     IKTarget, s4animtool_PT_IKTargetPanel, LIST_OT_NewIKTarget, LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget,
-    s4animtool_OT_bakeik, s4animtool_OT_removeIK,
+    s4animtool_OT_bakeik, s4animtool_OT_removeIK,s4animtools_OT_guessTarget,
     BeginIKMarker, s4animtool_OT_unmute_ik, s4animtool_OT_mute_ik, NewClipExporter, PositionConfig, QuaternionConfig,
     ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig,
     CopySelectedLeftSideToRightSide,
