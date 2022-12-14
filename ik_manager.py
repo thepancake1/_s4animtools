@@ -263,7 +263,7 @@ class s4animtools_OT_guessTarget(bpy.types.Operator):
             top_y_bone = sorted(y_scores.items(), key=lambda x: x[1])[0][0]
         except:
             top_y_bone = ""
-        print(y_scores.items())
+        #print(y_scores.items())
         if lowest_distance > 0.15:
             top_y_bone = ""
         for new_idx, ik_target in enumerate(x.ik_targets):

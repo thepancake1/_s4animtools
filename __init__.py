@@ -898,20 +898,34 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         if getattr(obj, property_name, "") != "":
             layout.prop(obj, property_name)
 
-    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout):
+    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None):
         events_list = getattr(obj, events_list_name)
         layout.label(
             text=f"{event_name}: {len(events_list)} - {description}")
         for idx, item in enumerate(events_list):
             row = layout.row()
+            if item.info != "":
+                if parameters is not None:
+                    concat_string = ""
+                    parameter_list = list(zip(parameters, item.info.split(",")))
+                    for key, value in parameter_list:
+                        layout.row().label(text=f"{key}: {value}")
+                    if len(parameters) > len(item.info.split(",")):
+                        layout.row().label(text="Not enough parameters.")
+                    if len(parameters) < len(item.info.split(",")):
+                        layout.row().label(text="Too many parameters.")
+                   # layout.row().label(text=concat_string[:-2])
             row2 = row.row()
             row.scale_x = x_scale
 
             row2.prop(item, "info", text="")
-            row.operator('s4animtools.move_new_element', text='Up').args = f"{events_list_name},{idx},up"
-            row.operator('s4animtools.move_new_element', text='Down').args = f"{events_list_name},{idx},down"
-            row.operator('s4animtools.move_new_element', text='Delete').args = f"{events_list_name},{idx},delete"
-            row.operator('s4animtools.move_new_element', text='Create').args = f"{events_list_name},{idx},create"
+
+
+            row.operator('s4animtools.move_new_element', text='↑').args = f"{events_list_name},{idx},up"
+            row.operator('s4animtools.move_new_element', text='↓').args = f"{events_list_name},{idx},down"
+            row.operator('s4animtools.move_new_element', text='✖').args = f"{events_list_name},{idx},delete"
+            row.operator('s4animtools.move_new_element', text='+').args = f"{events_list_name},{idx},create"
+
 
     def draw(self, context):
         obj = context.object
@@ -1049,7 +1063,18 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
        #     layout.operator("s4animtools.create_bone_selectors", icon='MESH_CUBE', text="Create Bone Selectors")
             layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
             layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
-  #         layout.prop(obj, "select_slots", text = "Slots")
+            try:
+                if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
+                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Arm)").command = "LEFT"
+                else:
+                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Arm)").command = "LEFT"
+                if context.object.pose.bones["b__R_Hand__"].constraints["Copy Rotation"].enabled:
+                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Arm)").command = "RIGHT"
+                else:
+                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Arm)").command = "RIGHT"
+                #         layout.prop(obj, "select_slots", text = "Slots")
+            except KeyError:
+                pass
   #         layout.prop(obj, "select_cas", text = "CAS")
   #         layout.prop(obj, "select_left", text = "Left Side")
   #         layout.prop(obj, "select_middle", text = "Middle")
@@ -1197,26 +1222,27 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.draw_property_if_not_empty(obj, "stop_effect_events", self.layout)
             self.draw_property_if_not_empty(obj, "disable_lipsync_events", self.layout)
             self.draw_events(obj, "parent_events_list", 0.1,
-                             "Parameters (Frame Number/Object To Be Parented/Object To Be Parented To/Bone)",
-                             "Parent Events", self.layout)
+                             "Parameters (Frame Number (f) or Seconds/Object To Be Parented/Object To Be Parented To/Bone)",
+                             "Parent Events", self.layout, parameters=["Frame Number (f) or Seconds", "Object to Be Parented", "Object to be Parented To", "Bone"])
+
             self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
-                             "Sound Events", self.layout)
+                             "Sound Events", self.layout,  parameters=["Frame Number (f) or Seconds", "Sound Effect Name"])
             self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)", "Script Events",
-                             self.layout)
+                             self.layout,  parameters=["Frame Number (f) or Seconds", "Script Xevt"])
             self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
-                             "Snap Events", self.layout)
+                             "Snap Events", self.layout,  parameters=["Frame Number (f) or Seconds", "Actor", "X", "Y", "Z",  "QX", "QY", "QZ", "QW",])
             self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM)",
-                             "Reaction Events", self.layout)
+                             "Reaction Events", self.layout, parameters=["Frame Number (f) or Seconds", "Reaction ASM Name"])
             self.draw_events(obj, "play_effect_events_list", 0.1,
                              "Parameters (Frame Number/VFX Name/Actor Hash/Bone Name Hash/(always 0)/(almost always 0)/Unique VFX Name)",
-                             "Play Effect Events", self.layout)
+                             "Play Effect Events", self.layout, parameters=["Frame Number (f) or Seconds", "VFX Name", "Actor Hash", "Bone Name Hash", "(always 0)", "(almost always 0)", "Unique VFX Name"])
             self.draw_events(obj, "stop_effect_events_list", 0.1,
                              "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
-                             "Stop Effect Events", self.layout)
+                             "Stop Effect Events", self.layout, parameters=["Frame Number (f) or Seconds", "Unique VFX Name", "(always 0)", "(unknown bool)"])
             self.draw_events(obj, "disable_lipsync_events_list", 0.1, "Parameters (Frame Number/Duration)",
-                             "Suppress Lipsync Events", self.layout)
+                             "Suppress Lipsync Events", self.layout, parameters=["Frame Number (f) or Seconds", "Duration (seconds)"])
             self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
-                             "Visibility Events", self.layout)
+                             "Visibility Events", self.layout, parameters=["Frame Number (f) or Seconds", "Actor Name", "Visibility (0 or 1)"])
             self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
                              "Focus Compatibility Events", self.layout)
 
@@ -1961,6 +1987,143 @@ class OT_S4ANIMTOOLS_CreateIKRig(bpy.types.Operator):
                 copyrot_constraint.subtarget = possible_IK_target + ik
 
         return {"FINISHED"}
+class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
+    bl_idname = "s4animtools.fk_to_ik"
+    bl_label = "FK To IK"
+    bl_options = {"REGISTER", "UNDO"}
+    command: bpy.props.StringProperty()
+
+    def execute(self, context):
+        # What gets activated
+        # Left Hand Target
+        # Left Hand IK
+        # Left Arm Pole
+        # Left Hand IK Constraint to Left Hand Target
+        # What gets hidden
+        # Left Upper Arm
+        # Left Forearm
+        # Left Hand
+        arm = context.object.data
+        pose = context.object.pose
+
+        if "LEFT" == self.command:
+            hand = "b__L_Hand__"
+            forearm = "b__L_Forearm__"
+            upper_arm = "b__L_UpperArm__"
+            target = "Left Hand Target"
+            pole = "Left Arm Pole"
+            export_pole = "b__L_ArmExportPole__"
+            ik = "Left Hand IK"
+
+        elif "RIGHT" == self.command:
+            hand = "b__R_Hand__"
+            forearm = "b__R_Forearm__"
+            upper_arm = "b__R_UpperArm__"
+            target = "Right Hand Target"
+            pole = "Right Arm Pole"
+            export_pole = "b__R_ArmExportPole__"
+            ik = "Right Hand IK"
+        else:
+            return {"FINISHED"}
+        if ik in pose.bones:
+            left_hand_ik = pose.bones[ik]
+            left_arm_pole = pose.bones[export_pole]
+            matrix_data = pose.bones[pole].matrix.copy()
+
+            left_arm_pole.matrix = matrix_data
+            left_arm_pole.keyframe_insert(data_path="location", frame=context.scene.frame_current)
+
+            left_hand = pose.bones[target]
+
+
+            matrix_data = pose.bones[hand].matrix.copy()
+            pose.bones[hand].constraints["Copy Rotation"].enabled = True
+
+            left_hand.matrix = matrix_data
+            left_hand.keyframe_insert(data_path="location", frame=context.scene.frame_current)
+            left_hand.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
+            left_hand.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
+            # Enable the left hand ik constraint
+            left_hand_ik.constraints["IK"].enabled = True
+
+            # Setup bone visibility
+            pose.bones[target].bone.hide = False
+            pose.bones[ik].bone.hide = True
+            pose.bones[export_pole].bone.hide = False
+            pose.bones[pole].bone.hide = True
+
+            pose.bones[upper_arm].bone.hide = True
+            pose.bones[forearm].bone.hide = True
+            pose.bones[hand].bone.hide = True
+        return {"FINISHED"}
+class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
+    bl_idname = "s4animtools.ik_to_fk"
+    bl_label = "IK To FK"
+    bl_options = {"REGISTER", "UNDO"}
+    command: bpy.props.StringProperty()
+
+    def execute(self, context):
+        arm = context.object.data
+        pose = context.object.pose
+
+        if "LEFT" == self.command:
+            hand = "b__L_Hand__"
+            forearm = "b__L_Forearm__"
+            upper_arm = "b__L_UpperArm__"
+            target = "Left Hand Target"
+            pole = "Left Arm Pole"
+            export_pole = "b__L_ArmExportPole__"
+            ik = "Left Hand IK"
+
+        elif "RIGHT" == self.command:
+            hand = "b__R_Hand__"
+            forearm = "b__R_Forearm__"
+            upper_arm = "b__R_UpperArm__"
+            target = "Right Hand Target"
+            pole = "Right Arm Pole"
+            export_pole = "b__R_ArmExportPole__"
+            ik = "Right Hand IK"
+        else:
+            return {"FINISHED"}
+
+        if ik in pose.bones:
+            left_hand_ik = pose.bones[ik]
+            left_upper_arm = pose.bones[upper_arm]
+            matrix_data = left_upper_arm.matrix.copy()
+
+            left_upper_arm.matrix = matrix_data
+            left_upper_arm.keyframe_insert(data_path="location", frame=context.scene.frame_current)
+            left_upper_arm.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
+            left_upper_arm.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
+
+            left_forearm = pose.bones[forearm]
+            matrix_data = left_forearm.matrix.copy()
+
+            left_forearm.matrix = matrix_data
+            left_forearm.keyframe_insert(data_path="location", frame=context.scene.frame_current)
+            left_forearm.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
+            left_forearm.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
+
+            left_hand = pose.bones[hand]
+            matrix_data = left_hand.matrix.copy()
+            left_hand.constraints["Copy Rotation"].enabled = False
+
+            left_hand.matrix = matrix_data
+            left_hand.keyframe_insert(data_path="location", frame=context.scene.frame_current)
+            left_hand.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
+            left_hand.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
+            left_hand_ik.constraints["IK"].enabled = False
+            # Setup bone visibility
+
+            pose.bones[target].bone.hide = True
+            pose.bones[ik].bone.hide = True
+            pose.bones[export_pole].bone.hide = True
+            pose.bones[pole].bone.hide = True
+
+            pose.bones[upper_arm].bone.hide = False
+            pose.bones[forearm].bone.hide = False
+            pose.bones[hand].bone.hide = False
+        return {"FINISHED"}
 # unused = (ScriptItem, SoundItem, LIST_OT_NewScriptEvent, LIST_OT_MoveScriptEvent, LIST_OT_DeleteScriptEvent,
 #          LIST_OT_NewSoundEvent, LIST_OT_MoveSoundEvent, LIST_OT_DeleteSoundEvent,
 #          ScriptEventsPanel, SoundEventsPanel, ActorProperties, LIST_OT_NewActor, LIST_OT_DeleteActor,
@@ -1984,7 +2147,8 @@ classes = (
     LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
-    OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig)
+    OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
+    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK)
 
 def update_selected_bones(self, context):
     pass
