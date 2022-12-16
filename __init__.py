@@ -2136,7 +2136,7 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
             hand = "b__R_Foot__"
             forearm = "b__R_Calf__"
             upper_arm = "b__R_Thigh__"
-            target = "Right Hand Target"
+            target = "Right Foot Main Parent"
             pole = "Right Leg Pole"
             export_pole = "b__R_LegExportPole__"
             ik = "Right Foot IK"
