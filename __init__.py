@@ -1065,13 +1065,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
             try:
                 if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Arm)").command = "LEFT"
+                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Arm)").command = "LEFT,HAND"
                 else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Arm)").command = "LEFT"
+                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Arm)").command = "LEFT,HAND"
                 if context.object.pose.bones["b__R_Hand__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Arm)").command = "RIGHT"
+                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Arm)").command = "RIGHT,HAND"
                 else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Arm)").command = "RIGHT"
+                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Arm)").command = "RIGHT,HAND"
+
+                if context.object.pose.bones["b__L_Foot__"].constraints["Copy Rotation"].enabled:
+                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Leg)").command = "LEFT,FOOT"
+                else:
+                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Leg)").command = "LEFT,FOOT"
+                if context.object.pose.bones["b__R_Foot__"].constraints["Copy Rotation"].enabled:
+                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Leg)").command = "RIGHT,FOOT"
+                else:
+                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Leg)").command = "RIGHT,FOOT"
                 #         layout.prop(obj, "select_slots", text = "Slots")
             except KeyError:
                 pass
@@ -2006,7 +2015,7 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
         arm = context.object.data
         pose = context.object.pose
 
-        if "LEFT" == self.command:
+        if "LEFT,HAND" == self.command:
             hand = "b__L_Hand__"
             forearm = "b__L_Forearm__"
             upper_arm = "b__L_UpperArm__"
@@ -2015,7 +2024,7 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
             export_pole = "b__L_ArmExportPole__"
             ik = "Left Hand IK"
 
-        elif "RIGHT" == self.command:
+        elif "RIGHT,HAND" == self.command:
             hand = "b__R_Hand__"
             forearm = "b__R_Forearm__"
             upper_arm = "b__R_UpperArm__"
@@ -2023,6 +2032,24 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
             pole = "Right Arm Pole"
             export_pole = "b__R_ArmExportPole__"
             ik = "Right Hand IK"
+
+        elif "LEFT,FOOT" == self.command:
+            hand = "b__L_Foot__"
+            forearm = "b__L_Calf__"
+            upper_arm = "b__L_Thigh__"
+            target = "Left Foot Main Parent"
+            pole = "Left Leg Pole"
+            export_pole = "b__L_LegExportPole__"
+            ik = "Left Foot IK"
+
+        elif "RIGHT,FOOT" == self.command:
+            hand = "b__R_Foot__"
+            forearm = "b__R_Calf__"
+            upper_arm = "b__R_Thigh__"
+            target = "Right Hand Target"
+            pole = "Right Leg Pole"
+            export_pole = "b__R_LegExportPole__"
+            ik = "Right Foot IK"
         else:
             return {"FINISHED"}
         if ik in pose.bones:
@@ -2038,6 +2065,7 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
 
             matrix_data = pose.bones[hand].matrix.copy()
             pose.bones[hand].constraints["Copy Rotation"].enabled = True
+            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["Copy Rotation"].enabled'.format(hand), frame=context.scene.frame_current)
 
             left_hand.matrix = matrix_data
             left_hand.keyframe_insert(data_path="location", frame=context.scene.frame_current)
@@ -2045,6 +2073,7 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
             left_hand.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
             # Enable the left hand ik constraint
             left_hand_ik.constraints["IK"].enabled = True
+            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["IK"].enabled'.format(ik), frame=context.scene.frame_current)
 
             # Setup bone visibility
             pose.bones[target].bone.hide = False
@@ -2055,6 +2084,17 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
             pose.bones[upper_arm].bone.hide = True
             pose.bones[forearm].bone.hide = True
             pose.bones[hand].bone.hide = True
+
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(target), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(ik), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(export_pole), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(pole), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(upper_arm), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(forearm), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(hand), frame=context.scene.frame_current)
+
+
+
         return {"FINISHED"}
 class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
     bl_idname = "s4animtools.ik_to_fk"
@@ -2066,7 +2106,7 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
         arm = context.object.data
         pose = context.object.pose
 
-        if "LEFT" == self.command:
+        if "LEFT,HAND" == self.command:
             hand = "b__L_Hand__"
             forearm = "b__L_Forearm__"
             upper_arm = "b__L_UpperArm__"
@@ -2075,7 +2115,7 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
             export_pole = "b__L_ArmExportPole__"
             ik = "Left Hand IK"
 
-        elif "RIGHT" == self.command:
+        elif "RIGHT,HAND" == self.command:
             hand = "b__R_Hand__"
             forearm = "b__R_Forearm__"
             upper_arm = "b__R_UpperArm__"
@@ -2083,6 +2123,23 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
             pole = "Right Arm Pole"
             export_pole = "b__R_ArmExportPole__"
             ik = "Right Hand IK"
+        elif "LEFT,FOOT" == self.command:
+            hand = "b__L_Foot__"
+            forearm = "b__L_Calf__"
+            upper_arm = "b__L_Thigh__"
+            target = "Left Foot Main Parent"
+            pole = "Left Leg Pole"
+            export_pole = "b__L_LegExportPole__"
+            ik = "Left Foot IK"
+
+        elif "RIGHT,FOOT" == self.command:
+            hand = "b__R_Foot__"
+            forearm = "b__R_Calf__"
+            upper_arm = "b__R_Thigh__"
+            target = "Right Hand Target"
+            pole = "Right Leg Pole"
+            export_pole = "b__R_LegExportPole__"
+            ik = "Right Foot IK"
         else:
             return {"FINISHED"}
 
@@ -2095,7 +2152,6 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
             left_upper_arm.keyframe_insert(data_path="location", frame=context.scene.frame_current)
             left_upper_arm.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
             left_upper_arm.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
-
             left_forearm = pose.bones[forearm]
             matrix_data = left_forearm.matrix.copy()
 
@@ -2107,13 +2163,14 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
             left_hand = pose.bones[hand]
             matrix_data = left_hand.matrix.copy()
             left_hand.constraints["Copy Rotation"].enabled = False
+            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["Copy Rotation"].enabled'.format(hand), frame=context.scene.frame_current)
 
             left_hand.matrix = matrix_data
             left_hand.keyframe_insert(data_path="location", frame=context.scene.frame_current)
             left_hand.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
             left_hand.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
             left_hand_ik.constraints["IK"].enabled = False
-            # Setup bone visibility
+            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["IK"].enabled'.format(ik), frame=context.scene.frame_current)
 
             pose.bones[target].bone.hide = True
             pose.bones[ik].bone.hide = True
@@ -2123,6 +2180,17 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
             pose.bones[upper_arm].bone.hide = False
             pose.bones[forearm].bone.hide = False
             pose.bones[hand].bone.hide = False
+
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(target), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(ik), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(export_pole), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(pole), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(upper_arm), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(forearm), frame=context.scene.frame_current)
+            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(hand), frame=context.scene.frame_current)
+
+
+
         return {"FINISHED"}
 # unused = (ScriptItem, SoundItem, LIST_OT_NewScriptEvent, LIST_OT_MoveScriptEvent, LIST_OT_DeleteScriptEvent,
 #          LIST_OT_NewSoundEvent, LIST_OT_MoveSoundEvent, LIST_OT_DeleteSoundEvent,
