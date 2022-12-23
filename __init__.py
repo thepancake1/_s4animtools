@@ -2003,6 +2003,8 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
     command: bpy.props.StringProperty()
 
     def execute(self, context):
+        from mathutils import Matrix
+        # TODO reset forearm and calf bones location and rotation when switching modes
         # What gets activated
         # Left Hand Target
         # Left Hand IK
@@ -2071,6 +2073,12 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
             left_hand.keyframe_insert(data_path="location", frame=context.scene.frame_current)
             left_hand.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
             left_hand.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
+
+            pose.bones[forearm].matrix_basis = Matrix()
+            pose.bones[forearm].keyframe_insert(data_path="location", frame=context.scene.frame_current)
+            pose.bones[forearm].keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
+            pose.bones[forearm].keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
+
             # Enable the left hand ik constraint
             left_hand_ik.constraints["IK"].enabled = True
             context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["IK"].enabled'.format(ik), frame=context.scene.frame_current)
