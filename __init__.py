@@ -41,7 +41,7 @@ from _s4animtools.serialization.types.transforms import Vector3, Quaternion4
 import _s4animtools.clip_processing.clip_body
 import _s4animtools.clip_processing.f1_palette
 from bpy_extras.io_utils import ImportHelper
-from mathutils import Vector, Quaternion
+from mathutils import Vector, Quaternion, Matrix
 from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
@@ -2040,7 +2040,7 @@ class OT_S4ANIMTOOLS_DetermineBalance(bpy.types.Operator):
             print(hips_cost, spine_cost)
             obj.balance = balance
             obj.keyframe_insert(data_path="balance", frame=frame)
-            obj.pose.bones["Offset"].location = midpoint
+            obj.pose.bones["Offset"].matrix = Matrix.LocRotScale(midpoint, None, None)
             obj.pose.bones["Offset"].keyframe_insert(data_path="location", frame=frame)
 
         return {"FINISHED"}
