@@ -1063,6 +1063,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
        #     layout.operator("s4animtools.create_bone_selectors", icon='MESH_CUBE', text="Create Bone Selectors")
             layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
             layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
+            layout.operator("s4animtools.determine_balance", icon='MESH_CUBE', text="Determine Balance")
+            layout.prop(obj, "balance", text = "Balance")
             try:
                 if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
                     layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Arm)").command = "LEFT,HAND"
@@ -1996,6 +1998,53 @@ class OT_S4ANIMTOOLS_CreateIKRig(bpy.types.Operator):
                 copyrot_constraint.subtarget = possible_IK_target + ik
 
         return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_DetermineBalance(bpy.types.Operator):
+    bl_idname = "s4animtools.determine_balance"
+    bl_label = "determine_balance"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        """
+        This code checks the balance of the character.
+        Balance is defined as the ability to support one's self using their feet.
+        To determine balance, we find the midpoint of the feet.
+        Then, we check how far the hips are from that midpoint.
+        If the hips are within a certain distance, we consider the character balanced.
+        This is used in Pose Mode.
+        """
+        obj = context.object
+        hips = obj.pose.bones["b__ROOT_bind__"]
+        left_foot = obj.pose.bones["b__L_Foot__"]
+        right_foot = obj.pose.bones["b__R_Foot__"]
+        head = obj.pose.bones["b__Head__"]
+
+        for frame in range(context.scene.frame_start, context.scene.frame_end):
+            context.scene.frame_set(frame)
+            pos = left_foot.matrix.to_translation() + right_foot.matrix.to_translation()
+            # Project pelvis to floor (0 position)
+            midpoint = Vector((pos.x / 2, 0, pos.z / 2))
+            hips_pos = hips.matrix.to_translation()
+            hips_pos.z = 0
+
+            head_pos = head.matrix.to_translation()
+            #print(head_pos)
+            head_pos.z = 0
+
+            head_plus_hips = hips_pos + head_pos
+            head_plus_hips_midpoint = Vector((head_plus_hips.x / 2, head_plus_hips.y / 2, 0))
+            hips_cost = ( hips_pos- midpoint).length * 1
+            spine_cost = (head_plus_hips_midpoint - midpoint).length * 1
+            balance = spine_cost# + spine_cost
+            print(hips_pos, head_plus_hips_midpoint, midpoint)
+            print(hips_cost, spine_cost)
+            obj.balance = balance
+            obj.keyframe_insert(data_path="balance", frame=frame)
+            obj.pose.bones["Offset"].location = midpoint
+            obj.pose.bones["Offset"].keyframe_insert(data_path="location", frame=frame)
+
+        return {"FINISHED"}
+
 class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
     bl_idname = "s4animtools.fk_to_ik"
     bl_label = "FK To IK"
@@ -2063,6 +2112,7 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
             left_arm_pole.keyframe_insert(data_path="location", frame=context.scene.frame_current)
 
             left_hand = pose.bones[target]
+
 
 
             matrix_data = pose.bones[hand].matrix.copy()
@@ -2224,7 +2274,7 @@ classes = (
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
-    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK)
+    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance)
 
 def update_selected_bones(self, context):
     pass
@@ -2337,6 +2387,8 @@ def register():
     bpy.types.Object.ignores_foundations = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_fenestration_node = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_trim = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.balance = bpy.props.FloatProperty(default=0, soft_min=0, soft_max=1)
+
     # One for IK, zero for fk
     bpy.types.Object.l_hand_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
     bpy.types.Object.r_hand_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
