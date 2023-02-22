@@ -10,7 +10,7 @@ from mathutils import Vector, Quaternion
 from _s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
 import _s4animtools
-
+ENABLE_SCALE = False
 F4_QuaternionIdentity = 17
 
 F3 = 3
@@ -416,18 +416,19 @@ class AnimationExporter:
                 self.exported_channels.append(rotation_channel)
 
 #
-            if len(animation_data.get_scale_channel().items()) > 0:
-                if self.use_full_precision:
-                    scale_channel = PaletteTranslationChannel(bone.name, F3, SCALE_SUBTARGET_IDX)
-                    scale_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_scale_channel(), axis_count=3)
-                    scale_channel.palette_setup(channel_data=scale_channel_data,
-                                                      snap_frames=self.snap_frames,
-                                                      values=original_values)
-                else:
-                    scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
-                    scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
-    #
-                self.exported_channels.append(scale_channel)
+            if ENABLE_SCALE:
+                if len(animation_data.get_scale_channel().items()) > 0:
+                    if self.use_full_precision:
+                        scale_channel = PaletteTranslationChannel(bone.name, F3, SCALE_SUBTARGET_IDX)
+                        scale_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_scale_channel(), axis_count=3)
+                        scale_channel.palette_setup(channel_data=scale_channel_data,
+                                                          snap_frames=self.snap_frames,
+                                                          values=original_values)
+                    else:
+                        scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
+                        scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
+        #
+                    self.exported_channels.append(scale_channel)
 
             for ik_target_idx in range(IK_TARGET_COUNT):
                 animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)

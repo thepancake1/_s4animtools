@@ -37,6 +37,8 @@ class Bone:
         location = (bp2.inverted() @ bp1).to_translation()
         rotation = matrix_data.to_quaternion()
 
+        print("Bone: {}, Parent: {}".format(current_bone.name, parent_bone.name))
+        print("Location: {}, Rotation: {}".format(location, rotation))
         self.position = [Float32(round(location.x, 4)), Float32(round(location.y, 4)),
                          Float32(round(location.z, 4))]
         self.rotation = [Float32(round(rotation.x, 4)), Float32(round(rotation.y, 4)), Float32(round(rotation.z, 4)),

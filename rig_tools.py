@@ -29,7 +29,7 @@ class ExportRig(bpy.types.Operator):
             file.write(all_data.getvalue())
 
     def get_filename(self, context):
-        return "8EAF13DE!00000000!{}.{}.Rig".format(get_64bithash(context.object.name), context.object.name)
+        return "8EAF13DE!00000000!{}.{}.Rig.binary".format(get_64bithash(context.object.name), context.object.name)
 
 
     def invoke(self, context, event):
