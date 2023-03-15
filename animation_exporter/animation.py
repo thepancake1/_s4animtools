@@ -217,7 +217,7 @@ class AnimationBoneData:
 
 
 class AnimationExporter:
-    def __init__(self, source_rig, snap_frames, world_rig, world_root, use_full_precision):
+    def __init__(self, source_rig, snap_frames, world_rig, world_root, use_full_precision, base_rig=None):
         self.animated_frame_data = {}
         self.source_rig = source_rig
         self.snap_frames = snap_frames
@@ -227,6 +227,8 @@ class AnimationExporter:
         self.world_root = world_root
         self.use_full_precision = use_full_precision
         self.paletteHolder = F1Palette()
+        self.base_rig = base_rig
+
     @property
     def animated_bones(self):
         """
@@ -489,3 +491,53 @@ class AnimationExporter:
         for bone in self.animated_frame_data:
             str += f"{bone} - {self.animated_frame_data[bone]}"
         return str
+
+class AdditiveAnimationExporter(AnimationExporter):
+    def get_transform(self, source_rig, source_bone, target_rig, target_bone):
+        """
+        Returns a tuple of translation, rotation, and scale data of
+        the source bone animated to the target bone.
+        """
+        parent_bone_src = source_bone.parent
+        src_matrix = source_rig.matrix_world @ source_bone.matrix
+        parent_bone_target = target_bone.parent
+        dst_matrix = target_rig.matrix_world @ target_bone.matrix
+
+        src_matrix_parent = source_rig.matrix_world @ parent_bone_src.matrix
+        dst_matrix_parent = target_rig.matrix_world @ parent_bone_target.matrix
+
+        src_matrix = src_matrix_parent.inverted() @ src_matrix
+        dst_matrix = dst_matrix_parent.inverted() @ dst_matrix
+
+        matrix_data = dst_matrix.inverted() @ src_matrix
+        rotation_data = matrix_data.to_quaternion()
+        translation_data = matrix_data.to_translation()
+        scale_data = matrix_data.to_scale()
+        return translation_data, rotation_data, scale_data
+
+
+    def animate_frame(self, source_bone, frame_idx, start_frame, force):
+        """
+        Animate a bone relative to a base pose.
+        Additive animations are exported as a difference between the base pose and the current pose.
+        This function requires the bone, the frame index, the current clip's start frame, and whether a keyframe
+        should be inserted without checking if it's identical to previous keyframes.
+
+        If the bone has "slot" in the bone's name, then the bone will not be animated.
+        This assumes that slot bones have no children.
+
+        The b__ROOT__ bone is never animated.
+        """
+        parent_bone = source_bone.parent
+        if parent_bone is not None:
+                self.animate_bone_relative_to_other_bone(source_bone=source_bone,
+                                                         target_rig=self.base_rig,
+                                                         target_bone=self.base_rig.pose.bones[source_bone.name], frame_idx=frame_idx,
+                                                         start_frame=start_frame,
+                                                         force=force)
+
+
+        for child in source_bone.children:
+            if slot in child.name:
+                continue
+            self.animate_frame(child, frame_idx, start_frame, force)

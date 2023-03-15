@@ -35,7 +35,7 @@ from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_C
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
     LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget
 import _s4animtools.animation_exporter.animation
-from _s4animtools.animation_exporter.animation import AnimationExporter
+from _s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
 import _s4animtools.rig.create_rig
 from _s4animtools.serialization.types.transforms import Vector3, Quaternion4
 import _s4animtools.clip_processing.clip_body
@@ -668,6 +668,7 @@ class NewClipExporter(bpy.types.Operator):
     bl_label = "New Export Clip"
     bl_options = {"REGISTER", "UNDO"}
 
+    additive: bpy.props.BoolProperty(default=False)
     def __init__(self):
         self.context = None
         self.clip_infos = []
@@ -831,6 +832,9 @@ class NewClipExporter(bpy.types.Operator):
         else:
             world_root = world_rig.pose.bones[world_root]
 
+        base_rig = self.context.object.base_rig
+
+
         for idx, clip_info in enumerate(self.clip_infos):
             current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
                                         clip_info.explicit_namespaces,
@@ -840,8 +844,10 @@ class NewClipExporter(bpy.types.Operator):
             snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
                                             self.context.object.additional_snap_frames)
 
-
-            exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision)
+            if self.additive:
+                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig])
+            else:
+                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision)
             exporter.create_animation_data()
             exporter.paletteHolder.try_add_palette_to_palette_values(0)
             exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
@@ -1154,6 +1160,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.prop(obj, "initial_offset_t", text="")
 
             self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
+            self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
+
             layout = self.layout.row()
             layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
 
@@ -1215,6 +1223,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
             layout = self.layout.row()
 
+            layout.prop_search(context.object, "base_rig", context.scene, "objects", text="Base Rig")
 
             layout.prop_search(context.object, "world_rig", context.scene, "objects", text="World Rig")
             if len(context.object.world_rig) > 0:
@@ -2429,6 +2438,7 @@ def register():
     bpy.types.Object.snap_events = bpy.props.StringProperty()
     bpy.types.Object.additional_snap_frames = bpy.props.StringProperty()
     bpy.types.Object.visibility_events = bpy.props.StringProperty()
+    bpy.types.Object.base_rig = bpy.props.StringProperty()
     bpy.types.Object.world_rig = bpy.props.StringProperty()
     bpy.types.Object.world_bone = bpy.props.StringProperty()
     bpy.types.Object.use_world_bone_as_root = bpy.props.BoolProperty(default=False)
@@ -2554,6 +2564,7 @@ def unregister():
     del bpy.types.Object.snap_events
     del bpy.types.Object.additional_snap_frames
     del bpy.types.Object.visibility_events
+    del bpy.types.Object.base_rig
     del bpy.types.Object.world_rig
     del bpy.types.Object.world_bone
     del bpy.types.Object.reaction_events
