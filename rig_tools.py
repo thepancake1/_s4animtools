@@ -16,8 +16,7 @@ class ExportRig(bpy.types.Operator):
     def execute(self, context):
         armature = bpy.context.object.data
         bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-
-        anim_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
+        anim_path = os.path.expanduser("~/Desktop") + os.sep + "Animation Workspace"
         if not os.path.exists(anim_path):
             os.mkdir(anim_path)
         serialized_rig = Rig().create(armature.edit_bones[:])
