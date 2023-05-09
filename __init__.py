@@ -191,451 +191,6 @@ class Snapper(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ClipExporter(bpy.types.Operator):
-    bl_idname = "s4animtools.export_clip"
-    bl_label = "Export Clip"
-    bl_options = {"REGISTER", "UNDO"}
-
-    def convert_into_value(self, value):
-        return str(value)
-
-    def get_distance(self, posA, posB):
-        distance = math.sqrt((posA.x - posB.x) ** 2 + (posA.y - posB.y) ** 2 + (posA.z - posB.z) ** 2)
-        # print(distance)
-        return distance
-
-    def get_keyframes(self, obj):
-        keyframes = []
-        anim = obj.animation_data
-        if anim is not None and anim.action is not None:
-            for fcu in anim.action.fcurves:
-                for keyframe in fcu.keyframe_points:
-                    x, y = keyframe.co
-                    if x not in keyframes:
-                        keyframes.append((math.ceil(x)))
-        return keyframes
-
-    def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames):
-        """
-        Shifts the timestamps of the clip events depending on the split.
-        So you can time it relative to the start of the blend file in blender,
-        and have it reflect relative to the clip file in the export.
-        """
-        start_time = start_frame * (1 / 30)
-        frame_time = frame_count * (1 / 30)
-
-        variable_to_event = {context.object.parent_events_list: ParentEvent,
-                             context.object.sound_events_list: SoundEvent,
-                             context.object.snap_events_list: SnapEvent,
-                             context.object.visibility_events_list: VisibilityEvent,
-                             context.object.script_events_list: ScriptEvent,
-                             context.object.reaction_events_list: ReactionEvent,
-                             context.object.play_effect_events_list: PlayEffectEvent,
-                             context.object.focus_compatibility_events_list: FocusCompatibilityEvent,
-                             context.object.disable_lipsync_events_list: SuppressLipsyncEvent,
-                             context.object.stop_effect_events_list: StopEffectEvent}
-        snap_frames = []
-
-        for parameter_fields, event in variable_to_event.items():
-            for event_instance in parameter_fields:
-                parameters = event_instance.info.split(",")
-                parameter_length = len(parameters)
-                if parameter_length == 1:
-                    continue
-                if parameter_length < event.arg_count:
-                    raise Exception(
-                        f"Your event has incomplete parameters. Expected {event.arg_count} parameters. Got {parameter_length}")
-                try:
-                    original_timestamp = parameters[0].strip()
-                    original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
-                                                                                                  start_time)
-                    if event == SnapEvent:
-                        snap_frames.append(timeshifted_timestamp)
-                    if event == FocusCompatibilityEvent:
-                        if frame_time >= timeshifted_timestamp >= 0:
-                            _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
-                                                                                             start_time)
-                            current_clip.add_event(
-                                event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
-
-                    else:
-                        if frame_time >= timeshifted_timestamp >= 0:
-                            current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
-                except Exception as e:
-                    print(e)
-                    #raise Exception("You're missing parameters for your event..")
-
-        if additional_snap_frames != "":
-            additional_snap_frames = additional_snap_frames.split(",")
-            for frame in additional_snap_frames:
-                original_frame = int(frame)
-                timeshifted_frame = original_frame - start_frame
-                if frame_count > timeshifted_frame >= 0:
-                    snap_frames.append(timeshifted_frame)
-        return snap_frames
-
-    def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
-        if original_timestamp_str.endswith("f") or original_timestamp_str.endswith("fr"):
-            original_timestamp = float(original_timestamp_str[:-1]) / 30
-        elif original_timestamp_str.endswith("e"):
-            original_timestamp = eval(original_timestamp_str[:-1])
-        else:
-            original_timestamp = float(original_timestamp_str)
-
-        # IF it ends with r (relative), then we don't need to shift from absolute to relative,
-        # because we're already in relative
-        if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
-            timeshifted_timestamp = original_timestamp
-        else:
-            timeshifted_timestamp = original_timestamp - start_time
-
-        return original_timestamp, timeshifted_timestamp
-
-    def execute(self, context):
-        t1 = time.time()
-
-        root_bone = list(bpy.context.active_object.pose.bones)[0]
-        world_root_bone, world_rig = self.determine_world_ik(context, root_bone)
-
-        ik_targets = determine_ik_slot_targets(bpy.context.active_object)
-        weight_channels = []
-        slot_assignments = defaultdict(list)
-        # add rigs namespaces
-        rigs_used = []
-        ik_bones = []
-        animated_bones = dict()
-        previous_recorded_frame = dict()
-
-        def setup_channel_data(bone):
-
-            default_bone_channels = {"Main Channel": {"TRANSLATION": {}, "ORIENTATION": {}, "SCALE": {}},
-                                     "IK World Channel": {"TRANSLATION": {}, "ORIENTATION": {}}}
-            animated_bones[bone.name] = default_bone_channels.copy()
-            default_previous_frame = {
-                "Main Channel": {"TRANSLATION": Vector((0, 0, 0)), "ORIENTATION": Quaternion((1, 0, 0, 0)),
-                                 "SCALE": Vector((1, 1, 1))},
-                "IK World Channel": {"TRANSLATION": Vector((0, 0, 0)), "ORIENTATION": Quaternion((1, 0, 0, 0))}}
-            previous_recorded_frame[bone.name] = default_previous_frame.copy()
-
-            for ik_chain in slot_assignments:
-                if ik_chain == bone.name:
-                    for idx in range(len(slot_assignments[ik_chain])):
-                        channel_name = "IK Target {} Channel".format(1 + idx)
-                        animated_bones[bone.name][channel_name] = {"TRANSLATION": {}, "ORIENTATION": {}}
-                        previous_recorded_frame[bone.name][channel_name] = {"TRANSLATION": Vector((0, 0, 0)),
-                                                                            "ORIENTATION": Quaternion((1, 0, 0, 0))}
-
-            for child in bone.children:
-                setup_channel_data(child)
-
-        snap_frames = None
-        # Todo why doesn't this use the Slot Assignment class?
-        for bone in constraints:
-            for idx, target in enumerate(constraints[bone]):
-                slot_assignments[bone].append(
-                    (bone, target[0], target[1], idx, int(target[2].target.name.split(" ")[2])))
-                if bone not in ik_bones:
-                    ik_bones.append(bone)
-        # Ik bones list
-        # Get blend name for source file name in clip file.
-        filepath = bpy.data.filepath
-        blend_name = filepath.split(os.sep)[-1]
-
-        clip_indices = [0, ]
-        clip_splits = context.scene.clip_splits.split(",")
-        if len(clip_splits) > 0:
-            for idx in range(len(clip_splits)):
-                clip_indices.append(int(clip_splits[idx]))
-
-        # clip_indices.append(bpy.context.scene.frame_end)
-
-        def finalize_channels(all_frame_data, channel_data, current_channel):
-            min, max = 9999, -9999
-            for idx, frame_data in channel_data.items():
-                all_frame_data[idx] = frame_data.copy()
-                for value in frame_data:
-                    # print(value, max)
-                    if max < value:
-                        max = value
-                    if min > value:
-                        min = value
-                # TODO Uhhh does the below code even do what it's supposed to do?
-            # printfor ax_idx in range(len(frame_data)):
-            #     frame_data[ax_idx] = number_format(frame_data[ax_idx])
-            offset = (min + max) / 2
-            scale = -((min - max) / 2)
-            current_channel.set_channel_data(offset=offset, scale=scale, individual_frames=all_frame_data,
-                                             snap_frames=snap_frames)
-            current_clip.clip_body.add_channel(current_channel)
-
-        def recursive_bone_animate(bone, idx, is_snap_frame):
-            if bone.parent and keyframed_bones[
-                bone.name] and bpy.context.scene.is_overlay or not bpy.context.scene.is_overlay and bone.parent:
-                # Animate relative to the world rig if the current bone is the b__ROOT_bind__ bone.
-                if bone.parent.name == "b__ROOT__":
-                    animate_relative_to_bone(bone, world_root_bone, bpy.context.active_object, world_rig, idx,
-                                             "Main Channel", is_snap_frame)
-                else:
-                    animate_relative_to_bone(bone, bone.parent, bpy.context.active_object, bpy.context.active_object,
-                                             idx, "Main Channel", is_snap_frame)
-
-                use_IK = True
-                if bone.name in ik_bones and use_IK:
-                    current_ik_target = 0
-                    animate_relative_to_bone(bone, world_root_bone, bpy.context.active_object, world_rig, idx,
-                                             "IK World Channel", is_snap_frame)
-                    current_ik_target += 1
-
-                    for bone_constraint_name in slot_assignments.keys():
-                        if bone.name == bone_constraint_name:
-                            for bone_constraint in slot_assignments[bone_constraint_name]:
-                                channel_name = "IK Target {} Channel".format(current_ik_target)
-                                current_ik_target += 1
-                                animate_relative_to_bone(bone, bone_constraint[1].pose.bones[bone_constraint[2]],
-                                                         bpy.context.active_object, bone_constraint[1], idx,
-                                                         channel_name, is_snap_frame)
-            for child in bone.children:
-                # Don't animate slots.
-                if "slot" not in child.name:
-                    recursive_bone_animate(child, idx, is_snap_frame)
-
-        def recursive_bone_finalize(bone):
-            current_sequence_count = 1  # This affects the actual IK translation and rotation offset data
-            for channel_name, channel_bundle in animated_bones[bone.name].items():
-                for channel_type, channel_data in channel_bundle.items():
-                    # Don't need to save channel if nothing is in it
-                    if len(channel_data) == 0:
-                        continue
-
-                    all_frame_data = {}
-                    current_channel = None
-                    if channel_type == "TRANSLATION":
-                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 1)
-                    elif channel_type == "ORIENTATION":
-                        current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20, 2)
-                    elif channel_type == "SCALE":
-                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 3)
-                    if "IK" in channel_name:
-                        if channel_type == "TRANSLATION":
-                            current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name,
-                                                                                                       18, 23 + (
-                                                                                                                   current_sequence_count * 2))
-                        elif channel_type == "ORIENTATION":
-                            current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20,
-                                                                                              (24 + current_sequence_count * 2))
-                    finalize_channels(all_frame_data, channel_data, current_channel)
-                if "IK" in channel_name:
-                    current_sequence_count += 1
-
-            for bone in bone.children:
-                recursive_bone_finalize(bone)
-
-        def animate_relative_to_bone(bone, parent_bone, source_rig, target_rig, idx, channel_name, is_snap_frame,
-                                     allow_fail_on_scale=True):
-            bp1 = source_rig.matrix_world @ bone.matrix
-            bp2 = target_rig.matrix_world @ parent_bone.matrix
-            matrix_data = bp2.inverted() @ bp1
-            rotation_data = matrix_data.to_quaternion()
-            translation_data = matrix_data.to_translation()
-            last_rotation_data = previous_recorded_frame[bone.name][channel_name]["ORIENTATION"]
-            last_translation_data = previous_recorded_frame[bone.name][channel_name]["TRANSLATION"]
-            # TODO quick hack for scale
-            try:
-                scale_data = bone.scale
-
-                last_scale_data = previous_recorded_frame[bone.name][channel_name]["SCALE"]
-                if abs(self.get_distance(last_scale_data, scale_data)) < 0.00001 and len(
-                        animated_bones[bone.name][channel_name]["SCALE"].keys()) >= 1 and not is_snap_frame:
-                    pass
-                else:
-                    animated_bones[bone.name][channel_name]["SCALE"][idx] = [scale_data.x, scale_data.y,
-                                                                             scale_data.z]
-                    previous_recorded_frame[bone.name][channel_name]["SCALE"] = scale_data.copy()
-
-
-            except Exception as e:
-                if allow_fail_on_scale:
-                    pass
-                else:
-                    raise e
-            if abs((last_rotation_data - rotation_data).magnitude) < 0.00001 and len(
-                    animated_bones[bone.name][channel_name]["ORIENTATION"].keys()) >= 1 and not is_snap_frame:
-                pass
-            else:
-                animated_bones[bone.name][channel_name]["ORIENTATION"][idx] = [rotation_data.x, rotation_data.y,
-                                                                               rotation_data.z,
-                                                                               rotation_data.w]
-                previous_recorded_frame[bone.name][channel_name]["ORIENTATION"] = rotation_data
-            if abs(self.get_distance(last_translation_data, translation_data)) < 0.00001 and len(
-                    animated_bones[bone.name][channel_name]["TRANSLATION"].keys()) >= 1 and not is_snap_frame:
-                pass
-            else:
-                animated_bones[bone.name][channel_name]["TRANSLATION"][idx] = [translation_data.x, translation_data.y,
-                                                                               translation_data.z]
-                previous_recorded_frame[bone.name][channel_name]["TRANSLATION"] = translation_data
-
-        def save_locomotion_data(clip_start, clip_end):
-            next_initial_translation_offset = ""
-            if "loco" in bpy.context.active_object.pose.bones:
-                loco_bone = bpy.context.active_object.pose.bones["loco"]
-                # current_clip.clip_body._f1PaletteData.append(float32(0))
-
-                for idx in range(clip_start, clip_end):
-                    bpy.context.scene.frame_set(idx)
-                    bp1 = bpy.context.active_object.matrix_world @ loco_bone.matrix
-
-                    current_clip.clip_body._f1PaletteData.append(Float32(round(abs(bp1.to_translation().y), 6)))
-                    if idx == clip_start:
-                        next_initial_translation_offset = "0,0,{}".format(abs(bp1.to_translation().y))
-                current_clip.clip_body._f1PaletteSize = len(current_clip.clip_body._f1PaletteData)
-                loco_channel_pos = _s4animtools.channels.palette_channel.PaletteTranslationChannel("loco", 3, 1)
-                channel_frame_data = {}
-                for idx in range(clip_start, clip_end):
-                    channel_frame_data[idx - clip_start] = (0, 0, idx - clip_start)
-                loco_channel_pos.set_channel_data(0, 1, channel_frame_data, snap_frames)
-                loco_channel_rot = _s4animtools.channels.channel.QuaternionChannel("loco", 17, 2)
-                loco_channel_rot.set_channel_data(0, 1, {}, snap_frames)
-
-                loco_channel_pos._target = UInt32(720414894)
-                loco_channel_rot._target = UInt32(720414894)
-                loco_channel_pos._frame_count = current_clip.clip_body._f1PaletteSize
-                current_clip.clip_body.add_channel(loco_channel_pos)
-
-                current_clip.clip_body.add_channel(loco_channel_rot)
-            return next_initial_translation_offset
-
-        def get_animated_bones():
-            rig = bpy.context.active_object.pose
-            keyframed_bones = defaultdict(bool)
-            for b in rig.bones:
-                for fcu in bpy.context.active_object.animation_data.action.fcurves:
-                    if fcu.data_path.startswith('pose.bones["{}"]'.format(b.name)):
-                        keyframed_bones[b.name] = True
-                        break
-            return keyframed_bones
-
-        keyframed_bones = get_animated_bones()
-
-        clip_names = []
-        clip_input_names = context.scene.clip_name.split(",")
-        if len(clip_input_names) > 0:
-            for idx in range(len(clip_input_names)):
-                clip_names.append(clip_input_names[idx].strip())
-
-        reset_offset = []
-        if context.object.reset_initial_offset_t != "":
-            reset_initial_offset_t = context.object.reset_initial_offset_t.split(",")
-            if len(reset_initial_offset_t) > 0:
-                for idx in range(len(reset_initial_offset_t)):
-                    reset_offset.append(reset_initial_offset_t[idx].strip() == "+")
-        else:
-            for clip_idx in range(len(clip_indices) - 1):
-                reset_offset.append(False)
-
-        initial_offset_t = context.object.initial_offset_t
-        initial_offset_q = context.object.initial_offset_q
-        # Set the initial offsets to the default if the user doesn't enter anything.
-        if initial_offset_t == "":
-            initial_offset_t = "0,0,0"
-        if initial_offset_q == "":
-            initial_offset_q = "0,0,0,1"
-        rig_name = context.object.rig_name
-        if rig_name == "":
-            context.object.rig_name = "x"
-            rig_name = context.object.rig_name
-
-        reference_namespace_hash = context.object.reference_namespace_hash
-        if reference_namespace_hash == "":
-            reference_namespace_hash = 0
-        else:
-            reference_namespace_hash = int(reference_namespace_hash, 16)
-
-        for clip_idx in range(len(clip_indices) - 1):
-            clip_frame_idx = clip_indices[clip_idx]
-            if context.scene.clip_name_prefix == "":
-                combined_clip_name = "{}".format(clip_names[clip_idx])
-            else:
-                combined_clip_name = "{}_{}".format(context.scene.clip_name_prefix, clip_names[clip_idx])
-            has_loco_bone = "loco" in context.object.pose.bones
-            current_clip = ClipResource(combined_clip_name, rig_name, slot_assignments,
-                                        context.object.explicit_namespaces,
-                                        reference_namespace_hash, Quaternion.from_str(initial_offset_q),
-                                        Vector3.from_str(initial_offset_t), blend_name, has_loco_bone,
-                                        context.object.disable_rig_suffix)
-            setup_channel_data(root_bone)
-
-            clip_start, clip_end = clip_frame_idx, clip_indices[clip_idx + 1]
-
-            snap_frames = self.setup_events(context, current_clip, clip_start, clip_end - clip_start,
-                                            context.object.additional_snap_frames)
-
-            for channel in weight_channels:
-                current_clip.clip_body.add_channel(channel)
-            last_frame_influences = defaultdict(int)
-            ik_weight_animation_data = defaultdict(dict)
-
-            for current_frame in range(clip_start, clip_end):
-                bpy.context.scene.frame_set(current_frame)
-                bpy.context.view_layer.update()
-
-                # Clip data needs to be offset when the clip actually starts is at zero.
-                recursive_bone_animate(root_bone, current_frame - clip_start, current_frame - clip_start in snap_frames)
-                for bone in constraints:
-                    for idx, target in enumerate(constraints[bone]):
-                        ik_weight = gather_ik_weights(ik_weight_animation_data, target[2], clip_start, current_frame,
-                                                      last_frame_influences[target[2]])
-                        last_frame_influences[target[2]] = ik_weight
-            for bone in constraints:
-                for idx, target in enumerate(constraints[bone]):
-                    current_clip.clip_body.add_channel(
-                        (create_ik_weight_channels(bone, ik_weight_animation_data[target[2]], idx + 1)))
-
-            next_initial_translation_offset = save_locomotion_data(clip_start, clip_end)
-            if next_initial_translation_offset != "":
-                # TODO Hack!! Fix this
-                current_clip._initialOffsetT = list(map(float, next_initial_translation_offset.split(",")))
-
-            if len(reset_offset) > clip_idx:
-                if reset_offset[clip_idx]:
-                    initial_offset_t = "0,0,0"
-                    initial_offset_q = "0,0,0,1"
-
-            loco_animation = False
-            root_bone = bpy.context.active_object.pose.bones["b__ROOT__"]
-
-            if loco_animation:
-                try:
-                    for bone in self.IK_bones:
-                        # todo don't play the animation each time for a bone!!
-                        current_clip.clip_body.add_channel(set_loco_world_ik(bone, clip_start, clip_end))
-                except:
-                    print("wtf")
-
-            recursive_bone_finalize(root_bone)
-
-            current_clip.clip_body.set_clip_length(clip_end - clip_start)
-
-            current_clip.update_duration(clip_end - clip_start)
-            current_clip.serialize()
-            current_clip = None
-        t2 = time.time()
-        print(f"Took {t2 - t1} seconds for clip export")
-
-    def determine_world_ik(self, context, root_bone):
-        if context.object.world_rig == "":
-            world_rig = bpy.context.active_object
-            world_root_bone = root_bone
-        else:
-            world_rig = bpy.data.objects[context.object.world_rig]
-            world_root_bone = world_rig.pose.bones[context.object.world_bone]
-        return world_root_bone, world_rig
-
-    def invoke(self, context, event):
-
-        self.execute(context)
-
-        return {'FINISHED'}
-
 
 class ClipInfo:
     def __init__(self, start_frame, end_frame, name, reference_namespace_hash, explicit_namespaces, initial_offset_q,
@@ -740,19 +295,21 @@ class NewClipExporter(bpy.types.Operator):
         return snap_frames
 
     def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
-        if original_timestamp_str.endswith("f") or original_timestamp_str.endswith("fr"):
-            original_timestamp = float(original_timestamp_str[:-1]) / 30
-        elif original_timestamp_str.endswith("e"):
-            original_timestamp = eval(original_timestamp_str[:-1])
-        else:
+        if original_timestamp_str.endswith("s"):
             original_timestamp = float(original_timestamp_str)
 
-        # IF it ends with r (relative), then we don't need to shift from absolute to relative,
-        # because we're already in relative
-        if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
-            timeshifted_timestamp = original_timestamp
+        elif original_timestamp_str.endswith("e"):
+            original_timestamp = float(eval(original_timestamp_str[:-1]))
         else:
-            timeshifted_timestamp = original_timestamp - start_time
+            original_timestamp = float(original_timestamp_str[:-1]) / 30
+
+        # What is relative mode???
+       # # IF it ends with r (relative), then we don't need to shift from absolute to relative,
+       # # because we're already in relative
+       # if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
+       #     timeshifted_timestamp = original_timestamp
+       # else:
+        timeshifted_timestamp = original_timestamp - start_time
 
         return original_timestamp, timeshifted_timestamp
     def get_clip_names(self):
@@ -1242,27 +799,27 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.draw_property_if_not_empty(obj, "stop_effect_events", self.layout)
             self.draw_property_if_not_empty(obj, "disable_lipsync_events", self.layout)
             self.draw_events(obj, "parent_events_list", 0.1,
-                             "Parameters (Frame Number (f) or Seconds/Object To Be Parented/Object To Be Parented To/Bone)",
-                             "Parent Events", self.layout, parameters=["Frame Number (f) or Seconds", "Object to Be Parented", "Object to be Parented To", "Bone"])
+                             "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
+                             "Parent Events", self.layout, parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
 
             self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
-                             "Sound Events", self.layout,  parameters=["Frame Number (f) or Seconds", "Sound Effect Name"])
+                             "Sound Events", self.layout,  parameters=["Frame", "Sound Effect Name"])
             self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)", "Script Events",
-                             self.layout,  parameters=["Frame Number (f) or Seconds", "Script Xevt"])
+                             self.layout,  parameters=["Frame", "Script Xevt"])
             self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
-                             "Snap Events", self.layout,  parameters=["Frame Number (f) or Seconds", "Actor", "X", "Y", "Z",  "QX", "QY", "QZ", "QW",])
+                             "Snap Events", self.layout,  parameters=["Frame", "Actor", "X", "Y", "Z",  "QX", "QY", "QZ", "QW",])
             self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM)",
-                             "Reaction Events", self.layout, parameters=["Frame Number (f) or Seconds", "Reaction ASM Name"])
+                             "Reaction Events", self.layout, parameters=["Frame", "Reaction ASM Name"])
             self.draw_events(obj, "play_effect_events_list", 0.1,
                              "Parameters (Frame Number/VFX Name/Actor Hash/Bone Name Hash/(always 0)/(almost always 0)/Unique VFX Name)",
-                             "Play Effect Events", self.layout, parameters=["Frame Number (f) or Seconds", "VFX Name", "Actor Hash", "Bone Name Hash", "(always 0)", "(almost always 0)", "Unique VFX Name"])
+                             "Play Effect Events", self.layout, parameters=["Frame", "VFX Name", "Actor Hash", "Bone Name Hash", "(always 0)", "(almost always 0)", "Unique VFX Name"])
             self.draw_events(obj, "stop_effect_events_list", 0.1,
                              "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
-                             "Stop Effect Events", self.layout, parameters=["Frame Number (f) or Seconds", "Unique VFX Name", "(always 0)", "(unknown bool)"])
+                             "Stop Effect Events", self.layout, parameters=["Frame", "Unique VFX Name", "(always 0)", "(unknown bool)"])
             self.draw_events(obj, "disable_lipsync_events_list", 0.1, "Parameters (Frame Number/Duration)",
-                             "Suppress Lipsync Events", self.layout, parameters=["Frame Number (f) or Seconds", "Duration (seconds)"])
+                             "Suppress Lipsync Events", self.layout, parameters=["Frame", "End Frame"])
             self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
-                             "Visibility Events", self.layout, parameters=["Frame Number (f) or Seconds", "Actor Name", "Visibility (0 or 1)"])
+                             "Visibility Events", self.layout, parameters=["Frame", "Actor Name", "Visibility (0 or 1)"])
             self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
                              "Focus Compatibility Events", self.layout)
 
@@ -2265,7 +1822,7 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
 #          LIST_OT_MoveActor, ActorPanel, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, StatePanel,
 #          ControllerProperties, StateProperties, LIST_OT_NewController, s4animtool_OT_IKEmptyCreator, s4animtool_OT_IKEmptyUpdate, s4animtool_PT_IKProperties,)
 classes = (
-    Snapper, ExportRig, SyncRigToMesh, ClipExporter,
+    Snapper, ExportRig, SyncRigToMesh,
     S4ANIMTOOLS_PT_MainPanel,
     TimeRange,
     IKTarget, s4animtool_PT_IKTargetPanel, LIST_OT_NewIKTarget, LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget,
