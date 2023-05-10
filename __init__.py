@@ -3,9 +3,12 @@ import os
 import time
 import math
 import importlib
+
+import _s4animtools.bone_names
 from _s4animtools.serialization.fnv import get_64bithash
 from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
+from _s4animtools.rig.create_rig import Trackmask
 from _s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from _s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent
@@ -45,7 +48,6 @@ from mathutils import Vector, Quaternion, Matrix
 from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
-
 JAW_ANIMATE_DURATION = 100000
 
 CHAIN_STR_IDX = 2
@@ -1069,7 +1071,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
        #     layout.operator("s4animtools.create_bone_selectors", icon='MESH_CUBE', text="Create Bone Selectors")
             layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
             layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
-            layout.operator("s4animtools.determine_balance", icon='MESH_CUBE', text="Determine Balance")
+
+            layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
+            layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
+            layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
             layout.prop(obj, "balance", text = "Balance")
             try:
                 if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
@@ -1535,6 +1540,48 @@ class ImportRig(bpy.types.Operator, ImportHelper):
 
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_ApplyTrackmask(bpy.types.Operator, ImportHelper):
+    bl_idname = "s4animtools.apply_trackmask"
+    bl_label = "Apply Trackmask"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def copy_location(self, arm, target, from_target, influence):
+        print(f"Copying position from {target.name} to {from_target.name}")
+        copy_constraint = from_target.constraints.new('COPY_LOCATION')
+        copy_constraint.target = arm
+        copy_constraint.subtarget = target.name
+        copy_constraint.influence = influence
+        copy_constraint.target_space = 'LOCAL'
+        copy_constraint.owner_space = 'LOCAL'
+
+        return copy_constraint
+
+    def copy_rotation(self, arm, target, from_target, influence):
+        print(f"Copying position from {target.name} to {from_target.name}")
+        copy_constraint = from_target.constraints.new('COPY_ROTATION')
+        copy_constraint.target = arm
+        copy_constraint.subtarget = target.name
+        copy_constraint.influence = influence
+
+        copy_constraint.target_space = 'LOCAL'
+        copy_constraint.owner_space = 'LOCAL'
+
+
+        return copy_constraint
+
+    def execute(self, context):
+        trackmask = Trackmask().read(self.properties.filepath)
+        arm = context.object
+        base_arm = bpy.data.objects[context.object.name.replace("_blended", "_base")]
+        human_bones = _s4animtools.bone_names.human_bones
+        for bone in arm.pose.bones:
+            if bone.name in human_bones:
+                for c in bone.constraints:
+                    bone.constraints.remove(c)
+                self.copy_location(base_arm, base_arm.pose.bones[bone.name], bone,  1 - trackmask.track_blends[human_bones.index(bone.name)])
+                self.copy_rotation(base_arm, base_arm.pose.bones[bone.name], bone, 1 - trackmask.track_blends[human_bones.index(bone.name)])
+
+        return {"FINISHED"}
 
 class InitializeEvents(bpy.types.Operator):
     bl_idname = "s4animtools.initialize_events"
@@ -2259,6 +2306,123 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
 
 
         return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_MaskOutParents(bpy.types.Operator):
+    bl_idname = "s4animtools.mask_out_parents"
+    bl_label = "Mask Out Parents"
+    bl_options = {"REGISTER", "UNDO"}
+    command: bpy.props.StringProperty()
+
+
+    def get_all_parents(self, bone):
+        all_parents = []
+        parent = bone
+        while parent is not None:
+            parent = parent.parent
+            if parent is not None:
+                all_parents.append(parent)
+        all_parents = list(reversed(all_parents))
+        return all_parents
+
+
+    def get_shared_direct_parent(self, bone1, bone2):
+        parents1 = self.get_all_parents(bone1)
+        parents2 = self.get_all_parents(bone2)
+        # if len(parents1) == len(parents2):
+        # if parents1[-1] == parents2[-1]:
+        #    print(parents1[-1], parents2[-1], bone1, bone2)
+        #     return True
+        if len(parents1) > len(parents2):
+            if bone2 in parents1:
+                return True
+
+        return False
+
+    def execute(self, context):
+        obj = context.object
+
+        if len(context.selected_pose_bones_from_active_object) > 0:
+            active_pose_bone = context.selected_pose_bones_from_active_object[0]
+
+            possible_paths = ['pose.bones["{}"].location', 'pose.bones["{}"].rotation_euler',
+                              'pose.bones["{}"].rotation_quaternion']
+
+            bones_to_enable = [active_pose_bone]
+            bones_to_disable = []
+            all_pose_bones = obj.pose.bones
+            for bone in all_pose_bones:
+                if self.get_shared_direct_parent(bone, active_pose_bone):
+                    bones_to_enable.append(bone)
+
+            # for bone in bones_to_enable:
+            # print(bone.name)
+            for bone in all_pose_bones:
+                # print(bone.name)
+                for possible_path in possible_paths:
+                    possible_formatted_path = possible_path.format(bone.name)
+                    for fcurve in obj.animation_data.action.fcurves:
+                        if fcurve.data_path == possible_formatted_path:
+                            fcurve.mute = bone not in bones_to_enable
+        return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_MaskOutChildren(bpy.types.Operator):
+    bl_idname = "s4animtools.mask_out_children"
+    bl_label = "Mask Out Children"
+    bl_options = {"REGISTER", "UNDO"}
+    command: bpy.props.StringProperty()
+
+
+    def get_all_parents(self, bone):
+        all_parents = []
+        parent = bone
+        while parent is not None:
+            parent = parent.parent
+            if parent is not None:
+                all_parents.append(parent)
+        all_parents = list(reversed(all_parents))
+        return all_parents
+
+
+    def get_shared_direct_parent(self, bone1, bone2):
+        parents1 = self.get_all_parents(bone1)
+        parents2 = self.get_all_parents(bone2)
+        # if len(parents1) == len(parents2):
+        # if parents1[-1] == parents2[-1]:
+        #    print(parents1[-1], parents2[-1], bone1, bone2)
+        #     return True
+        if bone2 in parents1:
+            return False
+
+        return True
+
+    def execute(self, context):
+        obj = context.object
+
+        if len(context.selected_pose_bones_from_active_object) > 0:
+            active_pose_bone = context.selected_pose_bones_from_active_object[0]
+
+            possible_paths = ['pose.bones["{}"].location', 'pose.bones["{}"].rotation_euler',
+                              'pose.bones["{}"].rotation_quaternion']
+
+            bones_to_enable = [active_pose_bone]
+            bones_to_disable = []
+            all_pose_bones = obj.pose.bones
+            for bone in all_pose_bones:
+                if self.get_shared_direct_parent(bone, active_pose_bone):
+                    bones_to_enable.append(bone)
+
+            # for bone in bones_to_enable:
+            # print(bone.name)
+            for bone in all_pose_bones:
+                # print(bone.name)
+                for possible_path in possible_paths:
+                    possible_formatted_path = possible_path.format(bone.name)
+                    for fcurve in obj.animation_data.action.fcurves:
+                        if fcurve.data_path == possible_formatted_path:
+                            fcurve.mute = bone not in bones_to_enable
+        return {"FINISHED"}
+
+
 # unused = (ScriptItem, SoundItem, LIST_OT_NewScriptEvent, LIST_OT_MoveScriptEvent, LIST_OT_DeleteScriptEvent,
 #          LIST_OT_NewSoundEvent, LIST_OT_MoveSoundEvent, LIST_OT_DeleteSoundEvent,
 #          ScriptEventsPanel, SoundEventsPanel, ActorProperties, LIST_OT_NewActor, LIST_OT_DeleteActor,
@@ -2283,7 +2447,7 @@ classes = (
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
-    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance)
+    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren)
 
 def update_selected_bones(self, context):
     pass
