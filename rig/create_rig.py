@@ -173,3 +173,21 @@ def create_rig_with_context(filepath, context):
 
 
     return ob_new
+
+class Trackmask:
+    def __init__(self):
+        self.track_blends = []
+
+    def read(self, filepath):
+        reader = StreamReader(filepath)
+        for i in range(24):
+            reader.u8()
+        track_blend_count = reader.u32()
+        reader.u32()
+        reader.u32()
+        reader.float32()
+        if track_blend_count > 1000:
+            raise ValueError("Invalid track mask.")
+        for i in range(track_blend_count):
+            self.track_blends.append(reader.float32())
+        return self
