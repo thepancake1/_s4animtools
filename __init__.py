@@ -685,16 +685,16 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             layout = self.layout.row()
             layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
-
-            # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-            layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
-            layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
-
             # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
             layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
                                  text="Maintain Keyframe").direction = "FORWARDS"
             layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
                                  text="Maintain Keyframe Backward").direction = "BACK"
+            # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
+            self.layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
+            self.layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
+
+
 
             self.layout.label(text="Use Full Precision means using full precision for all animation data.")
             self.layout.label(text="Don't enable if you don't know what that means!")

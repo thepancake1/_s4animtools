@@ -109,6 +109,45 @@ class CopyLeftSideAnimationToRightSideSim(bpy.types.Operator):
                 kf.interpolation = 'LINEAR'
         return {"FINISHED"}
 
+
+def check_if_finger_bone(bone):
+    if bone.parent is not None:
+        if "hand" in bone.parent.name.lower():
+            return True
+        if bone.parent.parent is not None:
+            if "hand" in bone.parent.parent.name.lower():
+                return True
+
+            if bone.parent.parent.parent is not None:
+
+                if "hand" in bone.parent.parent.parent.name.lower():
+                    print(bone.name)
+                    return True
+    return False
+
+def is_finger_bone(data_path):
+    if "b__R_Mid" in data_path:
+        return True
+    if "b__R_Ring" in data_path:
+        return True
+    if "b__R_Pinky" in data_path:
+        return True
+    if "b__R_Index" in data_path:
+        return True
+    if "b__R_Thumb" in data_path:
+        return True
+    if "b__L_Mid" in data_path:
+        return True
+    if "b__L_Ring" in data_path:
+        return True
+    if "b__L_Pinky" in data_path:
+        return True
+    if "b__L_Index" in data_path:
+        return True
+    if "b__L_Thumb" in data_path:
+        return True
+    return False
+
 class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
     bl_idname = "s4animtools.flip_left_side_sim"
     bl_label = "Flip Left Side Animation"
@@ -162,6 +201,8 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
                 if "rotation_euler" in fcurve.data_path:
                     multiplier = 1
                     if "Hand" in fcurve.data_path:
+                        multiplier = -1
+                    if is_finger_bone(fcurve.data_path) and fcurve.array_index == 0:
                         multiplier = -1
                     for keyframe in fcurve.keyframe_points:
                         current_value = keyframe.co[1]
