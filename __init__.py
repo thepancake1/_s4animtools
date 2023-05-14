@@ -493,7 +493,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             row.operator('s4animtools.move_new_element', text='↓').args = f"{events_list_name},{idx},down"
             row.operator('s4animtools.move_new_element', text='✖').args = f"{events_list_name},{idx},delete"
             row.operator('s4animtools.move_new_element', text='+').args = f"{events_list_name},{idx},create"
-
+        layout.label(text="")
 
     def draw(self, context):
         obj = context.object
@@ -819,8 +819,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM)",
                              "Reaction Events", self.layout, parameters=["Frame", "Reaction ASM Name"])
             self.draw_events(obj, "play_effect_events_list", 0.1,
-                             "Parameters (Frame Number/VFX Name/Actor Hash/Bone Name Hash/(always 0)/(almost always 0)/Unique VFX Name)",
-                             "Play Effect Events", self.layout, parameters=["Frame", "VFX Name", "Actor Hash", "Bone Name Hash", "(always 0)", "(almost always 0)", "Unique VFX Name"])
+                             "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/(almost always 0)/Unique VFX Name)",
+                             "Play Effect Events", self.layout, parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)", "(almost always 0)", "Unique VFX Name"])
             self.draw_events(obj, "stop_effect_events_list", 0.1,
                              "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
                              "Stop Effect Events", self.layout, parameters=["Frame", "Unique VFX Name", "(always 0)", "(unknown bool)"])
