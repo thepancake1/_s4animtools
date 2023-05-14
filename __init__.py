@@ -475,6 +475,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     parameter_list = list(zip(parameters, item.info.split(",")))
                     for key, value in parameter_list:
                         layout.row().label(text=f"{key}: {value}")
+
+                    for key in parameters[len(item.info.split(",") ):]:
+                        layout.row().label(text=f"{key}: ?")
                     if len(parameters) > len(item.info.split(",")):
                         layout.row().label(text="Not enough parameters.")
                     if len(parameters) < len(item.info.split(",")):
