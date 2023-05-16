@@ -10,7 +10,7 @@ from mathutils import Vector, Quaternion
 from _s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
 import _s4animtools
-ENABLE_SCALE = False
+ENABLE_SCALE = True
 F4_QuaternionIdentity = 17
 
 F3 = 3
