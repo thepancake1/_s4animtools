@@ -303,7 +303,7 @@ class NewClipExporter(bpy.types.Operator):
         elif original_timestamp_str.endswith("e"):
             original_timestamp = float(eval(original_timestamp_str[:-1]))
         else:
-            original_timestamp = float(original_timestamp_str[:-1]) / 30
+            original_timestamp = float(original_timestamp_str) / 30
 
         # What is relative mode???
        # # IF it ends with r (relative), then we don't need to shift from absolute to relative,
@@ -816,8 +816,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                              self.layout,  parameters=["Frame", "Script Xevt"])
             self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
                              "Snap Events", self.layout,  parameters=["Frame", "Actor", "X", "Y", "Z",  "QX", "QY", "QZ", "QW",])
-            self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM)",
-                             "Reaction Events", self.layout, parameters=["Frame", "Reaction ASM Name"])
+            self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM/Reaction State)",
+                             "Reaction Events", self.layout, parameters=["Frame", "Reaction ASM Name", "Reaction State Name"])
             self.draw_events(obj, "play_effect_events_list", 0.1,
                              "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/(almost always 0)/Unique VFX Name)",
                              "Play Effect Events", self.layout, parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)", "(almost always 0)", "Unique VFX Name"])
