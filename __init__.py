@@ -298,10 +298,11 @@ class NewClipExporter(bpy.types.Operator):
 
     def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
         if original_timestamp_str.endswith("s"):
-            original_timestamp = float(original_timestamp_str)
-
+            original_timestamp = float(original_timestamp_str[:-1])
         elif original_timestamp_str.endswith("e"):
             original_timestamp = float(eval(original_timestamp_str[:-1]))
+        elif original_timestamp_str.endswith("f"):
+            original_timestamp = float(original_timestamp_str[:-1]) / 30
         else:
             original_timestamp = float(original_timestamp_str) / 30
 
