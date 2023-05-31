@@ -104,7 +104,7 @@ def create_ik_weight_channels(bone_name, influences, sequence_count):
     min_value, max_value = min(influences.values()), max(influences.values())
     offset = (min_value + max_value) / 2
     scale = -((min_value - max_value) / 2)
-    if scale == 0:
+    if round(scale, 4) == 0:
         scale = 1
     f1normalized_channel.set_channel_data(offset=offset, scale=scale, individual_frames=influences)
     return f1normalized_channel
