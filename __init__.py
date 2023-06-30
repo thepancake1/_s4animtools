@@ -748,7 +748,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.operator("s4animtools.removeik", text="Remove IK")
 
                 layout.operator("s4animtools.preview_ik", text="Preview IK")
-
+                layout.operator("s4animtools.update_ik_empties", text="Update IK Empties")
                 layout.scale_x = 1
 
                 layout = self.layout.row()
@@ -2065,6 +2065,54 @@ class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
             ik_target_per_bone[target.chain_bone] += 1
         return {"FINISHED"}
 
+
+class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
+    bl_idname = "s4animtools.update_ik_empties"
+    bl_label = "Update IK Empties"
+    bl_options = {"REGISTER", "UNDO"}
+
+    LEFT_HAND = "b__L_Hand__"
+    RIGHT_HAND = "b__R_Hand__"
+    LEFT_FOOT = "b__L_Foot__"
+    RIGHT_FOOT = "b__R_Foot__"
+
+    ik_bones = [LEFT_HAND, RIGHT_HAND, LEFT_FOOT, RIGHT_FOOT]
+    def cleanup_stale_constraints(self, context):
+        # NOTE! This assumes your IK bones are the target bones. Not the bone where the ik constraint lives on.
+        for bone_name in self.ik_bones:
+            ik_bone = bone_name + "IK"
+            if ik_bone in context.object.pose.bones:
+                for constraint in context.object.pose.bones[ik_bone].constraints[:]:
+                    print(constraint)
+                    if constraint.type == 'COPY_TRANSFORMS':
+                        context.object.pose.bones[ik_bone].constraints.remove(constraint)
+
+
+    def execute(self, context):
+        obj = context.object
+        # Note: this assumes there is only one possible actor to go into Slot selection mode at a time
+        self.cleanup_stale_constraints(context)
+        ik_target_per_bone = defaultdict(int)
+        for idx, target in enumerate(get_ik_targets(obj)):
+            hashed_id = "IKEmpty_{}".format(hex(fnvhash.fnv1_64("{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode("utf-8"))))
+            # Don't deal with root bind for now
+            if "b__ROOT_bind__" == target.chain_bone:
+                continue
+            c = obj.pose.bones[target.chain_bone + "IK"].constraints.new('COPY_TRANSFORMS')
+            c.target = bpy.data.objects[hashed_id]
+            if ik_target_per_bone[target.chain_bone] >= 1:
+                location = c.driver_add("influence")
+                for v in location.driver.variables[:]:
+                    location.driver.variables.remove(v)
+                v = location.driver.variables.new()
+                driver_target = v.targets[0]
+                driver_target.id = obj
+                driver_target.data_path = 'pose.bones["{}"].ik_weight_{}'.format(target.chain_bone, ik_target_per_bone[target.chain_bone])
+                location.driver.expression = v.name
+            ik_target_per_bone[target.chain_bone] += 1
+
+        return {"FINISHED"}
+
 classes = (
     Snapper, ExportRig, SyncRigToMesh,
     S4ANIMTOOLS_PT_MainPanel,
@@ -2085,7 +2133,7 @@ classes = (
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
-OT_S4ANIMTOOLS_PreviewIK)
+OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties)
 
 def update_selected_bones(self, context):
     pass
