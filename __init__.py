@@ -499,165 +499,181 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
     def draw(self, context):
         obj = context.object
 
+        layout = self.layout
+        if obj is not None:
+            layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
+            if obj.is_s4_actor:
+                layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
+                layout.prop(obj, "actor_type", text="Actor Type")
+            layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
+            if obj.show_footprint_options:
+                layout.prop(obj, "is_footprint", text="Is Footprint Object")
 
-        #self.layout.operator("s4animtools.export_clip", icon='MESH_CUBE', text="Export Clip")
+                layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
+                layout.operator("s4animtools.export_footprint", icon="MESH_CUBE", text="Export Footprint")
 
-        # self.layout.operator("s4animtools.sync_rig_to_mesh", icon='MESH_CUBE', text="Sync Rig To Mesh")
-        # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
-        row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Left Hand").command = "LEFT,HAND,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Left Hand").command = "LEFT,HAND,END"
-        #
-        # row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Right Hand").command = "RIGHT,HAND,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Right Hand").command = "RIGHT,HAND,END"
-        # row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Left Foot").command = "LEFT,FOOT,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Left Foot").command = "LEFT,FOOT,END"
-        # row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Right Foot").command = "RIGHT,FOOT,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Right Foot").command = "RIGHT,FOOT,END"
-        # row = self.layout.row()
-        #
-        # row.operator("s4animtools.beginikmarker", text="Add Root Bind").command = "SINGLE,BIND,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Root Bind").command = "SINGLE,BIND,END"
-        #
-        self.layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
-        self.layout.operator("s4animtools.export_footprint", icon="MESH_CUBE", text="Export Footprint")
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Terrain Footprints").command="terrain"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Floor Footprints").command="floor"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pool Footprints").command="pool"
+                layout.prop(context.scene, "footprint_name", text="Footprint Name Or Hash")
 
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Terrain Footprints").command="terrain"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Floor Footprints").command="floor"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pool Footprints").command="pool"
-        self.layout.prop(context.scene, "footprint_name", text="Footprint Name Or Hash")
+                if obj.is_footprint:
+                    layout = self.layout.row()
+                    self.layout.label(text="Footprint is in: ")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "slope", text="Slope")
+                    layout.prop(obj, "outside", text="Outside")
+                    layout.prop(obj, "inside", text="Inside")
+
+                    self.layout.label(text="Footprint is of Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "for_placement", text="For Placement")
+                    layout.prop(obj, "for_pathing", text="For Pathing")
+                    layout.prop(obj, "is_enabled", text="Is Enabled")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "discouraged", text="Discouraged")
+                    layout.prop(obj, "landing_strip", text="Landing Strip")
+                    layout.prop(obj, "no_raycast", text="No Raycast")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "placement_slotted", text="Placement Slotted")
+                    layout.prop(obj, "encouraged", text="Encouraged")
+                    layout.prop(obj, "terrain_cutout", text="Terrain Cutout")
+
+                    self.layout.label(text="Footprint is of Surface Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "terrain", text="Terrain")
+                    layout.prop(obj, "floor", text="Floor")
+                    layout.prop(obj, "pool", text="Pool")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "pond", text="Pond")
+                    layout.prop(obj, "fence_post", text="Fence Post")
+                    layout.prop(obj, "any_surface", text="Any Surface")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "air", text="Air")
+                    layout.prop(obj, "roof", text="Roof")
+
+                    self.layout.label(text="Footprint Is Of Object Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "is_none", text="None")
+                    layout.prop(obj, "is_walls", text="Walls")
+                    layout.prop(obj, "is_objects", text="Objects")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "is_sims", text="Sims")
+                    layout.prop(obj, "is_roofs", text="Roof")
+                    layout.prop(obj, "is_fences", text="Fence")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "is_modular_stairs", text="Modular Stairs")
+                    layout.prop(obj, "is_objects_of_same_type", text="Objects of Same Type")
+                    layout.prop(obj, "is_columns", text="Columns")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "is_reserved_space", text="Reserved Space")
+
+                    layout.prop(obj, "is_foundations", text="Foundations")
+                    layout.prop(obj, "is_fenestration_node", text="Fenestration Node")
+                    layout.prop(obj, "is_trim", text="Trim")
+
+                    self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_none", text="None")
+                    layout.prop(obj, "ignores_walls", text="Walls")
+                    layout.prop(obj, "ignores_objects", text="Objects")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_sims", text="Sims")
+
+                    layout.prop(obj, "ignores_roofs", text="Roof")
+                    layout.prop(obj, "ignores_fences", text="Fence")
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_modular_stairs", text="Modular Stairs")
+                    layout.prop(obj, "ignores_objects_of_same_type", text="Objects of Same Type")
+                    layout.prop(obj, "ignores_columns", text="Columns")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_reserved_space", text="Reserved Space")
+
+                    layout.prop(obj, "ignores_foundations", text="Foundations")
+
+                    layout.prop(obj, "ignores_fenestration_node", text="Fenestration Node")
+                    layout.prop(obj, "ignores_trim", text="Trim")
+            layout.prop(obj, "show_mirror_and_masking_options", text="Show Footprint Options")
+
+            if obj.show_mirror_and_masking_options:
+                layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
+                layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
+                # Trackmasks are not working yet
+                #layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
+                # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
+                layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
+                layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
+
+            layout.prop(obj, "show_ik_options", text="Show IK Options")
+            if obj.show_ik_options:
+                layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
+                layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
+
+                try:
+                    if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (L Arm)").command = "LEFT,HAND"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (L Arm)").command = "LEFT,HAND"
+                    if context.object.pose.bones["b__R_Hand__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (R Arm)").command = "RIGHT,HAND"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (R Arm)").command = "RIGHT,HAND"
+
+                    if context.object.pose.bones["b__L_Foot__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (L Leg)").command = "LEFT,FOOT"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (L Leg)").command = "LEFT,FOOT"
+                    if context.object.pose.bones["b__R_Foot__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (R Leg)").command = "RIGHT,FOOT"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (R Leg)").command = "RIGHT,FOOT"
+                    #         layout.prop(obj, "select_slots", text = "Slots")
+                except KeyError:
+                    pass
+
+            if obj.show_experimental_options:
+                layout.label(text="Use Full Precision means using full precision for all animation data.")
+                layout.label(text="Don't enable if you don't know what that means! This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
+
+                layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+                layout.prop(obj, "use_world_bone_as_root",
+                                 text="Use World Rig and Bone as Root for IK Targets on Object")
+                layout.label("The base rig is only used for additive animations such as the infant carrier from Growing Together. It's still very experimental.")
+                layout.prop_search(context.object, "base_rig", context.scene, "objects", text="Base Rig")
 
         if obj is not None:
             layout = self.layout
 
-            layout.prop(obj, "is_footprint", text = "Is Footprint Object")
-            if obj.is_footprint:
-                layout = self.layout.row()
-                self.layout.label(text="Footprint is in: ")
-                layout = self.layout.row()
-
-                layout.prop(obj, "slope", text = "Slope")
-                layout.prop(obj, "outside", text = "Outside")
-                layout.prop(obj, "inside", text = "Inside")
-
-                self.layout.label(text="Footprint is of Type: ")
-
-                layout = self.layout.row()
-                layout.prop(obj, "for_placement", text = "For Placement")
-                layout.prop(obj, "for_pathing", text = "For Pathing")
-                layout.prop(obj, "is_enabled", text = "Is Enabled")
-                layout = self.layout.row()
-
-                layout.prop(obj, "discouraged", text = "Discouraged")
-                layout.prop(obj, "landing_strip", text = "Landing Strip")
-                layout.prop(obj, "no_raycast", text = "No Raycast")
-                layout = self.layout.row()
-
-                layout.prop(obj, "placement_slotted", text = "Placement Slotted")
-                layout.prop(obj, "encouraged", text = "Encouraged")
-                layout.prop(obj, "terrain_cutout", text = "Terrain Cutout")
-
-
-                self.layout.label(text="Footprint is of Surface Type: ")
-
-                layout = self.layout.row()
-                layout.prop(obj, "terrain", text = "Terrain")
-                layout.prop(obj, "floor", text = "Floor")
-                layout.prop(obj, "pool", text = "Pool")
-                layout = self.layout.row()
-
-                layout.prop(obj, "pond", text = "Pond")
-                layout.prop(obj, "fence_post", text = "Fence Post")
-                layout.prop(obj, "any_surface", text = "Any Surface")
-                layout = self.layout.row()
-
-                layout.prop(obj, "air", text = "Air")
-                layout.prop(obj, "roof", text = "Roof")
-
-                self.layout.label(text="Footprint Is Of Object Type: ")
-
-                layout = self.layout.row()
-                layout.prop(obj, "is_none", text = "None")
-                layout.prop(obj, "is_walls", text = "Walls")
-                layout.prop(obj, "is_objects", text = "Objects")
-
-                layout = self.layout.row()
-                layout.prop(obj, "is_sims", text = "Sims")
-                layout.prop(obj, "is_roofs", text = "Roof")
-                layout.prop(obj, "is_fences", text = "Fence")
-                layout = self.layout.row()
-
-                layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
-                layout.prop(obj, "is_objects_of_same_type", text = "Objects of Same Type")
-                layout.prop(obj, "is_columns", text = "Columns")
-
-
-                layout = self.layout.row()
-                layout.prop(obj, "is_reserved_space", text = "Reserved Space")
-
-                layout.prop(obj, "is_foundations", text = "Foundations")
-                layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
-                layout.prop(obj, "is_trim", text = "Trim")
-
-                self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
-
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_none", text = "None")
-                layout.prop(obj, "ignores_walls", text = "Walls")
-                layout.prop(obj, "ignores_objects", text = "Objects")
-
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_sims", text = "Sims")
-
-                layout.prop(obj, "ignores_roofs", text = "Roof")
-                layout.prop(obj, "ignores_fences", text = "Fence")
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_modular_stairs", text = "Modular Stairs")
-                layout.prop(obj, "ignores_objects_of_same_type", text = "Objects of Same Type")
-                layout.prop(obj, "ignores_columns", text = "Columns")
-
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_reserved_space", text = "Reserved Space")
-
-                layout.prop(obj, "ignores_foundations", text = "Foundations")
-
-                layout.prop(obj, "ignores_fenestration_node", text = "Fenestration Node")
-                layout.prop(obj, "ignores_trim", text = "Trim")
 
        #     layout.operator("s4animtools.create_bone_selectors", icon='MESH_CUBE', text="Create Bone Selectors")
-            layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
-            layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
 
-            layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
-            layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
-            layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
-            layout.prop(obj, "balance", text = "Balance")
-            try:
-                if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Arm)").command = "LEFT,HAND"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Arm)").command = "LEFT,HAND"
-                if context.object.pose.bones["b__R_Hand__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Arm)").command = "RIGHT,HAND"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Arm)").command = "RIGHT,HAND"
+            # Balance is no longer used
+            #layout.prop(obj, "balance", text = "Balance")
 
-                if context.object.pose.bones["b__L_Foot__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Leg)").command = "LEFT,FOOT"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Leg)").command = "LEFT,FOOT"
-                if context.object.pose.bones["b__R_Foot__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Leg)").command = "RIGHT,FOOT"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Leg)").command = "RIGHT,FOOT"
-                #         layout.prop(obj, "select_slots", text = "Slots")
-            except KeyError:
-                pass
   #         layout.prop(obj, "select_cas", text = "CAS")
   #         layout.prop(obj, "select_left", text = "Left Side")
   #         layout.prop(obj, "select_middle", text = "Middle")
@@ -694,17 +710,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  text="Maintain Keyframe").direction = "FORWARDS"
             layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
                                  text="Maintain Keyframe Backward").direction = "BACK"
-            # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-            self.layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
-            self.layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
 
 
 
-            self.layout.label(text="Use Full Precision means using full precision for all animation data.")
-            self.layout.label(text="Don't enable if you don't know what that means!")
 
-            self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
-            self.layout.prop(obj, "use_world_bone_as_root", text="Use World Rig and Bone as Root for IK Targets on Object")
             self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
                              text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
             layout = self.layout.row()
@@ -780,16 +789,16 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             except Exception as e:
                 pass
             layout = self.layout.row()
-            layout.prop(obj, "l_hand_fk_ik", text="Left Hand FK/IK")
 
-            layout.prop(obj, "r_hand_fk_ik", text="Right Hand FK/IK")
-            layout.prop(obj, "l_foot_fk_ik", text="Left Foot FK/IK")
-            layout.prop(obj, "r_foot_fk_ik", text="Right Foot FK/IK")
+            # TODO remove these. These are no longer used
+            #layout.prop(obj, "l_hand_fk_ik", text="Left Hand FK/IK")
+            #layout.prop(obj, "r_hand_fk_ik", text="Right Hand FK/IK")
+            #layout.prop(obj, "l_foot_fk_ik", text="Left Foot FK/IK")
+            #layout.prop(obj, "r_foot_fk_ik", text="Right Foot FK/IK")
 
             self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
             layout = self.layout.row()
 
-            layout.prop_search(context.object, "base_rig", context.scene, "objects", text="Base Rig")
 
             layout.prop_search(context.object, "world_rig", context.scene, "objects", text="World Rig")
             if len(context.object.world_rig) > 0:
@@ -2051,6 +2060,7 @@ def register():
             print(e)
     # bpy.types.Object.script_events = CollectionProperty(type=ScriptItem)
     # bpy.types.Object.sound_events = CollectionProperty(type=SoundItem)
+    # TODO Check if these are still used??
     bpy.types.Object.actors = CollectionProperty(type=ActorProperties)
     bpy.types.Object.states = CollectionProperty(type=StateProperties)
     bpy.types.Object.postures = CollectionProperty(type=PostureProperties)
@@ -2058,7 +2068,8 @@ def register():
 
     bpy.types.PoseBone.mirrored_bone = bpy.props.StringProperty()
     bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
-    bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
+
+    # This is for the baked IK data
     for ik_idx in range(-1,11):
         setattr(bpy.types.PoseBone, f"ik_pos_{ik_idx}", bpy.props.FloatVectorProperty(size=3))
         setattr(bpy.types.PoseBone, f"ik_rot_{ik_idx}", bpy.props.FloatVectorProperty(default=(0,0,0,1), size=4, min=-1, max=1))
@@ -2172,21 +2183,6 @@ def register():
     bpy.types.Object.relative_bone = bpy.props.StringProperty(update=update_initial_offsets)
     bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)
 
-    # OLD STUFF
-    bpy.types.Scene.rig_name = bpy.props.StringProperty()
-    bpy.types.Scene.reset_initial_offset_t = bpy.props.StringProperty()
-    bpy.types.Scene.parent_events = bpy.props.StringProperty()
-    bpy.types.Scene.sound_events = bpy.props.StringProperty()
-    bpy.types.Scene.explicit_namespaces = bpy.props.StringProperty()
-    bpy.types.Scene.reference_namespace_hash = bpy.props.StringProperty()
-    bpy.types.Scene.initial_offset_q = bpy.props.StringProperty()
-    bpy.types.Scene.initial_offset_t = bpy.props.StringProperty()
-    bpy.types.Scene.snap_events = bpy.props.StringProperty()
-    bpy.types.Scene.additional_snap_frames = bpy.props.StringProperty()
-    bpy.types.Scene.visibility_events = bpy.props.StringProperty()
-    bpy.types.Scene.world_rig = bpy.props.StringProperty()
-    bpy.types.Scene.world_bone = bpy.props.StringProperty()
-
     # bpy.types.Object.script_idx = IntProperty(name="Index for my_list", default=0)
     # bpy.types.Object.sound_idx = IntProperty(name="Index for sound_idx", default=0)
     bpy.types.Object.actor_idx = IntProperty(name="Index for actors", default=0)
@@ -2205,60 +2201,17 @@ def register():
 
     bpy.types.Scene.footprint_name = bpy.props.StringProperty()
 
-   # bpy.types.Object.select_slots = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_cas = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_mouth = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_left_pinky = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_ring = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_index = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_thumb = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_left_first_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_second_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_third_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_right_pinky = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_ring = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_index = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_thumb = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_right_first_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_second_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_third_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.PoseBone.is_slot = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_cas = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_middle = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_mouth = bpy.props.BoolProperty(default=False)
-#
-   # bpy.types.PoseBone.is_left_pinky = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_ring = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_middle = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_index = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_thumb = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_first_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_second_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_third_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_pinky = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_ring = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_middle = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_index = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_thumb = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_first_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_second_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_third_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_finger = bpy.props.BoolProperty(default=False)
+    actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
 
+
+    bpy.types.Object.is_s4_actor = bpy.props.BoolProperty(default=False)
+    # Actor type can be sim, object, or prop
+    bpy.types.Object.actor_type = bpy.props.EnumProperty(items = actor_types)
+    bpy.types.Object.is_enabled_for_animation = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_footprint_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_mirror_and_masking_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_ik_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_experimental_options = bpy.props.BoolProperty(default=False)
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2296,20 +2249,6 @@ def unregister():
     del bpy.types.Object.play_effect_events
     del bpy.types.Object.stop_effect_events
     del bpy.types.Object.disable_lipsync_events
-    # OLD STUFF
-    del bpy.types.Scene.rig_name
-    del bpy.types.Scene.reset_initial_offset_t
-    del bpy.types.Scene.parent_events
-    del bpy.types.Scene.sound_events
-    del bpy.types.Scene.explicit_namespaces
-    del bpy.types.Scene.reference_namespace_hash
-    del bpy.types.Scene.initial_offset_q
-    del bpy.types.Scene.initial_offset_t
-    del bpy.types.Scene.snap_events
-    del bpy.types.Scene.additional_snap_frames
-    del bpy.types.Scene.visibility_events
-    del bpy.types.Scene.world_rig
-    del bpy.types.Scene.world_bone
 
     # bpy.types.Object.script_idx = IntProperty(name="Index for my_list", default=0)
     # bpy.types.Object.sound_idx = IntProperty(name="Index for sound_idx", default=0)
@@ -2322,3 +2261,11 @@ def unregister():
     del bpy.types.Scene.clip_name
     del bpy.types.Scene.clip_name_prefix
     del bpy.types.Scene.clip_splits
+
+    del bpy.types.Object.is_s4_actor
+    del bpy.types.Object.actor_type
+    del bpy.types.Object.is_enabled_for_animation
+    del bpy.types.Object.show_footprint_options
+    del bpy.types.Object.show_mirror_and_masking_options
+    del bpy.types.Object.show_ik_options
+    del bpy.types.Object.show_experimental_options
