@@ -609,7 +609,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                     layout.prop(obj, "ignores_fenestration_node", text="Fenestration Node")
                     layout.prop(obj, "ignores_trim", text="Trim")
-            layout.prop(obj, "show_mirror_and_masking_options", text="Show Footprint Options")
+            layout.prop(obj, "show_mirror_and_masking_options", text="Show Mirror/Mask/Maintain/Bake Options")
 
             if obj.show_mirror_and_masking_options:
                 layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
@@ -619,12 +619,68 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
                 layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
                 layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
+                layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
+                # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
+                layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                                     text="Maintain Keyframe").direction = "FORWARDS"
+                layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                                     text="Maintain Keyframe Backward").direction = "BACK"
+
+                layout = self.layout
+                layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
+
+                layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
+
 
             layout.prop(obj, "show_ik_options", text="Show IK Options")
             if obj.show_ik_options:
                 layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
                 layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
+                self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
 
+                layout = self.layout
+                box = layout.row()
+                row = box
+
+                if obj.ik_idx >= 0 and obj.ik_targets:
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Hand__")
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Hand__")
+                    box = layout.row()
+
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Foot__")
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Foot__")
+                    box = layout.row()
+
+                    row = box.column()
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__ROOT_bind__")
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "")
+
+                row = layout.row()
+                # row.scale_x = 0.2
+                #  row.operator('iktarget.move', text='Down').direction = 'DOWN'
+                #  row.operator('iktarget.move', text='Up').direction = 'UP'
+                row.operator('iktarget.new', text='New').command = ""
+                layout = self.layout.row()
+
+                layout.operator("s4animtools.bakeik", text="Bake IK")
+                layout.operator("s4animtools.muteik", text="Mute IK")
+                layout.operator("s4animtools.unmuteik", text="Unmute IK")
+
+                layout.operator("s4animtools.removeik", text="Remove IK")
+
+                layout.scale_x = 1
+
+                layout = self.layout.row()
                 try:
                     if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
                         layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
@@ -655,92 +711,90 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 except KeyError:
                     pass
 
-            if obj.show_experimental_options:
-                layout.label(text="Use Full Precision means using full precision for all animation data.")
-                layout.label(text="Don't enable if you don't know what that means! This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
+            layout.prop(obj, "show_initial_offset_options", text="Show Initial Offset Options")
+            if obj.show_initial_offset_options:
+                layout = self.layout.row()
 
-                layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
-                layout.prop(obj, "use_world_bone_as_root",
-                                 text="Use World Rig and Bone as Root for IK Targets on Object")
-                layout.label("The base rig is only used for additive animations such as the infant carrier from Growing Together. It's still very experimental.")
-                layout.prop_search(context.object, "base_rig", context.scene, "objects", text="Base Rig")
+                layout.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
+                if len(context.object.relative_rig) > 0:
+                    if context.object.relative_rig in bpy.data.objects:
+                        relative_rig_obj = bpy.data.objects[context.object.relative_rig]
+                        layout.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones",
+                                           text="Initial Offsets Bone")
+                layout = self.layout.row()
+                layout.scale_x = 0.4
+                layout.label(text="Initial Offset Q")
+                layout.scale_x = 0.5
+
+                layout.prop(obj, "initial_offset_q", text="")
+                layout.scale_x = 0.4
+                layout.label(text="Initial Offset T")
+
+                layout.prop(obj, "initial_offset_t", text="")
+
+            self.layout.prop(obj, "show_events", text="Show Events")
+            if obj.show_events:
+                self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
+
+                self.draw_property_if_not_empty(obj, "parent_events", self.layout)
+                self.draw_property_if_not_empty(obj, "sound_events", self.layout)
+                self.draw_property_if_not_empty(obj, "script_events", self.layout)
+                self.draw_property_if_not_empty(obj, "snap_events", self.layout)
+                self.draw_property_if_not_empty(obj, "reaction_events", self.layout)
+                self.draw_property_if_not_empty(obj, "play_effect_events", self.layout)
+                self.draw_property_if_not_empty(obj, "stop_effect_events", self.layout)
+                self.draw_property_if_not_empty(obj, "disable_lipsync_events", self.layout)
+                self.draw_events(obj, "parent_events_list", 0.1,
+                                 "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
+                                 "Parent Events", self.layout,
+                                 parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
+
+                self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
+                                 "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"])
+                self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
+                                 "Script Events",
+                                 self.layout, parameters=["Frame", "Script Xevt"])
+                self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
+                                 "Snap Events", self.layout,
+                                 parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ])
+                self.draw_events(obj, "reaction_events_list", 0.1,
+                                 "Parameters (Frame Number/Reaction ASM/Reaction State)",
+                                 "Reaction Events", self.layout,
+                                 parameters=["Frame", "Reaction ASM Name", "Reaction State Name"])
+                self.draw_events(obj, "play_effect_events_list", 0.1,
+                                 "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/(almost always 0)/Unique VFX Name)",
+                                 "Play Effect Events", self.layout,
+                                 parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)",
+                                             "(almost always 0)", "Unique VFX Name"])
+                self.draw_events(obj, "stop_effect_events_list", 0.1,
+                                 "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
+                                 "Stop Effect Events", self.layout,
+                                 parameters=["Frame", "Unique VFX Name", "(always 0)", "(unknown bool)"])
+                self.draw_events(obj, "disable_lipsync_events_list", 0.1, "Parameters (Frame Number/Duration)",
+                                 "Suppress Lipsync Events", self.layout, parameters=["Frame", "End Frame"])
+                self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
+                                 "Visibility Events", self.layout,
+                                 parameters=["Frame", "Actor Name", "Visibility (0 or 1)"])
+                self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
+                                 "Focus Compatibility Events", self.layout)
+            self.layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
+            if obj.show_experimental_options:
+                self.layout.label(text="Use Full Precision means using full precision for all animation data.")
+                self.layout.label(text="Don't enable if you don't know what that means! ")
+                self.layout.label(text="This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
+                self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+                self.layout.prop(obj, "use_world_bone_as_root",
+                                text="Use World Rig and Bone as Root for IK Targets on Object")
+                self.layout.label(text="The base rig is only used for additive animations such as the infant carrier from Growing Together.")
+                self.layout.label(text="The base rig setting is not used for normal animations.")
+                self.layout.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
+                self.layout.label(text="Export an Additive Clip. Do not use for normal animations")
+                self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
 
         if obj is not None:
             layout = self.layout
-
-
-       #     layout.operator("s4animtools.create_bone_selectors", icon='MESH_CUBE', text="Create Bone Selectors")
-
-            # Balance is no longer used
-            #layout.prop(obj, "balance", text = "Balance")
-
-  #         layout.prop(obj, "select_cas", text = "CAS")
-  #         layout.prop(obj, "select_left", text = "Left Side")
-  #         layout.prop(obj, "select_middle", text = "Middle")
-
-  #         layout.prop(obj, "select_right", text = "Right Side")
-  #         layout.prop(obj, "select_mouth", text = "Mouth")
-
-  #         layout.prop(obj, "select_left_pinky", text = "Left Pinky")
-  #         layout.prop(obj, "select_left_ring", text = "Left Ring")
-  #         layout.prop(obj, "select_left_middle", text = "Left Middle")
-  #         layout.prop(obj, "select_left_index", text = "Left Index")
-  #         layout.prop(obj, "select_left_thumb", text = "Left Thumb")
-  #         layout.prop(obj, "select_left_fingers", text = "Left Fingers")
-
-  #         layout.prop(obj, "select_left_first_fingers", text = "Left First Fingers")
-  #         layout.prop(obj, "select_left_second_fingers", text = "Left Second Fingers")
-  #         layout.prop(obj, "select_left_third_fingers", text = "Left Third Fingers")
-
-  #         layout.prop(obj, "select_right_pinky", text = "Right Pinky")
-  #         layout.prop(obj, "select_right_ring", text = "Right Ring")
-  #         layout.prop(obj, "select_right_middle", text = "Right Middle")
-  #         layout.prop(obj, "select_right_index", text = "Right Index")
-  #         layout.prop(obj, "select_right_thumb", text = "Right Thumb")
-  #         layout.prop(obj, "select_right_fingers", text = "Right Fingers")
-
-  #         layout.prop(obj, "select_right_first_fingers", text = "Right First Fingers")
-  #         layout.prop(obj, "select_right_second_fingers", text = "Right Second Fingers")
-  #         layout.prop(obj, "select_right_third_fingers", text = "Right Third Fingers")
-
-            layout = self.layout.row()
-            layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
-            # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
-            layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-                                 text="Maintain Keyframe").direction = "FORWARDS"
-            layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-                                 text="Maintain Keyframe Backward").direction = "BACK"
-
-
-
-
-            self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
-                             text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
             layout = self.layout.row()
 
-            layout.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
-            if len(context.object.relative_rig) > 0:
-                if context.object.relative_rig in bpy.data.objects:
-                    relative_rig_obj = bpy.data.objects[context.object.relative_rig]
-                    layout.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones", text="Initial Offsets Bone")
-            layout = self.layout.row()
-            layout.scale_x= 0.4
-            layout.label(text="Initial Offset Q")
-            layout.scale_x= 0.5
-
-            layout.prop(obj, "initial_offset_q" ,text="")
-            layout.scale_x= 0.4
-            layout.label(text="Initial Offset T")
-
-            layout.prop(obj, "initial_offset_t", text="")
-
-            self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
-            self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
-
-            layout = self.layout.row()
-            layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
-
-            layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
 
             try:
@@ -760,165 +814,63 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     row.scale_x = 2.5
                     row.prop(selected_bone, f"ik_weight_{ik_idx}", text=f"IK Weight {ik_idx}")
 
-                # if selected_bone.name == "b__L_Hand__IK" or selected_bone.name == "b__L_Hand__":
-                #    self.layout.prop(obj, "l_hand_fist", text="Left Hand Fist")
-            # self.layout.prop(selected_bone, "mirrored_bone")
-            # self.layout.prop(selected_bone, "bone_flags")
-            # isnt_mirrored = selected_bone.bone_flags[-3] == "1" and selected_bone.bone_flags[-4] == "1" and selected_bone.bone_flags[-5] == "1"
-            # if not isnt_mirrored:
-            #    mirrored_status = "-Is Not A Mirrored Bone"
-            # else:
-            #    mirrored_status = "-Is Mirrored Bone or Single Bone"
-            # self.layout.label(text=mirrored_status)
-
-            # movable_status = "-Editable by Sliders"
-            # if not  selected_bone.bone_flags[7] == "1":
-            #    movable_status = "-Not Editable by Sliders"
-            # self.layout.label(text=movable_status)
-
-            # slot_status = "-Not Slot"
-            # if  selected_bone.bone_flags[17] == "1":
-            #    slot_status = "-Slot"
-            # self.layout.label(text=slot_status)
-
-            # animatable_status = "-Not Animatable"
-            # if selected_bone.bone_flags[18] == "1":
-            #    animatable_status = "-Animatable"
-            # self.layout.label(text=animatable_status)
-
             except Exception as e:
                 pass
-            layout = self.layout.row()
-
-            # TODO remove these. These are no longer used
-            #layout.prop(obj, "l_hand_fk_ik", text="Left Hand FK/IK")
-            #layout.prop(obj, "r_hand_fk_ik", text="Right Hand FK/IK")
-            #layout.prop(obj, "l_foot_fk_ik", text="Left Foot FK/IK")
-            #layout.prop(obj, "r_foot_fk_ik", text="Right Foot FK/IK")
-
-            self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
-            layout = self.layout.row()
 
 
-            layout.prop_search(context.object, "world_rig", context.scene, "objects", text="World Rig")
-            if len(context.object.world_rig) > 0:
-                if context.object.world_rig in bpy.data.objects:
-                    target_bone_obj = bpy.data.objects[obj.world_rig]
-                    layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="World Bone")
 
-            self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
+            if obj.is_enabled_for_animation:
 
-            self.draw_property_if_not_empty(obj, "parent_events", self.layout)
-            self.draw_property_if_not_empty(obj, "sound_events", self.layout)
-            self.draw_property_if_not_empty(obj, "script_events", self.layout)
-            self.draw_property_if_not_empty(obj, "snap_events", self.layout)
-            self.draw_property_if_not_empty(obj, "reaction_events", self.layout)
-            self.draw_property_if_not_empty(obj, "play_effect_events", self.layout)
-            self.draw_property_if_not_empty(obj, "stop_effect_events", self.layout)
-            self.draw_property_if_not_empty(obj, "disable_lipsync_events", self.layout)
-            self.draw_events(obj, "parent_events_list", 0.1,
-                             "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
-                             "Parent Events", self.layout, parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
+                self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
+                                 text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
 
-            self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
-                             "Sound Events", self.layout,  parameters=["Frame", "Sound Effect Name"])
-            self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)", "Script Events",
-                             self.layout,  parameters=["Frame", "Script Xevt"])
-            self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
-                             "Snap Events", self.layout,  parameters=["Frame", "Actor", "X", "Y", "Z",  "QX", "QY", "QZ", "QW",])
-            self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM/Reaction State)",
-                             "Reaction Events", self.layout, parameters=["Frame", "Reaction ASM Name", "Reaction State Name"])
-            self.draw_events(obj, "play_effect_events_list", 0.1,
-                             "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/(almost always 0)/Unique VFX Name)",
-                             "Play Effect Events", self.layout, parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)", "(almost always 0)", "Unique VFX Name"])
-            self.draw_events(obj, "stop_effect_events_list", 0.1,
-                             "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
-                             "Stop Effect Events", self.layout, parameters=["Frame", "Unique VFX Name", "(always 0)", "(unknown bool)"])
-            self.draw_events(obj, "disable_lipsync_events_list", 0.1, "Parameters (Frame Number/Duration)",
-                             "Suppress Lipsync Events", self.layout, parameters=["Frame", "End Frame"])
-            self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
-                             "Visibility Events", self.layout, parameters=["Frame", "Actor Name", "Visibility (0 or 1)"])
-            self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
-                             "Focus Compatibility Events", self.layout)
+                self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
 
-            self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-            self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
+                # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone\
+                self.layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
+
+               # self.layout.label(text="Clip Split Points are the points in the animation where the clip will be split.")
+               # self.layout.label(text="This is useful for animations that have multiple parts.")
+               # self.layout.label(text="For example, a dance animation that has a start, loop, and end.")
+               # self.layout.label(text="You can specify multiple clip split points with commas.")
+               # self.layout.label(text="Example: 30,75,110")
+               # self.layout.label(text="If you only have one clip, enter it without a comma.")
+                self.layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix(es)")  # clip_name_prefix
+              #  self.layout.label(text="The clip name prefix is the prefix that will be added to the clip name.")
+              #  self.layout.label(text="If your clip names all start with a2o_dance, for example.")
+              #  self.layout.label(text="You can specify a clip name prefix of a2o_dance.")
+              #  self.layout.label(text="If you don't want to use a clip name prefix, leave this blank.")
 
 
-            self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
-            self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
-            self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
+                self.layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
+             #   self.layout.label(text="If you have more than one clip in this blend file.")
+             #   self.layout.label(text="you can specify multiple clip names with commas.")
+             #   self.layout.label(text="Example: a2o_dance_start,a2o_dance_loop,a2o_dance_end")
+             #   self.layout.label(text="If you only have one clip name, enter it without a comma.")
+                self.layout.prop(context.scene, "is_overlay", text="Is Overlay")
 
-            layout = self.layout
-            box = layout.row()
-            row = box
+                self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
+              #  self.layout.label(text="Disable the rig suffix. For example:")
+              #  self.layout.label(text="a2o_dance_start would become a2o_dance_start_x")
+              #  self.layout.label(text="if you were exporting a clip for the x rig.")
 
+                self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
 
-            if obj.ik_idx >= 0 and obj.ik_targets:
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Hand__")
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Hand__")
-                box = layout.row()
-
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Foot__")
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Foot__")
-                box = layout.row()
-
-                row = box.column()
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__ROOT_bind__")
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "")
-
-            row = layout.row()
-            # row.scale_x = 0.2
-            #  row.operator('iktarget.move', text='Down').direction = 'DOWN'
-            #  row.operator('iktarget.move', text='Up').direction = 'UP'
-            row.operator('iktarget.new', text='New').command = ""
-            layout = self.layout.row()
-
-            layout.operator("s4animtools.bakeik", text="Bake IK")
-            layout.operator("s4animtools.muteik", text="Mute IK")
-            layout.operator("s4animtools.unmuteik", text="Unmute IK")
-
-            layout.operator("s4animtools.removeik", text="Remove IK")
+              #  layout.label(text="The world rig is where the root of your exported animation will be located.")
+               # layout.label(text="This is handy if you accidentally animated your sim in the wrong spot and don't want to remake it.")
+                self.layout.prop_search(context.object, "world_rig", context.scene, "objects", text="World Rig")
+                if len(context.object.world_rig) > 0:
+                    if context.object.world_rig in bpy.data.objects:
+                        target_bone_obj = bpy.data.objects[obj.world_rig]
+                        self.layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="World Bone")
 
 
-            layout.scale_x= 1
+                self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
+                self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
 
-            layout = self.layout.row()
 
-        # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
-        self.layout.prop(context.scene, "clip_splits")
-        self.layout.prop(context.scene, "clip_name_prefix")  # clip_name_prefix
-        self.layout.prop(context.scene, "clip_name")
-
-        self.layout.prop(context.scene, "is_overlay")
-        self.layout.prop(obj, "disable_rig_suffix")
-        # TODO remove this at some point when compatibility with older files isn't an issue. This used to be
-        # when each file could only contain one actor.
-       # if context.scene.rig_name != "":
-       #     self.layout.prop(context.scene, "reset_initial_offset_t")
-       #     self.layout.prop(context.scene, "world_rig")
-       #     self.layout.prop(context.scene, "world_bone")
-       #     self.layout.prop(context.scene, "parent_events")
-       #     self.layout.prop(context.scene, "sound_events")
-       #     self.layout.prop(context.scene, "explicit_namespaces")
-       #     self.layout.prop(context.scene, "reference_namespace_hash")
-       #     self.layout.prop(context.scene, "initial_offset_q")
-       #     self.layout.prop(context.scene, "initial_offset_t")
-       #     self.layout.prop(context.scene, "snap_events")
-       #     self.layout.prop(context.scene, "additional_snap_frames")
-       #     self.layout.prop(context.scene, "visibility_events")
-       #     self.layout.prop(context.scene, "rig_name")  # String for current clip actor
-
+                self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
+                self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
     def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
         box = row.column()
@@ -2211,6 +2163,10 @@ def register():
     bpy.types.Object.show_footprint_options = bpy.props.BoolProperty(default=False)
     bpy.types.Object.show_mirror_and_masking_options = bpy.props.BoolProperty(default=False)
     bpy.types.Object.show_ik_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_events = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_clip_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_initial_offset_options = bpy.props.BoolProperty(default=False)
+
     bpy.types.Object.show_experimental_options = bpy.props.BoolProperty(default=False)
 def unregister():
     from bpy.utils import unregister_class
