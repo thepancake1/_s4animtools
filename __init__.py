@@ -4,6 +4,8 @@ import time
 import math
 import importlib
 
+import fnvhash
+
 import _s4animtools.bone_names
 from _s4animtools.serialization.fnv import get_64bithash
 from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
@@ -57,6 +59,7 @@ importlib.reload(_s4animtools.clip_processing.f1_palette)
 importlib.reload(_s4animtools.frames.frame)
 importlib.reload(_s4animtools.clip_processing.clip_body)
 importlib.reload(_s4animtools.channels.palette_channel)
+importlib.reload(_s4animtools.ik_baker)
 
 # importlib.reload(_s4animtools.asm.state_machine)
 # importlib.reload(_s4animtools.translation_channel)
@@ -677,6 +680,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.operator("s4animtools.unmuteik", text="Unmute IK")
 
                 layout.operator("s4animtools.removeik", text="Remove IK")
+
+                layout.operator("s4animtools.preview_ik", text="Preview IK")
 
                 layout.scale_x = 1
 
@@ -1944,12 +1949,56 @@ class OT_S4ANIMTOOLS_MaskOutChildren(bpy.types.Operator):
                             fcurve.mute = bone not in bones_to_enable
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
+    bl_idname = "s4animtools.preview_ik"
+    bl_label = "Preview IK"
+    bl_options = {"REGISTER", "UNDO"}
 
-# unused = (ScriptItem, SoundItem, LIST_OT_NewScriptEvent, LIST_OT_MoveScriptEvent, LIST_OT_DeleteScriptEvent,
-#          LIST_OT_NewSoundEvent, LIST_OT_MoveSoundEvent, LIST_OT_DeleteSoundEvent,
-#          ScriptEventsPanel, SoundEventsPanel, ActorProperties, LIST_OT_NewActor, LIST_OT_DeleteActor,
-#          LIST_OT_MoveActor, ActorPanel, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, StatePanel,
-#          ControllerProperties, StateProperties, LIST_OT_NewController, s4animtool_OT_IKEmptyCreator, s4animtool_OT_IKEmptyUpdate, s4animtool_PT_IKProperties,)
+
+    def cleanup_stale_empties(self):
+        for obj in bpy.data.objects:
+            if obj.name.startswith("IKEmpty_"):
+                bpy.data.objects.remove(obj)
+
+    def execute(self, context):
+        obj = context.object
+        # Note: this assumes there is only one possible actor to go into Slot selection mode at a time
+        self.cleanup_stale_empties()
+        ik_target_per_bone = defaultdict(int)
+        for idx, target in enumerate(get_ik_targets(obj)):
+            hashed_id = "IKEmpty_{}".format(hex(fnvhash.fnv1_64("{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode("utf-8"))))
+            o = bpy.data.objects.new(hashed_id, None)
+            o.rotation_mode = 'QUATERNION'
+            bpy.context.scene.collection.objects.link(o)
+            o.empty_display_size = 0.2
+            o.empty_display_type = 'PLAIN_AXES'
+            # Create a child of constraint on the new empty.
+            c = o.constraints.new('CHILD_OF')
+            c.target = bpy.data.objects[target.target_obj]
+            c.subtarget = target.target_bone
+            bpy.context.view_layer.objects.active = o
+            o.select_set(True)
+            context_py = bpy.context.copy()
+            context_py["constraint"] = c
+            bpy.ops.constraint.childof_clear_inverse(context_py, constraint="Child Of", owner='OBJECT')
+            for j in range(3):
+                location = o.driver_add("location", j)
+                v = location.driver.variables.new()
+                driver_target = v.targets[0]
+                driver_target.id = obj
+                driver_target.data_path = 'pose.bones["{}"].ik_pos_{}[{}]'.format(target.chain_bone, ik_target_per_bone[target.chain_bone], j)
+                location.driver.expression = v.name
+
+            for k in range(4):
+                location = o.driver_add("rotation_quaternion", k)
+                v = location.driver.variables.new()
+                driver_target = v.targets[0]
+                driver_target.id = obj
+                driver_target.data_path = 'pose.bones["{}"].ik_rot_{}[{}]'.format(target.chain_bone, ik_target_per_bone[target.chain_bone], k)
+                location.driver.expression = v.name
+            ik_target_per_bone[target.chain_bone] += 1
+        return {"FINISHED"}
+
 classes = (
     Snapper, ExportRig, SyncRigToMesh,
     S4ANIMTOOLS_PT_MainPanel,
@@ -1969,7 +2018,8 @@ classes = (
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
-    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren)
+    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
+OT_S4ANIMTOOLS_PreviewIK)
 
 def update_selected_bones(self, context):
     pass

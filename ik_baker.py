@@ -152,7 +152,7 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
             for idx, item in enumerate(get_ik_targets(obj)):
 
                 chain_bone, target_bone, target_rig = self.get_bonedata(item, obj)
-
+                print(chain_bone, target_bone, target_rig)
                 for pos_idx in range(3):
                     data_path = f'pose.bones["{chain_bone.name}"].ik_pos_{current_bone_idx[chain_bone]}'
 
