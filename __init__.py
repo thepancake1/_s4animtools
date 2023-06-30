@@ -72,6 +72,39 @@ importlib.reload(_s4animtools.ik_manager)
 importlib.reload(_s4animtools.clip_processing.clip_body)
 importlib.reload(_s4animtools.rcol.rcol_wrapper)
 
+
+
+def update_valid_skins(scene, context):
+
+    items = []
+
+    for ob in context.scene.objects:
+        if ob.is_sim_skin:
+            items.append((ob.name, ob.name, ""))
+
+    return items
+def update_active_sim_skin(self, context):
+    rig_obj = context.object
+    bpy.ops.object.select_all(action='DESELECT')
+
+    if rig_obj.is_s4_actor:
+        for child in bpy.data.objects[rig_obj.name].children:
+            print(rig_obj.name, child.name)
+            child.select_set(True)
+        bpy.ops.object.delete()
+
+        new_skin = rig_obj.active_sim_skin
+        new_skin_rig = bpy.data.objects[new_skin]
+
+
+        for child in new_skin_rig.children:
+            new_ob = child.copy()
+            bpy.context.scene.collection.objects.link(new_ob)
+            print(rig_obj.name)
+            new_ob.parent = bpy.data.objects[rig_obj.name]
+            for constraint in new_ob.constraints:
+                if constraint.type == "ARMATURE":
+                    constraint.target = bpy.data.objects[rig_obj.name]
 def determine_ik_slot_targets(rig):
     all_constraints = defaultdict(list)
     current_bone_idx = defaultdict(int)
@@ -504,10 +537,14 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
         layout = self.layout
         if obj is not None:
+            layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
             layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
             if obj.is_s4_actor:
                 layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
                 layout.prop(obj, "actor_type", text="Actor Type")
+                if obj.actor_type == "sim":
+                    layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
+
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
             if obj.show_footprint_options:
                 layout.prop(obj, "is_footprint", text="Is Footprint Object")
@@ -2218,6 +2255,9 @@ def register():
     bpy.types.Object.show_initial_offset_options = bpy.props.BoolProperty(default=False)
 
     bpy.types.Object.show_experimental_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_sim_skin = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.active_sim_skin = bpy.props.EnumProperty(items=update_valid_skins, update=update_active_sim_skin)
+
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2275,3 +2315,4 @@ def unregister():
     del bpy.types.Object.show_mirror_and_masking_options
     del bpy.types.Object.show_ik_options
     del bpy.types.Object.show_experimental_options
+    del bpy.types.Object.is_sim_skin
