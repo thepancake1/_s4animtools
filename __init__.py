@@ -85,6 +85,8 @@ def update_valid_skins(scene, context):
     return items
 def update_active_sim_skin(self, context):
     rig_obj = context.object
+    bpy.ops.object.mode_set(mode='OBJECT')
+
     bpy.ops.object.select_all(action='DESELECT')
 
     if rig_obj.is_s4_actor:
@@ -94,17 +96,44 @@ def update_active_sim_skin(self, context):
         bpy.ops.object.delete()
 
         new_skin = rig_obj.active_sim_skin
-        new_skin_rig = bpy.data.objects[new_skin]
+        bpy.ops.object.select_all(action='DESELECT')
 
+        new_skin_rig = bpy.data.objects[new_skin]
+        new_skin_rig.users_collection[0].hide_viewport = False
+        new_skin_rig.select_set(True)
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        bone_data = {}
+        for bone in new_skin_rig.data.edit_bones:
+            print(bone.name)
+            bone_data[bone.name] = (bone.head.copy(), bone.tail.copy(), bone.roll)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        rig_obj.select_set(True)
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        for bone in rig_obj.data.edit_bones:
+            #print(bone.name)
+            if bone.name in bone_data:
+                bone.head = bone_data[bone.name][0]
+                bone.tail = bone_data[bone.name][1]
+                bone.roll = bone_data[bone.name][2]
+                print(bone.name, bone_data[bone.name][0], bone_data[bone.name][1], bone_data[bone.name][2])
+
+        bpy.ops.object.mode_set(mode='OBJECT')
 
         for child in new_skin_rig.children:
             new_ob = child.copy()
             bpy.context.scene.collection.objects.link(new_ob)
             print(rig_obj.name)
             new_ob.parent = bpy.data.objects[rig_obj.name]
-            for constraint in new_ob.constraints:
-                if constraint.type == "ARMATURE":
-                    constraint.target = bpy.data.objects[rig_obj.name]
+            for modifier in new_ob.modifiers:
+                print(modifier)
+                if modifier.type == "ARMATURE":
+                    modifier.object = bpy.data.objects[rig_obj.name]
+        rig_obj.select_set(True)
+
+        new_skin_rig.users_collection[0].hide_viewport = True
+
 def determine_ik_slot_targets(rig):
     all_constraints = defaultdict(list)
     current_bone_idx = defaultdict(int)
