@@ -741,7 +741,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row.operator('iktarget.new', text='New').command = ""
                 layout = self.layout.row()
 
-                layout.operator("s4animtools.bakeik", text="Bake IK")
+                layout.operator("s4animtools.bakeik", text="Set IK Weight")
                 layout.operator("s4animtools.muteik", text="Mute IK")
                 layout.operator("s4animtools.unmuteik", text="Unmute IK")
 
@@ -2032,7 +2032,10 @@ class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
         self.cleanup_stale_empties()
         ik_target_per_bone = defaultdict(int)
         for idx, target in enumerate(get_ik_targets(obj)):
-            hashed_id = "IKEmpty_{}".format(hex(fnvhash.fnv1_64("{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode("utf-8"))))
+            bone_id = hex(fnvhash.fnv1_64(
+                "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
+                    "utf-8")))
+            hashed_id = "IKEmpty_{}_UserAdjust".format(bone_id)
             o = bpy.data.objects.new(hashed_id, None)
             o.rotation_mode = 'QUATERNION'
             bpy.context.scene.collection.objects.link(o)
@@ -2047,8 +2050,28 @@ class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
             context_py = bpy.context.copy()
             context_py["constraint"] = c
             bpy.ops.constraint.childof_clear_inverse(context_py, constraint="Child Of", owner='OBJECT')
+
+
+            # Create animated slot offset driven by drivers
+            # This needs to be separated from UserAdjust so the user can adjust the slot offset
+            # and then the driver applies it relative to the UserAdjust
+            hashed_id = "IKEmpty_{}_DriverAdjust".format(bone_id)
+            o2 = bpy.data.objects.new(hashed_id, None)
+            o2.rotation_mode = 'QUATERNION'
+            bpy.context.scene.collection.objects.link(o2)
+            o2.empty_display_size = 0.2
+            o2.empty_display_type = 'PLAIN_AXES'
+            # Create a child of constraint on the new empty.
+            c = o2.constraints.new('CHILD_OF')
+            o2.parent = o
+            c.target = bpy.data.objects[target.target_obj]
+            c.subtarget = target.target_bone
+            bpy.context.view_layer.objects.active = o2
+            o.select_set(True)
+
+
             for j in range(3):
-                location = o.driver_add("location", j)
+                location = o2.driver_add("location", j)
                 v = location.driver.variables.new()
                 driver_target = v.targets[0]
                 driver_target.id = obj
@@ -2056,7 +2079,7 @@ class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
                 location.driver.expression = v.name
 
             for k in range(4):
-                location = o.driver_add("rotation_quaternion", k)
+                location = o2.driver_add("rotation_quaternion", k)
                 v = location.driver.variables.new()
                 driver_target = v.targets[0]
                 driver_target.id = obj
@@ -2094,12 +2117,14 @@ class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
         self.cleanup_stale_constraints(context)
         ik_target_per_bone = defaultdict(int)
         for idx, target in enumerate(get_ik_targets(obj)):
-            hashed_id = "IKEmpty_{}".format(hex(fnvhash.fnv1_64("{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode("utf-8"))))
-            # Don't deal with root bind for now
+            bone_id = hex(fnvhash.fnv1_64(
+                "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
+                    "utf-8")))
+            driver_adjust_obj = "IKEmpty_{}_DriverAdjust".format(bone_id)
             if "b__ROOT_bind__" == target.chain_bone:
                 continue
             c = obj.pose.bones[target.chain_bone + "IK"].constraints.new('COPY_TRANSFORMS')
-            c.target = bpy.data.objects[hashed_id]
+            c.target = bpy.data.objects[driver_adjust_obj]
             if ik_target_per_bone[target.chain_bone] >= 1:
                 location = c.driver_add("influence")
                 for v in location.driver.variables[:]:
