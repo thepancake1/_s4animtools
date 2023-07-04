@@ -104,9 +104,9 @@ def update_active_sim_skin(self, context):
 
         bpy.ops.object.mode_set(mode='EDIT')
         bone_data = {}
-        for bone in new_skin_rig.data.edit_bones:
+        for bone in new_skin_rig.data.bones:
             print(bone.name)
-            bone_data[bone.name] = (bone.head.copy(), bone.tail.copy(), bone.roll)
+            bone_data[bone.name] = (bone.head_local.copy(), bone.tail_local.copy())
         bpy.ops.object.mode_set(mode='OBJECT')
         rig_obj.select_set(True)
 
@@ -116,8 +116,7 @@ def update_active_sim_skin(self, context):
             if bone.name in bone_data:
                 bone.head = bone_data[bone.name][0]
                 bone.tail = bone_data[bone.name][1]
-                bone.roll = bone_data[bone.name][2]
-                print(bone.name, bone_data[bone.name][0], bone_data[bone.name][1], bone_data[bone.name][2])
+                print(bone.name, bone_data[bone.name][0], bone_data[bone.name][1])
 
         bpy.ops.object.mode_set(mode='OBJECT')
 
