@@ -329,7 +329,8 @@ class NewClipExporter(bpy.types.Operator):
                                                                                               start_time)
                 if event == SnapEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
-                        snap_frames.append(timeshifted_timestamp)
+
+                        snap_frames.append(math.floor(timeshifted_timestamp * 30))
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
 
                 elif event == FocusCompatibilityEvent:
@@ -1208,7 +1209,7 @@ def update_initial_offsets(self, context):
     active_object_root = context.active_object.pose.bones["b__ROOT__"]
     if context.object.relative_rig == "":
         relative_rig = context.active_object
-        relative_bone = root_bone
+        relative_bone = None
     else:
         relative_rig = bpy.data.objects[context.object.relative_rig]
         relative_bone = relative_rig.pose.bones[context.object.relative_bone]
