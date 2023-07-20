@@ -84,6 +84,12 @@ def update_valid_skins(scene, context):
 
     return items
 def update_active_sim_skin(self, context):
+    """
+    Function for updating the active sim skin.
+    This function copies over the rig from the active sim skin to the current rig.
+    Note! Exported rigs do not have bones in our control rig, so for example the
+    Left Hand IK and Right Hand IK need
+    """
     rig_obj = context.object
     bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -91,7 +97,7 @@ def update_active_sim_skin(self, context):
 
     if rig_obj.is_s4_actor:
         for child in bpy.data.objects[rig_obj.name].children:
-            print(rig_obj.name, child.name)
+            #print(rig_obj.name, child.name)
             child.select_set(True)
         bpy.ops.object.delete()
 
@@ -107,6 +113,24 @@ def update_active_sim_skin(self, context):
         for bone in new_skin_rig.data.bones:
             print(bone.name)
             bone_data[bone.name] = (bone.head_local.copy(), bone.tail_local.copy())
+            if bone.name == "b__L_Hand__":
+                bone_data["Left Hand IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Hand Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+            elif bone.name == "b__R_Hand__":
+                bone_data["Right Hand IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Hand Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+            elif bone.name == "b__L_Foot__":
+                bone_data["Left Foot IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Main Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Pivot"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
+            elif bone.name == "b__R_Foot__":
+                bone_data["Right Foot IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Main Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Pivot"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
         bpy.ops.object.mode_set(mode='OBJECT')
         rig_obj.select_set(True)
 
@@ -2039,7 +2063,7 @@ class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
             o = bpy.data.objects.new(hashed_id, None)
             o.rotation_mode = 'QUATERNION'
             bpy.context.scene.collection.objects.link(o)
-            o.empty_display_size = 0.2
+            o.empty_display_size = 0.01
             o.empty_display_type = 'PLAIN_AXES'
             # Create a child of constraint on the new empty.
             c = o.constraints.new('CHILD_OF')
@@ -2059,15 +2083,11 @@ class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
             o2 = bpy.data.objects.new(hashed_id, None)
             o2.rotation_mode = 'QUATERNION'
             bpy.context.scene.collection.objects.link(o2)
-            o2.empty_display_size = 0.2
+            o2.empty_display_size = 0.1
             o2.empty_display_type = 'PLAIN_AXES'
-            # Create a child of constraint on the new empty.
-            c = o2.constraints.new('CHILD_OF')
             o2.parent = o
-            c.target = bpy.data.objects[target.target_obj]
-            c.subtarget = target.target_bone
             bpy.context.view_layer.objects.active = o2
-            o.select_set(True)
+            o2.select_set(True)
 
 
             for j in range(3):
@@ -2100,15 +2120,29 @@ class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
     RIGHT_FOOT = "b__R_Foot__"
 
     ik_bones = [LEFT_HAND, RIGHT_HAND, LEFT_FOOT, RIGHT_FOOT]
+
+
+    def get_matching_bone_name(self, target):
+        target_bone = None
+
+        if target == "b__L_Hand__":
+            target_bone = "Left Hand Target"
+        elif target == "b__R_Hand__":
+            target_bone = "Right Hand Target"
+        elif target == "b__L_Foot__":
+            target_bone = "Left Foot Target"
+        elif target == "b__R_Foot__":
+            target_bone = "Right Foot Target"
+        return target_bone
     def cleanup_stale_constraints(self, context):
         # NOTE! This assumes your IK bones are the target bones. Not the bone where the ik constraint lives on.
         for bone_name in self.ik_bones:
-            ik_bone = bone_name + "IK"
-            if ik_bone in context.object.pose.bones:
-                for constraint in context.object.pose.bones[ik_bone].constraints[:]:
+            target_bone = self.get_matching_bone_name(bone_name)
+            if target_bone in context.object.pose.bones:
+                for constraint in context.object.pose.bones[target_bone].constraints[:]:
                     print(constraint)
                     if constraint.type == 'COPY_TRANSFORMS':
-                        context.object.pose.bones[ik_bone].constraints.remove(constraint)
+                        context.object.pose.bones[target_bone].constraints.remove(constraint)
 
 
     def execute(self, context):
@@ -2123,7 +2157,10 @@ class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
             driver_adjust_obj = "IKEmpty_{}_DriverAdjust".format(bone_id)
             if "b__ROOT_bind__" == target.chain_bone:
                 continue
-            c = obj.pose.bones[target.chain_bone + "IK"].constraints.new('COPY_TRANSFORMS')
+            target_bone = self.get_matching_bone_name(target.chain_bone)
+            if target_bone is None:
+                continue
+            c = obj.pose.bones[target_bone].constraints.new('COPY_TRANSFORMS')
             c.target = bpy.data.objects[driver_adjust_obj]
             if ik_target_per_bone[target.chain_bone] >= 1:
                 location = c.driver_add("influence")
