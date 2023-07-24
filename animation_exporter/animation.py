@@ -217,7 +217,7 @@ class AnimationBoneData:
 
 
 class AnimationExporter:
-    def __init__(self, source_rig, snap_frames, world_rig, world_root, use_full_precision, base_rig=None):
+    def __init__(self, source_rig, snap_frames, world_rig, world_root, use_full_precision, base_rig=None, allow_slots=False):
         self.animated_frame_data = {}
         self.source_rig = source_rig
         self.snap_frames = snap_frames
@@ -228,6 +228,7 @@ class AnimationExporter:
         self.use_full_precision = use_full_precision
         self.paletteHolder = F1Palette()
         self.base_rig = base_rig
+        self.allow_slots = allow_slots
 
     @property
     def animated_bones(self):
@@ -244,7 +245,7 @@ class AnimationExporter:
         Create an AnimationBoneData class for each bone that can be animated.
         """
         for bone in self.source_rig.pose.bones:
-            if slot in bone.name:
+            if slot in bone.name and not self.allow_slots:
                 continue
 
             self.animated_frame_data[bone.name] = AnimationBoneData(self)
@@ -309,7 +310,7 @@ class AnimationExporter:
 
 
         for child in source_bone.children:
-            if slot in child.name:
+            if slot in child.name and not self.allow_slots:
                 continue
             self.animate_frame(child, frame_idx, start_frame, force)
 
@@ -457,7 +458,7 @@ class AnimationExporter:
                     self.exported_channels.append(rotation_channel)
 
         for child in bone.children:
-            if slot in child.name:
+            if slot in child.name and not self.allow_slots:
                 continue
             self.recursively_export_bone_animation_to_channels(child)
 
@@ -538,6 +539,6 @@ class AdditiveAnimationExporter(AnimationExporter):
 
 
         for child in source_bone.children:
-            if slot in child.name:
+            if slot in child.name and not self.allow_slots:
                 continue
             self.animate_frame(child, frame_idx, start_frame, force)

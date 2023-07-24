@@ -86,7 +86,8 @@ def update_active_sim_skin(self, context):
     Function for updating the active sim skin.
     This function copies over the rig from the active sim skin to the current rig.
     Note! Exported rigs do not have bones in our control rig, so for example the
-    Left Hand IK and Right Hand IK need
+    Left Hand IK and Right Hand IK need to be copied over from the hands default position.
+    The feet need to be recreated as well.
     """
     rig_obj = context.object
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -492,9 +493,9 @@ class NewClipExporter(bpy.types.Operator):
                                             self.context.object.additional_snap_frames)
 
             if self.additive:
-                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig])
+                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots)
             else:
-                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision)
+                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots)
             exporter.create_animation_data()
             exporter.paletteHolder.try_add_palette_to_palette_values(0)
             exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
@@ -595,6 +596,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.prop(obj, "actor_type", text="Actor Type")
                 if obj.actor_type == "sim":
                     layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
+                    layout.prop(obj, "allow_slots", text="Allow Slots")
 
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
             if obj.show_footprint_options:
@@ -2395,6 +2397,8 @@ def register():
     bpy.types.Object.is_sim_skin = bpy.props.BoolProperty(default=False)
     bpy.types.Object.active_sim_skin = bpy.props.EnumProperty(items=update_valid_skins, update=update_active_sim_skin)
 
+    bpy.types.Object.allow_slots = bpy.props.BoolProperty(default=False)
+
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2453,3 +2457,4 @@ def unregister():
     del bpy.types.Object.show_ik_options
     del bpy.types.Object.show_experimental_options
     del bpy.types.Object.is_sim_skin
+    del bpy.types.Object.allow_slots
