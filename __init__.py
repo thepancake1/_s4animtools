@@ -52,23 +52,23 @@ JAW_ANIMATE_DURATION = 100000
 
 CHAIN_STR_IDX = 2
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
-importlib.reload(_s4animtools.animation_exporter.animation)
-importlib.reload(_s4animtools.clip_processing.f1_palette)
-importlib.reload(_s4animtools.frames.frame)
-importlib.reload(_s4animtools.clip_processing.clip_body)
-importlib.reload(_s4animtools.channels.palette_channel)
-importlib.reload(_s4animtools.ik_baker)
+#importlib.reload(_s4animtools.animation_exporter.animation)
+#importlib.reload(_s4animtools.clip_processing.f1_palette)
+#importlib.reload(_s4animtools.frames.frame)
+#importlib.reload(_s4animtools.clip_processing.clip_body)
+#importlib.reload(_s4animtools.channels.palette_channel)
+#importlib.reload(_s4animtools.ik_baker)
 
 # importlib.reload(_s4animtools.asm.state_machine)
 # importlib.reload(_s4animtools.translation_channel)
 # importlib.reload(_s4animtools.f1_normalized_channel)
 # importlib.reload(_s4animtools.rig.create_rig)
 
-importlib.reload(_s4animtools.clip_processing.clip_header)
-importlib.reload(_s4animtools.control_rig.basic_control_rig)
-importlib.reload(_s4animtools.ik_manager)
-importlib.reload(_s4animtools.clip_processing.clip_body)
-importlib.reload(_s4animtools.rcol.rcol_wrapper)
+#importlib.reload(_s4animtools.clip_processing.clip_header)
+#importlib.reload(_s4animtools.control_rig.basic_control_rig)
+#importlib.reload(_s4animtools.ik_manager)
+#importlib.reload(_s4animtools.clip_processing.clip_body)
+#importlib.reload(_s4animtools.rcol.rcol_wrapper)
 
 
 
