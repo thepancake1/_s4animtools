@@ -4,10 +4,8 @@ import time
 import math
 import importlib
 
-import fnvhash
-
 import _s4animtools.bone_names
-from _s4animtools.serialization.fnv import get_64bithash
+from _s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
 from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
 from _s4animtools.rig.create_rig import Trackmask
@@ -2056,7 +2054,7 @@ class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
         self.cleanup_stale_empties()
         ik_target_per_bone = defaultdict(int)
         for idx, target in enumerate(get_ik_targets(obj)):
-            bone_id = hex(fnvhash.fnv1_64(
+            bone_id = hex(get_32bit_hash(
                 "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
                     "utf-8")))
             hashed_id = "IKEmpty_{}_UserAdjust".format(bone_id)
@@ -2151,7 +2149,7 @@ class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
         self.cleanup_stale_constraints(context)
         ik_target_per_bone = defaultdict(int)
         for idx, target in enumerate(get_ik_targets(obj)):
-            bone_id = hex(fnvhash.fnv1_64(
+            bone_id = hex(get_32bit_hash(
                 "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
                     "utf-8")))
             driver_adjust_obj = "IKEmpty_{}_DriverAdjust".format(bone_id)
