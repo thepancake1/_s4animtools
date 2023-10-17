@@ -94,24 +94,26 @@ class ClipResource:
         self.clipEventList.append(event)
         self.clipEventCount += 1
 
-    def get_filename(self):
+    def get_clip_filename(self):
         if self.s3peNaming:
             return "S4_6B20C4F3_00000000_{}_{}.Clip".format(get_64bithash(self.clipName), self.fileName)
         return "6B20C4F3!00000000!{}.{}.Clip".format(get_64bithash(self.clipName), self.fileName)
 
-    def get_header_name(self):
+    def get_clip_header_filename(self):
         if self.s3peNaming:
             return "S4_BC4A5044_00000000_{}_{}.ClipHeader".format(get_64bithash(self.clipName), self.fileName)
 
         return "BC4A5044!00000000!{}.{}.ClipHeader".format(get_64bithash(self.clipName), self.fileName)
 
-    def serialize(self):
+    def export(self, export_path):
 
-        anim_path = os.path.expanduser("~/Desktop") + os.sep + "Animation Workspace"
+        anim_path = os.path.abspath(export_path)
+        if export_path == "":
+            anim_path = os.path.expanduser("~/Desktop") + os.sep + "Animation Workspace"
         if not os.path.exists(anim_path):
             os.mkdir(anim_path)
 
-        with open(anim_path + os.sep +  self.get_filename(), "wb") as file:
+        with open(anim_path + os.sep +  self.get_clip_filename(), "wb") as file:
             serialized = [UInt32(self._version), UInt32(self._flags), Float32(self._duration),
                           *self._initialOffsetQ.to_binary(), *self._initialOffsetT.to_binary(),
                           UInt32(self.referenceNamespaceHash), UInt32(self.surfaceNamespaceHash),
@@ -139,7 +141,7 @@ class ClipResource:
             write_data = all_data.getvalue()
 
             file.write(write_data)
-            with open(anim_path + os.sep + self.get_header_name(), "wb") as clip_header_file:
+            with open(anim_path + os.sep + self.get_clip_header_filename(), "wb") as clip_header_file:
                 clip_header_file.write(write_data)
 if __name__ == "__main__":
     ClipResource().serialize()

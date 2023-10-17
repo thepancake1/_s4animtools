@@ -493,9 +493,9 @@ class NewClipExporter(bpy.types.Operator):
                                             self.context.object.additional_snap_frames)
 
             if self.additive:
-                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots)
+                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             else:
-                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots)
+                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             exporter.create_animation_data()
             exporter.paletteHolder.try_add_palette_to_palette_values(0)
             exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
@@ -534,7 +534,7 @@ class NewClipExporter(bpy.types.Operator):
             current_clip.clip_body.set_clip_length(clip_info.end_frame - clip_info.start_frame)
             current_clip.update_duration(clip_info.end_frame - clip_info.start_frame)
 
-            current_clip.serialize()
+            current_clip.export(export_path=self.context.scene.s4animtools_export_path)
         t2 = time.time()
         print(f"Took {t2 - t1} seconds for clip export")
         return {"FINISHED"}
@@ -915,6 +915,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
             if obj.is_enabled_for_animation:
+                self.layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
 
                 self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
@@ -942,7 +943,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
              #   self.layout.label(text="you can specify multiple clip names with commas.")
              #   self.layout.label(text="Example: a2o_dance_start,a2o_dance_loop,a2o_dance_end")
              #   self.layout.label(text="If you only have one clip name, enter it without a comma.")
-                self.layout.prop(context.scene, "is_overlay", text="Is Overlay")
+                self.layout.prop(obj, "is_overlay", text="Is Overlay")
 
                 self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
               #  self.layout.label(text="Disable the rig suffix. For example:")
@@ -2370,7 +2371,7 @@ def register():
     bpy.types.Object.state_connection_idx = IntProperty(name="Index for state", default=0)
 
     #  bpy.types.Object.clip_idx = IntProperty(name="Index for clip", default=0)
-    bpy.types.Scene.is_overlay = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_overlay = bpy.props.BoolProperty(default=False)
 
     bpy.types.Scene.watcher_running = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.clip_name = bpy.props.StringProperty()
@@ -2378,6 +2379,8 @@ def register():
     bpy.types.Scene.clip_splits = bpy.props.StringProperty()
 
     bpy.types.Scene.footprint_name = bpy.props.StringProperty()
+
+    bpy.types.Scene.s4animtools_export_path = bpy.props.StringProperty()
 
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
 
