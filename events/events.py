@@ -257,7 +257,10 @@ class StopEffectEvent:
         self.header2 = UInt32(0)
         self.timecode = Float32(float(timecode))
         self.slot_name = hash_name_or_get_hash(slot_name)
-        self.u2 = hash_name_or_get_hash(u2)
+        if u2.lstrip() != "0":
+            self.u2 = hash_name_or_get_hash(u2)
+        else:
+            self.u2 = UInt32(0)
         self.b1 = Byte(int(b1))
 
     def serialize(self):
