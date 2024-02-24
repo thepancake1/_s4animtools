@@ -97,7 +97,3 @@ class PaletteTranslationFrame:
 
 if __name__ == "__main__":
     pass
-    #frame = Frame()
-    #frame.set_frame_data(1, [0.120406516, -0.031965576, 0.450546116, 0.884018481])
-    #sign_bits_int = int.from_bytes(frame._sign_bits, byteorder=sys.byteorder)
-    #print(bin(sign_bits_int), sign_bits_int)
