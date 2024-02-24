@@ -76,7 +76,7 @@ class ClipResource:
         self.slotAssignmentCount += slot_idx
         self.clipEventCount = 0
         self.clipEventList = []
-        self.codecDataLength = 1 #Offset to end file I think. Remember to actually set this
+        self.codecDataLength = 0
         self.clip_body = ClipBody(self.clipName, source_file_name)
         if len(explicit_namespaces) >= 2:
             for namespace in explicit_namespaces.split(","):
@@ -84,7 +84,7 @@ class ClipResource:
 
     def update_duration(self, ticks):
         # -1 tick for some reason.
-        self._duration = (ticks) / 30 - (1/30)
+        self._duration = ticks/30 - (1/30)
 
     def add_explicit_namespace(self, name):
         self.explicitNamespaceCount += 1
