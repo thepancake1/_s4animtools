@@ -15,12 +15,6 @@ from _s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, React
 from _s4animtools.serialization.types.basic import Float32, UInt32
 from _s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
 from _s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
-from _s4animtools.asm.state_machine import ActorPanel, ActorProperties, LIST_OT_MoveActor, LIST_OT_NewActor, \
-    LIST_OT_DeleteActor
-from _s4animtools.asm.states import StateProperties, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, \
-    StatePanel, ControllerProperties, LIST_OT_NewController, LIST_OT_RemoveController, LIST_OT_MoveControllerState, \
-    PostureProperties, PosturePanel, LIST_OT_NewPosture, LIST_OT_DeletePosture, LIST_OT_MovePosture, StateConnections, \
-    LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection, LIST_OT_MoveStateConnection
 
 from _s4animtools.rig.create_rig import create_rig_with_context
 import _s4animtools.clip_processing.clip_header
@@ -52,23 +46,6 @@ JAW_ANIMATE_DURATION = 100000
 
 CHAIN_STR_IDX = 2
 bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
-#importlib.reload(_s4animtools.animation_exporter.animation)
-#importlib.reload(_s4animtools.clip_processing.f1_palette)
-#importlib.reload(_s4animtools.frames.frame)
-#importlib.reload(_s4animtools.clip_processing.clip_body)
-#importlib.reload(_s4animtools.channels.palette_channel)
-#importlib.reload(_s4animtools.ik_baker)
-
-# importlib.reload(_s4animtools.asm.state_machine)
-# importlib.reload(_s4animtools.translation_channel)
-# importlib.reload(_s4animtools.f1_normalized_channel)
-# importlib.reload(_s4animtools.rig.create_rig)
-
-#importlib.reload(_s4animtools.clip_processing.clip_header)
-#importlib.reload(_s4animtools.control_rig.basic_control_rig)
-#importlib.reload(_s4animtools.ik_manager)
-#importlib.reload(_s4animtools.clip_processing.clip_body)
-#importlib.reload(_s4animtools.rcol.rcol_wrapper)
 
 
 
@@ -2184,14 +2161,7 @@ classes = (
     s4animtool_OT_bakeik, s4animtool_OT_removeIK,s4animtools_OT_guessTarget,
     BeginIKMarker, s4animtool_OT_unmute_ik, s4animtool_OT_mute_ik, NewClipExporter, PositionConfig, QuaternionConfig,
     ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig,
-    CopySelectedLeftSideToRightSide,
-    LIST_OT_MoveActor, ActorPanel, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, StatePanel,
-    ActorProperties, ControllerProperties, StateProperties,
-    LIST_OT_NewActor, LIST_OT_DeleteActor, LIST_OT_NewController, LIST_OT_RemoveController, LIST_OT_MoveControllerState,
-    PosturePanel, PostureProperties,
-    LIST_OT_NewPosture, LIST_OT_DeletePosture, LIST_OT_MovePosture, StateConnections,
-    LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection,
-    LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
+    CopySelectedLeftSideToRightSide, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
@@ -2200,34 +2170,6 @@ OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties)
 
 def update_selected_bones(self, context):
     pass
-   #ui_toggle_to_bone_attribute = {"select_slots" : "is_slot", "select_cas" : "is_cas", "select_left" : "is_left",
-   #                           "select_right" : "is_right", "select_middle" : "is_middle", "select_mouth" : "is_mouth",
-   #                               "select_left_pinky" : "is_left_pinky",
-   #                           "select_left_ring" : "is_left_ring","select_left_middle" : "is_left_middle",
-   #                           "select_left_index" : "is_left_index","select_left_thumb" : "is_left_thumb",
-   #                           "select_left_first_fingers" : "is_left_first_finger",
-   #                               "select_left_second_fingers" : "is_left_second_finger",
-   #                               "select_left_third_fingers" : "is_left_third_finger",
-   #                               "select_left_fingers" : "is_left_finger",
-   #                               "select_right_pinky": "is_right_pinky",
-   #                               "select_right_ring": "is_right_ring", "select_right_middle": "is_right_middle",
-   #                               "select_right_index": "is_right_index", "select_right_thumb": "is_right_thumb",
-   #                               "select_right_first_fingers": "is_right_first_finger",
-   #                               "select_right_second_fingers": "is_right_second_finger",
-   #                               "select_right_third_fingers": "is_right_third_finger",
-   #                               "select_right_fingers": "is_right_finger"
-   #                               }
-   #bpy.ops.object.mode_set(mode='POSE')
-   #for bone in context.object.pose.bones:
-   #    bone.bone.hide = False
-   #bpy.ops.pose.select_all(action='DESELECT')
-   #for ui_toggle, bone_attrib in ui_toggle_to_bone_attribute.items():
-   #    if getattr(context.object, ui_toggle):
-   #        for bone in context.object.pose.bones:
-   #            if getattr(bone, bone_attrib):
-   #                print(getattr(bone, bone_attrib))
-   #                bone.bone.hide = True
-
 
 def register():
     """Register classes for the things."""
@@ -2237,14 +2179,6 @@ def register():
             register_class(cls)
         except Exception as e:
             print(e)
-    # bpy.types.Object.script_events = CollectionProperty(type=ScriptItem)
-    # bpy.types.Object.sound_events = CollectionProperty(type=SoundItem)
-    # TODO Check if these are still used??
-    bpy.types.Object.actors = CollectionProperty(type=ActorProperties)
-    bpy.types.Object.states = CollectionProperty(type=StateProperties)
-    bpy.types.Object.postures = CollectionProperty(type=PostureProperties)
-    bpy.types.Object.state_connections = CollectionProperty(type=StateConnections)
-
     bpy.types.PoseBone.mirrored_bone = bpy.props.StringProperty()
     bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
 
