@@ -807,15 +807,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.prop(obj, "show_events", text="Show Events")
             if obj.show_events:
                 self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
-
-                self.draw_property_if_not_empty(obj, "parent_events", self.layout)
-                self.draw_property_if_not_empty(obj, "sound_events", self.layout)
-                self.draw_property_if_not_empty(obj, "script_events", self.layout)
-                self.draw_property_if_not_empty(obj, "snap_events", self.layout)
-                self.draw_property_if_not_empty(obj, "reaction_events", self.layout)
-                self.draw_property_if_not_empty(obj, "play_effect_events", self.layout)
-                self.draw_property_if_not_empty(obj, "stop_effect_events", self.layout)
-                self.draw_property_if_not_empty(obj, "disable_lipsync_events", self.layout)
                 self.draw_events(obj, "parent_events_list", 0.1,
                                  "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
                                  "Parent Events", self.layout,
@@ -2272,13 +2263,6 @@ def register():
     bpy.types.Object.ik_idx = IntProperty(default=0)
     bpy.types.Object.rig_name = bpy.props.StringProperty()
     bpy.types.Object.reset_initial_offset_t = bpy.props.StringProperty()
-    bpy.types.Object.parent_events = bpy.props.StringProperty()
-    bpy.types.Object.sound_events = bpy.props.StringProperty()
-    bpy.types.Object.script_events = bpy.props.StringProperty()
-    bpy.types.Object.reaction_events = bpy.props.StringProperty()
-    bpy.types.Object.play_effect_events = bpy.props.StringProperty()
-    bpy.types.Object.stop_effect_events = bpy.props.StringProperty()
-    bpy.types.Object.disable_lipsync_events = bpy.props.StringProperty()
     bpy.types.Object.allow_jaw_animation_for_entire_animation = bpy.props.BoolProperty(default=False)
     bpy.types.Object.explicit_namespaces = bpy.props.StringProperty()
     bpy.types.Object.reference_namespace_hash = bpy.props.StringProperty()
