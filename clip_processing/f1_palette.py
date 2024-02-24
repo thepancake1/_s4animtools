@@ -3,8 +3,8 @@ FLOAT_PRECISION = 7
 
 class F1Palette:
     """
-    F1 palettes are used to store data that needs to have full precision. Unlike the Translation channel, which uses 10 bits per
-    axis, and unlike the Rotation channel, which uses 12 bits per axis, F1 Palettes use 32 bits per axis.
+    F1 palettes are used to store data that needs to have full precision. Unlike the Translation-HighPrecision channel, which uses 10 bits per
+    axis, and unlike the Quaternion-SuperHighPrecision channel, which uses 12 bits per axis, F1 Palettes use 32 bits per value.
     """
     def __init__(self):
         self.palette_values = []

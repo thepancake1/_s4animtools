@@ -26,13 +26,10 @@ class Vector3Channel(_s4animtools.channels.quaternion_channel.QuaternionChannel)
             single_frame = _s4animtools.frames.translation_frame.TranslationFrame()
             single_frame.set_frame_data(idx, list(map(self.normalize_offset_scale, values)), idx in snap_frames)
             single_frame._frame_data = list(map(self.quantize_data, single_frame._frame_data))
-           # list(map(print, single_frame._frame_data))
             single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
             serialized = single_frame._frame_data
             combined_bits = serialized[0].value + (serialized[1].value << 10) + (serialized[2].value << 20)
             single_frame._bitshifted_data = UInt32(combined_bits)
-            #print(combined_bits)
-            #print(idx, self._individual_frames[idx])
             self.serialized_frames[idx] = single_frame
 
     def serialize(self):
@@ -47,9 +44,3 @@ class Vector3Channel(_s4animtools.channels.quaternion_channel.QuaternionChannel)
             serialized_frames.append(frame.serialize())
 
         return serialized_header, serialized_frames
-
-if __name__ == "__main__":
-    channel = Vector3Channel("b__R_Squint__")
-    channel.set_channel_data(0.444224, -0.570586, {0: [0.00024896969696969196,1.007001393939394,0.00024896969696969196]})
-    data = channel.serialized_frames[0]._frame_data
-    #print(data)
