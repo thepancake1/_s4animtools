@@ -109,11 +109,11 @@ class ClipResource:
 
         anim_path = os.path.abspath(export_path)
         if export_path == "":
-            anim_path = os.path.expanduser("~/Desktop") + os.sep + "Animation Workspace"
+            anim_path = os.path.join(os.path.expanduser("~/Desktop"), "Animation Workspace")
         if not os.path.exists(anim_path):
             os.mkdir(anim_path)
 
-        with open(anim_path + os.sep +  self.get_clip_filename(), "wb") as file:
+        with open(os.path.join(anim_path, self.get_clip_filename()), "wb") as file:
             serialized = [UInt32(self._version), UInt32(self._flags), Float32(self._duration),
                           *self._initialOffsetQ.to_binary(), *self._initialOffsetT.to_binary(),
                           UInt32(self.referenceNamespaceHash), UInt32(self.surfaceNamespaceHash),
