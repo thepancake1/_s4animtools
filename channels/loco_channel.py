@@ -33,11 +33,11 @@ class F1Normalized(_s4animtools.channels.quaternion_channel.QuaternionChannel):
 
     def serialize(self):
 
-        order = [UInt32(self._data_offset), self._target, Float32(self._offset), Float32(self._scale), UInt16(self._frame_count), Byte(self._channel_type), Byte(self._sub_type)]
+        serialize_order = [UInt32(self._data_offset), self._target, Float32(self._offset), Float32(self._scale), UInt16(self._frame_count), Byte(self._channel_type), Byte(self._sub_type)]
         serialized_header = []
         serialized_frames = []
 
-        for item in order:
+        for item in serialize_order:
             serialized_header.append(item.serialize())
 
         for idx, frame in self.serialized_frames.items():
