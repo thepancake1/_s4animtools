@@ -1228,11 +1228,18 @@ def update_initial_offsets(self, context):
 
     rotation = offset.to_quaternion()
     translation = offset.to_translation()
+
+    # It bothered me far too much to have the height sticking out of the ground or under the ground.
+    # This shouldn't actually do anything in game, just for my own sanity.
+
+    initial_offset_height = round(translation[1], 4)
+    if abs(round(translation[1], 4)) < 0.01:
+        initial_offset_height = 0
     context.active_object.initial_offset_q = ",".join(
         [str(round(rotation[1], 4)), str(round(rotation[2], 4)), str(round(rotation[3], 4)),
          str(round(rotation[0], 4))])
     context.active_object.initial_offset_t = ",".join(
-        [str(round(translation[0], 4)), str(round(translation[1], 4)), str(round(translation[2], 4))])
+        [str(round(translation[0], 4)), str(initial_offset_height), str(round(translation[2], 4))])
 
     return  None
 
