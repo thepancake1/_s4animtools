@@ -107,8 +107,13 @@ class ClipResource:
         return "BC4A5044!00000000!{}.{}.ClipHeader".format(get_64bithash(self.clip_name), self.file_name)
 
     def export(self, export_path):
-
+        import bpy
         anim_path = os.path.abspath(export_path)
+
+        if export_path.startswith(".\\"):
+            filepath = bpy.data.filepath
+            anim_path = os.path.join(os.path.dirname(os.path.dirname(filepath)), export_path[2:])
+
         if export_path == "":
             anim_path = os.path.join(os.path.expanduser("~/Desktop"), "Animation Workspace")
         if not os.path.exists(anim_path):

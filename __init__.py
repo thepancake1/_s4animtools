@@ -506,7 +506,7 @@ class NewClipExporter(bpy.types.Operator):
                 sampling_rate = 2
 
             # The +1 is for ensuring the last frame is included in the downsampled animation data.
-            
+
             for frame_idx in range(clip_info.start_frame, clip_info.end_frame+1, sampling_rate):
                 bpy.context.scene.frame_set(frame_idx)
                 bpy.context.view_layer.update()
@@ -538,6 +538,18 @@ class NewClipExporter(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class S4ANIMTOOL_OT_ExportAllClips(bpy.types.Operator):
+    bl_label = "Export All Clips"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        for obj in bpy.data.objects:
+            if obj.is_s4_actor and obj.is_enabled_for_animation:
+                with bpy.context.temp_override(object=obj):
+                    bpy.context.view_layer.objects.active = obj
+                    bpy.ops.s4animtools.new_export_clip("INVOKE_DEFAULT")
+
+        return {"FINISHED"}
 class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
     bl_idname = "S4ANIMTOOLS_PT_MainPanel"
     bl_label = "S4AnimTools"
@@ -586,6 +598,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         obj = context.object
 
         layout = self.layout
+        layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
         layout.prop(context.scene, "downsample_60_to_30",text="Downsample 60 fps to 30")
         if obj is not None:
             layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
@@ -2186,7 +2199,7 @@ classes = (
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
-OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties)
+OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips)
 
 def update_selected_bones(self, context):
     pass
