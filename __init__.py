@@ -396,7 +396,11 @@ class NewClipExporter(bpy.types.Operator):
     def get_clip_splits(self):
         clip_indices = [0, ]
         clip_splits = self.context.scene.clip_splits.split(",")
-        if len(clip_splits) > 1:
+        # If the clip splits string is of zero length, then the user hasn't entered anything and needs to enter it.
+        if len(self.context.scene.clip_splits) == 0:
+            raise Exception("You need to specify clip splits")
+
+        elif len(clip_splits) > 0:
             for split in clip_splits:
                 clip_indices.append(int(split))
         return clip_indices
@@ -501,7 +505,9 @@ class NewClipExporter(bpy.types.Operator):
             if self.context.scene.downsample_60_to_30:
                 sampling_rate = 2
 
-            for frame_idx in range(clip_info.start_frame, clip_info.end_frame, sampling_rate):
+            # The +1 is for ensuring the last frame is included in the downsampled animation data.
+            
+            for frame_idx in range(clip_info.start_frame, clip_info.end_frame+1, sampling_rate):
                 bpy.context.scene.frame_set(frame_idx)
                 bpy.context.view_layer.update()
                 exporter.animate_recursively(self.get_downsampled_frame_idx(frame_idx, sampling_rate), start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate), force=frame_idx == clip_info.start_frame
