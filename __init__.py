@@ -539,6 +539,7 @@ class NewClipExporter(bpy.types.Operator):
 
 
 class S4ANIMTOOL_OT_ExportAllClips(bpy.types.Operator):
+    bl_idname = "s4animtools.export_all_clips"
     bl_label = "Export All Clips"
     bl_options = {"REGISTER", "UNDO"}
 
