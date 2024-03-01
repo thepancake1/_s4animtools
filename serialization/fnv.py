@@ -60,10 +60,11 @@ def get_64bithash(to_hash, lowercase=True):
     for byte in to_hash:
         hval = (hval * fnvprime) % fnvsize
         hval = hval ^ byte
-    return "{}".format(str(hex(hval))[2:].upper()).zfill(8)
+    return "{}".format(str(hex(hval))[2:].upper()).zfill(16)
 
 def get_64bithash_as_int(to_hash, lowercase=True):
     # TODO why am I doing this
+    # This is disgusting.
     return int(get_64bithash(to_hash, lowercase), 16)
 
 def hash_name_or_get_hash(string, lowercase=False):
