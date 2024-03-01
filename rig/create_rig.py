@@ -16,6 +16,7 @@ class Bone:
         self.parent_idx = 0
         self.bone_hash = 0
         self.flags = 0
+
     def read(self, reader):
         self.position = [reader.float32(), reader.float32(), reader.float32()]
         self.rotation = [reader.float32(), reader.float32(), reader.float32(), reader.float32()]

@@ -274,6 +274,10 @@ class AnimationExporter:
         Recursively animate all the bones from a rig
         starting from the root bone.
         This assumes that the root bone is called "b__ROOT__"
+
+        Note that with animation downsampling, idx and start frame will be // 2
+
+        Also note that idx will be the frame index in the source animation data, not the frame index in the individual clip.
         """
         self.animate_frame(self.root_bone, idx, start_frame, force)
 

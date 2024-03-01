@@ -382,6 +382,8 @@ class NewClipExporter(bpy.types.Operator):
         return original_timestamp, timeshifted_timestamp
     def get_clip_names(self):
         clip_names = []
+        if self.context.scene.clip_name == "":
+            raise Exception("You need to specify a clip name")
         clip_input_names = self.context.scene.clip_name.split(",")
         if len(clip_input_names) > 0:
             for clip_input_name in clip_input_names:
@@ -394,7 +396,7 @@ class NewClipExporter(bpy.types.Operator):
     def get_clip_splits(self):
         clip_indices = [0, ]
         clip_splits = self.context.scene.clip_splits.split(",")
-        if len(clip_splits) > 0:
+        if len(clip_splits) > 1:
             for split in clip_splits:
                 clip_indices.append(int(split))
         return clip_indices
@@ -434,10 +436,21 @@ class NewClipExporter(bpy.types.Operator):
             self.clip_infos = clip_infos
         return self.clip_infos
 
+    def get_downsampled_frame_idx(self, frame, sampling_rate):
+        if sampling_rate == 1:
+            return frame
+        return frame // sampling_rate
     def execute(self, context):
         t1 = time.time()
         self.context = context
         self.clip_infos = []
+
+        # Check if the user has toggled 60 fps downsampling to 30 fps
+        if self.context.scene.downsample_60_to_30:
+            if bpy.context.scene.render.fps != 60:
+                raise ValueError("You need to set your render settings to 60 fps to downsample to 30.")
+
+
 
         source_filename = bpy.data.filepath.split(os.sep)[-1]
         ik_targets_to_bone = determine_ik_slot_targets(self.context.active_object)
@@ -482,34 +495,36 @@ class NewClipExporter(bpy.types.Operator):
 
             slot_assignment_source_bones = ik_targets_to_bone.keys()
 
-            for frame_idx in range(clip_info.start_frame, clip_info.end_frame):
+            # sampling rate. 1 for every frame, 2 for every other frame, etc.
+            # Currently used for halving the animation data for 60 fps to 30 fps.
+            sampling_rate = 1
+            if self.context.scene.downsample_60_to_30:
+                sampling_rate = 2
+
+            for frame_idx in range(clip_info.start_frame, clip_info.end_frame, sampling_rate):
                 bpy.context.scene.frame_set(frame_idx)
                 bpy.context.view_layer.update()
-                exporter.animate_recursively(frame_idx, start_frame=clip_info.start_frame, force=frame_idx == clip_info.start_frame
+                exporter.animate_recursively(self.get_downsampled_frame_idx(frame_idx, sampling_rate), start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate), force=frame_idx == clip_info.start_frame
                                                               or frame_idx == clip_info.end_frame)
 
                 for source_bone_ik in slot_assignment_source_bones:
                     for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
 
-                        ik_weight = gather_ik_weights(rig, ik_weight_animation_data, slot_assignment_info.source_bone, ik_idx, clip_info.start_frame,
-                                                      frame_idx, last_frame_influences[(slot_assignment_info.source_bone, ik_idx)])
+                        ik_weight = gather_ik_weights(rig, ik_weight_animation_data, slot_assignment_info.source_bone, ik_idx, self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
+                                                      self.get_downsampled_frame_idx(frame_idx, sampling_rate), last_frame_influences[(slot_assignment_info.source_bone, ik_idx)])
                         last_frame_influences[(slot_assignment_info.source_bone, ik_idx)] = ik_weight
 
             for source_bone_ik in slot_assignment_source_bones:
                 for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
                     exporter.add_baked_animation_data_to_frame(slot_assignment_info.source_bone,
-                                                               start_frame=clip_info.start_frame,
-                                                               end_frame=clip_info.end_frame, ik_idx=ik_idx)
-                    current_clip.clip_body.add_channel(
-                        (create_ik_weight_channels(slot_assignment_info.source_bone,
-                                                   ik_weight_animation_data[(slot_assignment_info.source_bone, ik_idx)],
-                                                   ik_idx)))
+                                                               start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
+                                                               end_frame=self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate), ik_idx=ik_idx)
+                    current_clip.clip_body.add_channel((create_ik_weight_channels(slot_assignment_info.source_bone, ik_weight_animation_data[(slot_assignment_info.source_bone, ik_idx)], ik_idx)))
 
             for channel in exporter.export_to_channels():
                 current_clip.clip_body.add_channel(new_channel=channel)
             current_clip.clip_body.set_palette_values(exporter.paletteHolder.palette_values)
-            current_clip.clip_body.set_clip_length(clip_info.end_frame - clip_info.start_frame)
-            current_clip.update_duration(clip_info.end_frame - clip_info.start_frame)
+            current_clip.update_duration(self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate)- self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate))
 
             current_clip.export(export_path=self.context.scene.s4animtools_export_path)
         t2 = time.time()
@@ -565,6 +580,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         obj = context.object
 
         layout = self.layout
+        layout.prop(context.scene, "downsample_60_to_30",text="Downsample 60 fps to 30")
         if obj is not None:
             layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
             layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
@@ -2319,6 +2335,9 @@ def register():
     bpy.types.Object.active_sim_skin = bpy.props.EnumProperty(items=update_valid_skins, update=update_active_sim_skin)
 
     bpy.types.Object.allow_slots = bpy.props.BoolProperty(default=False)
+
+    # 60 FPS downsample to 30
+    bpy.types.Scene.downsample_60_to_30 = bpy.props.BoolProperty(default=False)
 
 def unregister():
     from bpy.utils import unregister_class

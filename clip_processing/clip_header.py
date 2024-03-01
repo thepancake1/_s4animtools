@@ -85,6 +85,7 @@ class ClipResource:
     def update_duration(self, ticks):
         # -1 tick for some reason.
         self.duration = ticks / 30 - (1 / 30)
+        self.clip_body.set_clip_length(ticks)
 
     def add_explicit_namespace(self, name):
         self.explicit_namespace_count += 1
