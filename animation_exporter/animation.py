@@ -354,19 +354,30 @@ class AnimationExporter:
                                                                                force=force, ik_idx=ik_idx)
 
 
-    def add_baked_animation_data_to_frame(self, source_bone_name, start_frame, end_frame, ik_idx=-1):
+    def add_baked_animation_data_to_frame(self, source_bone_name, start_frame, end_frame, sampling_rate=1, ik_idx=-1):
+
+        if sampling_rate != 1 and sampling_rate != 2:
+            raise Exception("Sampling rate must be 1 or 2")
         translation_data_path = f'pose.bones["{source_bone_name}"].ik_pos_{ik_idx}'
         rotation_data_path = f'pose.bones["{source_bone_name}"].ik_rot_{ik_idx}'
 
         translation_channel_clip = self.animated_frame_data[source_bone_name].get_translation_channel(ik_idx)
         rotation_channel_clip = self.animated_frame_data[source_bone_name].get_rotation_channel(ik_idx)
         translations = defaultdict(dict)
+        # Convert from baked data from "Set IK Weights" into actual ik keyframe data
         for t_axis in range(3):
             fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
             for keyframe in fc_t.keyframe_points:
                 frame = math.floor(keyframe.co[0])
-                if start_frame <= frame < end_frame:
-                    translations[frame-start_frame][t_axis] = keyframe.co[1]
+                # Skip every other frame, sampling_rate == 2 means downsampling 60 to 30 fps
+                if sampling_rate == 2:
+                    if frame % 2 != 0:
+                        continue
+                # Need to divide by sampling rate to get the correct frame index
+                # Because this is 60 fps
+                downsampled_frame_idx = frame // sampling_rate
+                if start_frame <= downsampled_frame_idx < end_frame:
+                    translations[downsampled_frame_idx-start_frame][t_axis] = keyframe.co[1]
         for frame in translations:
             translation_channel_clip.add_keyframe(Vector(translations[frame].values()), frame, force=frame==0)
         rotations = defaultdict(dict)
@@ -374,9 +385,12 @@ class AnimationExporter:
             fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
             for keyframe in fc_r.keyframe_points:
                 frame = math.floor(keyframe.co[0])
-
-                if start_frame <= frame < end_frame:
-                    rotations[frame-start_frame][r_axis] = keyframe.co[1]
+                if sampling_rate == 2:
+                    if frame % 2 != 0:
+                        continue
+                downsampled_frame_idx = frame // sampling_rate
+                if start_frame <= downsampled_frame_idx < end_frame:
+                    rotations[downsampled_frame_idx-start_frame][r_axis] = keyframe.co[1]
         for frame in rotations:
             rotation_channel_clip.add_keyframe(Quaternion(rotations[frame].values()), frame, force=frame==0)
 

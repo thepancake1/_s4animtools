@@ -294,7 +294,7 @@ class NewClipExporter(bpy.types.Operator):
         self.context = None
         self.clip_infos = []
 
-    def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames):
+    def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames, sampling_rate):
         """Shifts the timestamps of the clip events depending on the split.
         So you can time it relative to the start of the blend file in blender,
         and have it reflect relative to the clip file in the export.
@@ -325,8 +325,9 @@ class NewClipExporter(bpy.types.Operator):
                 original_timestamp = parameters[0].strip()
                 if original_timestamp.startswith("//"):
                     continue
-                original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
-                                                                                              start_time)
+
+
+                original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp, start_time, sampling_rate=sampling_rate)
                 if event == SnapEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
 
@@ -336,13 +337,13 @@ class NewClipExporter(bpy.types.Operator):
                 elif event == FocusCompatibilityEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
                         _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
-                                                                                         start_time)
+                                                                                         start_time, sampling_rate=sampling_rate)
                         current_clip.add_event(
                             event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
                 elif event == SuppressLipsyncEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
                         _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
-                                                                                         start_time)
+                                                                                         start_time, sampling_rate=sampling_rate)
                         current_clip.add_event(
                             event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
                 else:
@@ -361,7 +362,7 @@ class NewClipExporter(bpy.types.Operator):
                     snap_frames.append(timeshifted_frame)
         return snap_frames
 
-    def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
+    def create_timeshifted_timestamp(self, original_timestamp_str, start_time, sampling_rate):
         if original_timestamp_str.endswith("s"):
             original_timestamp = float(original_timestamp_str[:-1])
         elif original_timestamp_str.endswith("e"):
@@ -379,6 +380,10 @@ class NewClipExporter(bpy.types.Operator):
        # else:
         timeshifted_timestamp = original_timestamp - start_time
 
+
+        if sampling_rate == 2:
+            original_timestamp = original_timestamp / 2
+            timeshifted_timestamp = timeshifted_timestamp / 2
         return original_timestamp, timeshifted_timestamp
     def get_clip_names(self):
         clip_names = []
@@ -483,8 +488,15 @@ class NewClipExporter(bpy.types.Operator):
                                         clip_info.reference_namespace_hash, clip_info.initial_offset_q,
                                         clip_info.initial_offset_t, source_filename, False, context.object.disable_rig_suffix)
             rig = self.context.object
+
+            # sampling rate. 1 for every frame, 2 for every other frame, etc.
+            # Currently used for halving the animation data for 60 fps to 30 fps.
+            sampling_rate = 1
+            if self.context.scene.downsample_60_to_30:
+                sampling_rate = 2
+
             snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
-                                            self.context.object.additional_snap_frames)
+                                            self.context.object.additional_snap_frames, sampling_rate=sampling_rate)
 
             if self.additive:
                 exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
@@ -499,11 +511,7 @@ class NewClipExporter(bpy.types.Operator):
 
             slot_assignment_source_bones = ik_targets_to_bone.keys()
 
-            # sampling rate. 1 for every frame, 2 for every other frame, etc.
-            # Currently used for halving the animation data for 60 fps to 30 fps.
-            sampling_rate = 1
-            if self.context.scene.downsample_60_to_30:
-                sampling_rate = 2
+
 
             # The +1 is for ensuring the last frame is included in the downsampled animation data.
 
@@ -524,7 +532,7 @@ class NewClipExporter(bpy.types.Operator):
                 for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
                     exporter.add_baked_animation_data_to_frame(slot_assignment_info.source_bone,
                                                                start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
-                                                               end_frame=self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate), ik_idx=ik_idx)
+                                                               end_frame=self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate), ik_idx=ik_idx, sampling_rate=sampling_rate)
                     current_clip.clip_body.add_channel((create_ik_weight_channels(slot_assignment_info.source_bone, ik_weight_animation_data[(slot_assignment_info.source_bone, ik_idx)], ik_idx)))
 
             for channel in exporter.export_to_channels():
