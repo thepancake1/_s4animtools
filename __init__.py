@@ -607,16 +607,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         obj = context.object
 
         layout = self.layout
-        layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
         layout.prop(context.scene, "downsample_60_to_30",text="Downsample 60 fps to 30")
         if obj is not None:
-            layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
+            #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
             layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
             if obj.is_s4_actor:
                 layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
                 layout.prop(obj, "actor_type", text="Actor Type")
                 if obj.actor_type == "sim":
-                    layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
+                    #layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
                     layout.prop(obj, "allow_slots", text="Allow Slots")
 
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
@@ -979,6 +978,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
                 self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
+
+            layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
+
     def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
         box = row.column()
