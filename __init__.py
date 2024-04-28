@@ -782,17 +782,17 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 # row.scale_x = 0.2
                 #  row.operator('iktarget.move', text='Down').direction = 'DOWN'
                 #  row.operator('iktarget.move', text='Up').direction = 'UP'
-                row.operator('iktarget.new', text='New').command = ""
+                row.operator('iktarget.new', text='New InGame IK Target').command = ""
                 layout = self.layout.row()
 
-                layout.operator("s4animtools.bakeik", text="Set IK Weight")
-                layout.operator("s4animtools.muteik", text="Mute IK")
-                layout.operator("s4animtools.unmuteik", text="Unmute IK")
+                layout.operator("s4animtools.bakeik", text="Bake InGame IK Animation Data")
+                #layout.operator("s4animtools.muteik", text="Mute IK")
+                #layout.operator("s4animtools.unmuteik", text="Unmute IK")
 
-                layout.operator("s4animtools.removeik", text="Remove IK")
+                #layout.operator("s4animtools.removeik", text="Remove IK")
 
-                layout.operator("s4animtools.preview_ik", text="Preview IK")
-                layout.operator("s4animtools.update_ik_empties", text="Update IK Empties")
+                #layout.operator("s4animtools.preview_ik", text="Preview IK")
+                #layout.operator("s4animtools.update_ik_empties", text="Update IK Empties")
                 layout.scale_x = 1
 
                 layout = self.layout.row()
@@ -926,6 +926,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
             if obj.is_enabled_for_animation:
+                self.layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
                 self.layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
 
                 self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
@@ -1694,6 +1695,23 @@ class OT_S4ANIMTOOLS_CreateIKRig(bpy.types.Operator):
 
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_SelectExportDirectory(bpy.types.Operator):
+    bl_idname = "s4animtools.select_export_path"
+    bl_label = "Select Export Path"
+    bl_options = {'REGISTER'}
+
+    directory: bpy.props.StringProperty(
+        name="Outdir Path")
+
+    def execute(self, context):
+        bpy.context.scene.s4animtools_export_path = self.directory
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 class OT_S4ANIMTOOLS_DetermineBalance(bpy.types.Operator):
     bl_idname = "s4animtools.determine_balance"
     bl_label = "determine_balance"
@@ -2210,7 +2228,7 @@ classes = (
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
-OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips)
+OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory)
 
 def update_selected_bones(self, context):
     pass
