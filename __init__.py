@@ -933,35 +933,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
 
                 self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
+                self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
 
-                # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone\
                 self.layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
 
-               # self.layout.label(text="Clip Split Points are the points in the animation where the clip will be split.")
-               # self.layout.label(text="This is useful for animations that have multiple parts.")
-               # self.layout.label(text="For example, a dance animation that has a start, loop, and end.")
-               # self.layout.label(text="You can specify multiple clip split points with commas.")
-               # self.layout.label(text="Example: 30,75,110")
-               # self.layout.label(text="If you only have one clip, enter it without a comma.")
                 self.layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix(es)")  # clip_name_prefix
-              #  self.layout.label(text="The clip name prefix is the prefix that will be added to the clip name.")
-              #  self.layout.label(text="If your clip names all start with a2o_dance, for example.")
-              #  self.layout.label(text="You can specify a clip name prefix of a2o_dance.")
-              #  self.layout.label(text="If you don't want to use a clip name prefix, leave this blank.")
+
 
 
                 self.layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
-             #   self.layout.label(text="If you have more than one clip in this blend file.")
-             #   self.layout.label(text="you can specify multiple clip names with commas.")
-             #   self.layout.label(text="Example: a2o_dance_start,a2o_dance_loop,a2o_dance_end")
-             #   self.layout.label(text="If you only have one clip name, enter it without a comma.")
-                self.layout.prop(obj, "is_overlay", text="Is Overlay")
-
-                self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
-              #  self.layout.label(text="Disable the rig suffix. For example:")
-              #  self.layout.label(text="a2o_dance_start would become a2o_dance_start_x")
-              #  self.layout.label(text="if you were exporting a clip for the x rig.")
-
                 self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
 
               #  layout.label(text="The world rig is where the root of your exported animation will be located.")
@@ -978,7 +958,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
                 self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
-                self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
+                self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
+                self.layout.prop(obj, "is_overlay", text="Is Overlay")
 
             layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
 
