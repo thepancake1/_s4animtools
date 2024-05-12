@@ -1,5 +1,5 @@
-from _s4animtools.serialization.types.basic import UInt16
-from _s4animtools.frames.frame import Frame
+from s4animtools.serialization.types.basic import UInt16
+from s4animtools.frames.frame import Frame
 
 class F1NormalizedFrame(Frame):
     def set_frame_data(self, startTick, value, snap_frame):

@@ -4,39 +4,39 @@ import time
 import math
 import importlib
 
-import _s4animtools.bone_names
-from _s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
-from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
+import s4animtools.bone_names
+from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
+from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
-from _s4animtools.rig.create_rig import Trackmask
-from _s4animtools.rig_tools import ExportRig, SyncRigToMesh
-from _s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
+from s4animtools.rig.create_rig import Trackmask
+from s4animtools.rig_tools import ExportRig, SyncRigToMesh
+from s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent
-from _s4animtools.serialization.types.basic import Float32, UInt32
-from _s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
-from _s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
+from s4animtools.serialization.types.basic import Float32, UInt32
+from s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
+from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
 
-from _s4animtools.rig.create_rig import create_rig_with_context
-import _s4animtools.clip_processing.clip_header
-import _s4animtools.rig
-import _s4animtools.channels.f1_normalized_channel
-import _s4animtools.channels.translation_channel
-import _s4animtools.channels.loco_channel
-import _s4animtools.channels.palette_channel
-import _s4animtools.channels.quaternion_channel
-import _s4animtools.control_rig.basic_control_rig
-import _s4animtools.frames.frame
-from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
+from s4animtools.rig.create_rig import create_rig_with_context
+import s4animtools.clip_processing.clip_header
+import s4animtools.rig
+import s4animtools.channels.f1_normalized_channel
+import s4animtools.channels.translation_channel
+import s4animtools.channels.loco_channel
+import s4animtools.channels.palette_channel
+import s4animtools.channels.quaternion_channel
+import s4animtools.control_rig.basic_control_rig
+import s4animtools.frames.frame
+from s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig, FlipLeftSideAnimationToRightSideSim
-from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
+from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
     LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget
-import _s4animtools.animation_exporter.animation
-from _s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
-import _s4animtools.rig.create_rig
-from _s4animtools.serialization.types.transforms import Vector3, Quaternion4
-import _s4animtools.clip_processing.clip_body
-import _s4animtools.clip_processing.f1_palette
+import s4animtools.animation_exporter.animation
+from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
+import s4animtools.rig.create_rig
+from s4animtools.serialization.types.transforms import Vector3, Quaternion4
+import s4animtools.clip_processing.clip_body
+import s4animtools.clip_processing.f1_palette
 from bpy_extras.io_utils import ImportHelper
 from mathutils import Vector, Quaternion, Matrix
 from bpy.props import IntProperty, CollectionProperty, FloatProperty
@@ -45,7 +45,7 @@ from collections import defaultdict
 JAW_ANIMATE_DURATION = 100000
 
 CHAIN_STR_IDX = 2
-bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
+bl_info = {"name": "s4animtools", "category": "Object", "blender": (2, 80, 0)}
 
 
 
@@ -164,7 +164,7 @@ def determine_ik_slot_targets(rig):
 
 
 def create_ik_weight_channels(bone_name, influences, sequence_count):
-    f1normalized_channel = _s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14 + sequence_count)
+    f1normalized_channel = s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14 + sequence_count)
     min_value, max_value = min(influences.values()), max(influences.values())
     offset = (min_value + max_value) / 2
     scale = -((min_value - max_value) / 2)
@@ -186,7 +186,7 @@ def gather_ik_weights(obj, influences, bone_name, ik_weight_idx, start_frame, cu
 
 def set_loco_world_ik(bone_name, clip_start, clip_end):
     """Record the IK weight of each IK constraint from the actual constraint in Blender."""
-    f1normalized_channel = _s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14)
+    f1normalized_channel = s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14)
     influences = {}
     min_value, max_value = 1, 1
     influences[0] = 1
@@ -1187,7 +1187,7 @@ class OT_S4ANIMTOOLS_ApplyTrackmask(bpy.types.Operator, ImportHelper):
         trackmask = Trackmask().read(self.properties.filepath)
         arm = context.object
         base_arm = bpy.data.objects[context.object.name.replace("_blended", "_base")]
-        human_bones = _s4animtools.bone_names.human_bones
+        human_bones = s4animtools.bone_names.human_bones
         for bone in arm.pose.bones:
             if bone.name in human_bones:
                 for c in bone.constraints:

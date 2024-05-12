@@ -1,5 +1,5 @@
-from _s4animtools.serialization.types.basic import Float32
-from _s4animtools.serialization import Serializable
+from s4animtools.serialization.types.basic import Float32
+from s4animtools.serialization import Serializable
 
 """
 Transform Types are types used for representing exported data 

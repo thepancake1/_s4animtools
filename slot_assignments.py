@@ -1,8 +1,8 @@
-from _s4animtools.serialization.types.basic import UInt32, UInt16
-import _s4animtools.clip_processing
+from s4animtools.serialization.types.basic import UInt32, UInt16
+import s4animtools.clip_processing
 import importlib
 
-importlib.reload(_s4animtools.clip_processing.clip_body)
+importlib.reload(s4animtools.clip_processing.clip_body)
 
 
 class SlotAssignment:

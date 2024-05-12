@@ -1,4 +1,4 @@
-from _s4animtools.serialization.types.basic import UInt64, UInt32
+from s4animtools.serialization.types.basic import UInt64, UInt32
 
 
 def get_addon_path():

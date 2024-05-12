@@ -1,5 +1,5 @@
-from _s4animtools.serialization.types.basic import UInt32, String
-from _s4animtools.serialization import Serializable
+from s4animtools.serialization.types.basic import UInt32, String
+from s4animtools.serialization import Serializable
 
 """
 Transform Types are types used for representing exported data 

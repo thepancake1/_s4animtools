@@ -1,5 +1,5 @@
-from _s4animtools.serialization.types.basic import UInt32, Serializable
-from _s4animtools.serialization.types.basic import UInt64
+from s4animtools.serialization.types.basic import UInt32, Serializable
+from s4animtools.serialization.types.basic import UInt64
 
 
 class TGI(Serializable):

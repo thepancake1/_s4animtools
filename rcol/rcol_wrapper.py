@@ -2,21 +2,21 @@ import io
 import math
 import os
 import traceback
-import _s4animtools
+import s4animtools
 
-from _s4animtools.rcol.footprints import Footprint, Area, Point
-from _s4animtools.serialization.types.tgi import TGI
-from _s4animtools.rcol.skin import Skin
-from _s4animtools.serialization.types.basic import UInt32, Bytes
-from _s4animtools.serialization import get_size
-from _s4animtools.stream import StreamReader
+from s4animtools.rcol.footprints import Footprint, Area, Point
+from s4animtools.serialization.types.tgi import TGI
+from s4animtools.rcol.skin import Skin
+from s4animtools.serialization.types.basic import UInt32, Bytes
+from s4animtools.serialization import get_size
+from s4animtools.stream import StreamReader
 import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
 from math import radians
 from mathutils import Vector
 import bmesh
-from _s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash, hash_name_or_get_hash_64
+from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash, hash_name_or_get_hash_64
 
 from math import pi
 def get_combined_len(value):
@@ -450,7 +450,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
         if not os.path.exists(anim_path):
             os.mkdir(anim_path)
         try:
-            _s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
+            s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
         except:
             print(traceback.format_exc())
 

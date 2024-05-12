@@ -1,14 +1,14 @@
 import io
 import os
 import importlib
-import _s4animtools.clip_processing
-import _s4animtools.serialization
-from _s4animtools.serialization.types.basic import UInt32, Float32, String
-from _s4animtools.clip_processing.clip_body import ClipBody
-from _s4animtools.serialization import get_size
-from _s4animtools.serialization.fnv import get_64bithash
-from _s4animtools.slot_assignments import SlotAssignment
-importlib.reload(_s4animtools.clip_processing.clip_body)
+import s4animtools.clip_processing
+import s4animtools.serialization
+from s4animtools.serialization.types.basic import UInt32, Float32, String
+from s4animtools.clip_processing.clip_body import ClipBody
+from s4animtools.serialization import get_size
+from s4animtools.serialization.fnv import get_64bithash
+from s4animtools.slot_assignments import SlotAssignment
+importlib.reload(s4animtools.clip_processing.clip_body)
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
                            "b__L_Foot__" : 2, "b__R_Foot__" : 3,
@@ -143,7 +143,7 @@ class ClipResource:
             all_data = io.BytesIO()
             # offsets
 
-            _s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
+            s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
             write_data = all_data.getvalue()
 
             file.write(write_data)

@@ -1,6 +1,6 @@
-from _s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Byte, UInt64
+from s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Byte, UInt64
 
-from _s4animtools.serialization.fnv import hash_name_or_get_hash
+from s4animtools.serialization.fnv import hash_name_or_get_hash
 
 
 def get_null_terminated_string(string):

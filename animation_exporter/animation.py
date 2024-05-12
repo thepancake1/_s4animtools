@@ -1,15 +1,15 @@
-from _s4animtools.serialization.types.basic import UInt32
-from _s4animtools.rig_constants import slot
-from _s4animtools.channels.translation_channel import Vector3Channel
-from _s4animtools.channels.quaternion_channel import QuaternionChannel
-from _s4animtools.channels.palette_channel import PaletteTranslationChannel
-from _s4animtools.frames.frame import PaletteTranslationFrame, PaletteFrame
-from _s4animtools.clip_processing.f1_palette import F1Palette
+from s4animtools.serialization.types.basic import UInt32
+from s4animtools.rig_constants import slot
+from s4animtools.channels.translation_channel import Vector3Channel
+from s4animtools.channels.quaternion_channel import QuaternionChannel
+from s4animtools.channels.palette_channel import PaletteTranslationChannel
+from s4animtools.frames.frame import PaletteTranslationFrame, PaletteFrame
+from s4animtools.clip_processing.f1_palette import F1Palette
 from collections import defaultdict
 from mathutils import Vector, Quaternion
-from _s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
+from s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
-import _s4animtools
+import s4animtools
 ENABLE_SCALE = True
 F4_QuaternionIdentity = 17
 
@@ -424,7 +424,7 @@ class AnimationExporter:
                 location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
 
                 self.exported_channels.append(location_channel)
-                rotation_channel = _s4animtools.channels.quaternion_channel.QuaternionChannel("loco", F4_QuaternionIdentity, 2)
+                rotation_channel = s4animtools.channels.quaternion_channel.QuaternionChannel("loco", F4_QuaternionIdentity, 2)
                 rotation_channel.set_channel_data(0, 1, {}, self.snap_frames)
                 rotation_channel._target = UInt32(720414894)
                 self.exported_channels.append(rotation_channel)

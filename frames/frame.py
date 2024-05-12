@@ -1,4 +1,4 @@
-from _s4animtools.serialization.types.basic import UInt16
+from s4animtools.serialization.types.basic import UInt16
 
 
 class Frame:

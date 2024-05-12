@@ -1,5 +1,5 @@
-from _s4animtools.serialization.types.basic import UInt32, Float32, String, UInt16, Byte
-from _s4animtools.serialization import get_size
+from s4animtools.serialization.types.basic import UInt32, Float32, String, UInt16, Byte
+from s4animtools.serialization import get_size
 
 # You will need to update this should serialize_order change
 F1_PALETTE_SIZE = -5

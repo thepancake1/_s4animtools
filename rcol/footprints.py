@@ -1,7 +1,7 @@
-from _s4animtools.serialization.types.basic import UInt32, Float32, Serializable
-from _s4animtools.serialization.types.basic import Byte, Bytes
-from _s4animtools.serialization.types.tgi import TGI
-from _s4animtools.stream import StreamReader
+from s4animtools.serialization.types.basic import UInt32, Float32, Serializable
+from s4animtools.serialization.types.basic import Byte, Bytes
+from s4animtools.serialization.types.tgi import TGI
+from s4animtools.stream import StreamReader
 def get_combined_len(value):
     size = 0
     if isinstance(value, list):

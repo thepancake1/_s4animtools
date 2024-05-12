@@ -1,13 +1,13 @@
 import importlib
-import _s4animtools.frames.translation_frame
-from _s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
-import _s4animtools.serialization
-import _s4animtools.channels.quaternion_channel
+import s4animtools.frames.translation_frame
+from s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
+import s4animtools.serialization
+import s4animtools.channels.quaternion_channel
 import math
-from _s4animtools.channels.palette_channel import PaletteTranslationChannel
-importlib.reload(_s4animtools.channels.quaternion_channel)
-importlib.reload(_s4animtools.frames.translation_frame)
-class Vector3Channel(_s4animtools.channels.quaternion_channel.QuaternionChannel):
+from s4animtools.channels.palette_channel import PaletteTranslationChannel
+importlib.reload(s4animtools.channels.quaternion_channel)
+importlib.reload(s4animtools.frames.translation_frame)
+class Vector3Channel(s4animtools.channels.quaternion_channel.QuaternionChannel):
     def serialize_data(self, value):
         return UInt16(value)
 
@@ -23,7 +23,7 @@ class Vector3Channel(_s4animtools.channels.quaternion_channel.QuaternionChannel)
         self._frame_count = len(self._individual_frames)
 
         for idx, values in self._individual_frames.items():
-            single_frame = _s4animtools.frames.translation_frame.TranslationFrame()
+            single_frame = s4animtools.frames.translation_frame.TranslationFrame()
             single_frame.set_frame_data(idx, list(map(self.normalize_offset_scale, values)), idx in snap_frames)
             single_frame._frame_data = list(map(self.quantize_data, single_frame._frame_data))
             single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
