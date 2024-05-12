@@ -1,3 +1,5 @@
+import json
+
 import bpy
 import os
 import time
@@ -42,7 +44,13 @@ from mathutils import Vector, Quaternion, Matrix
 from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
+
+# Current version used for serialization.
+# Useful for writing versioned code!
+# Programmers hate this one weird trick for not breaking backwards compatibility!!
+CURRENT_S4ANIMTOOLS_VERSION = 1
 JAW_ANIMATE_DURATION = 100000
+
 
 CHAIN_STR_IDX = 2
 bl_info = {"name": "s4animtools", "category": "Object", "blender": (2, 80, 0)}
@@ -312,6 +320,17 @@ class NewClipExporter(bpy.types.Operator):
                              context.object.disable_lipsync_events_list: SuppressLipsyncEvent,
                              context.object.stop_effect_events_list: StopEffectEvent}
         snap_frames = []
+
+        # New UI Sound events widget
+        # These ones have separate parameter fields
+        for event in context.object.sound_events_list_UI:
+            original_timestamp = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(event(timeshifted_timestamp, event.sound_name))
 
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
@@ -607,6 +626,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         obj = context.object
 
         layout = self.layout
+        old_version = False
+        for obj in context.scene.objects:
+            if len(obj.sound_events_list_UI) > 0:
+                old_version = True
+                break
+
+        if old_version:
+            layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
+
         layout.prop(context.scene, "downsample_60_to_30",text="Downsample 60 fps to 30")
         if obj is not None:
             #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
@@ -857,6 +885,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
                                  "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"])
+
+                for idx, item in enumerate(obj.sound_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    self.layout.row().prop(item, "sound_name", text="Sound")
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"sound_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"sound_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"sound_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"sound_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+
+                if len(obj.sound_events_list_UI) == 0:
+                    row =  self.layout.row()
+                    row.operator("s4animtools.add_sound_events_list_ui", text="+")
+
                 self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
                                  "Script Events",
                                  self.layout, parameters=["Frame", "Script Xevt"])
@@ -1121,6 +1165,22 @@ class IKTarget(PropertyGroup):
 class AnimationEvent(PropertyGroup):
     info: bpy.props.StringProperty()
 
+class SoundEventInfo(PropertyGroup):
+    @property
+    def info(self):
+        return json.dumps({"frame_number" : self.frame_number, "sound_name" : self.sound_name})
+
+    @info.setter
+    def info(self, value):
+        try:
+            value = json.loads(value)
+
+            self.frame_number = value["frame_number"]
+            self.sound_name = value["sound_name"]
+        except json.decoder.JSONDecodeError:
+            pass
+    frame_number : bpy.props.IntProperty()
+    sound_name : bpy.props.StringProperty()
 
 class ClipData(PropertyGroup):
     clip_name: bpy.props.StringProperty()
@@ -1226,6 +1286,24 @@ class InitializeEvents(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class OT_S4ANIMTOOLS_AddSoundEventsListUI(bpy.types.Operator):
+    bl_idname = "s4animtools.add_sound_events_list_ui"
+    bl_label = "Add Events"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        if len(context.object.sound_events_list_UI) == 0:
+            context.object.sound_events_list_UI.add()
+        return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_UpgradeData(bpy.types.Operator):
+    bl_idname = "s4animtools.upgrade_data"
+    bl_label = "upgrade_data"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        handle_version_upgrade(context)
+        return {"FINISHED"}
 def update_initial_offsets(self, context):
     active_object_root = context.active_object.pose.bones["b__ROOT__"]
     if context.object.relative_rig == "":
@@ -2201,18 +2279,39 @@ classes = (
     S4ANIMTOOLS_PT_MainPanel,
     TimeRange,
     IKTarget, s4animtool_PT_IKTargetPanel, LIST_OT_NewIKTarget, LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget,
-    s4animtool_OT_bakeik, s4animtool_OT_removeIK,s4animtools_OT_guessTarget,
+    s4animtool_OT_bakeik, s4animtool_OT_removeIK, s4animtools_OT_guessTarget,
     BeginIKMarker, s4animtool_OT_unmute_ik, s4animtool_OT_mute_ik, NewClipExporter, PositionConfig, QuaternionConfig,
     ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig,
     CopySelectedLeftSideToRightSide, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
-OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory)
+    OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData)
 
 def update_selected_bones(self, context):
     pass
+
+
+def handle_version_upgrade(context):
+    old_version = context.scene.s4animtools_version
+    # This code handles upgrading the addon from an older version.
+
+    # This portion handles updating from older versions of the code before the version var was added.
+    # This always runs.'
+
+    for obj in context.scene.objects:
+        if len(obj.sound_events_list) > 0:
+            for event in obj.sound_events_list:
+                if event.info != "":
+                    frame_number, sound_name = event.info.split(",")
+                    obj.sound_events_list_UI.add()
+                    obj.sound_events_list_UI[-1].frame_number = int(frame_number)
+                    obj.sound_events_list_UI[-1].sound_name = sound_name
+
+
+    context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register():
     """Register classes for the things."""
@@ -2302,6 +2401,9 @@ def register():
 
     bpy.types.Object.parent_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.sound_events_list = CollectionProperty(type=AnimationEvent)
+    # New version where each events list get their own unique "bespoke" UI.
+    bpy.types.Object.sound_events_list_UI = CollectionProperty(type=SoundEventInfo)
+
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.play_effect_events_list = CollectionProperty(type=AnimationEvent)
@@ -2375,6 +2477,7 @@ def register():
     # 60 FPS downsample to 30
     bpy.types.Scene.downsample_60_to_30 = bpy.props.BoolProperty(default=False)
 
+    bpy.types.Scene.s4animtools_version = IntProperty(default=CURRENT_S4ANIMTOOLS_VERSION)
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
