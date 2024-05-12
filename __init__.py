@@ -2396,29 +2396,22 @@ def unregister():
     del bpy.types.Object.ik_idx
     del bpy.types.Object.rig_name
     del bpy.types.Object.reset_initial_offset_t
-    del bpy.types.Object.parent_events
-    del bpy.types.Object.sound_events
     del bpy.types.Object.explicit_namespaces
     del bpy.types.Object.reference_namespace_hash
     del bpy.types.Object.initial_offset_q
     del bpy.types.Object.initial_offset_t
     del bpy.types.Object.snap_events
     del bpy.types.Object.additional_snap_frames
-    del bpy.types.Object.visibility_events
     del bpy.types.Object.base_rig
     del bpy.types.Object.world_rig
     del bpy.types.Object.world_bone
-    del bpy.types.Object.reaction_events
-    del bpy.types.Object.play_effect_events
-    del bpy.types.Object.stop_effect_events
-    del bpy.types.Object.disable_lipsync_events
+
 
     # bpy.types.Object.script_idx = IntProperty(name="Index for my_list", default=0)
     # bpy.types.Object.sound_idx = IntProperty(name="Index for sound_idx", default=0)
     # bpy.types.Object.actor_idx = IntProperty(name="Index for actors", default=0)
     # bpy.types.Object.state_idx = IntProperty(name="Index for state", default=0)
     #  bpy.types.Object.clip_idx = IntProperty(name="Index for clip", default=0)
-    del bpy.types.Scene.is_overlay
 
     del bpy.types.Scene.watcher_running
     del bpy.types.Scene.clip_name
