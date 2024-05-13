@@ -319,6 +319,8 @@ class NewClipExporter(bpy.types.Operator):
                              context.object.focus_compatibility_events_list: FocusCompatibilityEvent,
                              context.object.disable_lipsync_events_list: SuppressLipsyncEvent,
                              context.object.stop_effect_events_list: StopEffectEvent}
+
+
         snap_frames = []
 
         # New UI Sound events widget
@@ -328,9 +330,33 @@ class NewClipExporter(bpy.types.Operator):
             original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
                                                                                           start_time,
                                                                                           sampling_rate=sampling_rate)
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(SoundEvent(timeshifted_timestamp, event.sound_name))
+
+        for event in context.object.snap_events_list_UI:
+            original_timestamp_frame = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp_frame,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+
+            target_rig_object = context.scene.objects[event.target_actor]
+            if target_rig_object.rig_name.strip() == "":
+                raise Exception(f"Targeting {target_rig_object}, but it has no rig name. This will not work so fix this and try again")
+
+
+            # For snap events, the event must start on the first frame the sim is snapped on. NOT the frame where before they snap
+            context.scene.frame_set(original_timestamp_frame)
+            active_rig = context.object
+            active_rig_root = context.object.pose.bones["b__ROOT__"]
+            target_rig = target_rig_object
+            target_rig_root = target_rig.pose.bones[event.target_bone]
+
+            translation, rotation = get_offset(active_rig, active_rig_root, target_rig, target_rig_root)
 
             if frame_time >= timeshifted_timestamp >= 0:
-                current_clip.add_event(event(timeshifted_timestamp, event.sound_name))
+                current_clip.add_event(SnapEvent(timeshifted_timestamp,  target_rig_object.rig_name.strip(),
+                                                 str(round(translation[0], 4)), str(round(translation[1], 4)), str(round(translation[2], 4)),
+                                                 str(round(rotation[1], 4)), str(round(rotation[2], 4)), str(round(rotation[3], 4)), str(round(rotation[0], 4))))
 
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
@@ -382,14 +408,20 @@ class NewClipExporter(bpy.types.Operator):
         return snap_frames
 
     def create_timeshifted_timestamp(self, original_timestamp_str, start_time, sampling_rate):
-        if original_timestamp_str.endswith("s"):
-            original_timestamp = float(original_timestamp_str[:-1])
-        elif original_timestamp_str.endswith("e"):
-            original_timestamp = float(eval(original_timestamp_str[:-1]))
-        elif original_timestamp_str.endswith("f"):
-            original_timestamp = float(original_timestamp_str[:-1]) / 30
+        # For the new events widgets that are ui based instead of being a sad csv
+        if isinstance(original_timestamp_str, int):
+            # / 30 for frame to second, then sampling rate for 60 to 30 downsample
+            original_timestamp = original_timestamp_str / 30 / sampling_rate
+
         else:
-            original_timestamp = float(original_timestamp_str) / 30
+            if original_timestamp_str.endswith("s"):
+                original_timestamp = float(original_timestamp_str[:-1])
+            elif original_timestamp_str.endswith("e"):
+                original_timestamp = float(eval(original_timestamp_str[:-1]))
+            elif original_timestamp_str.endswith("f"):
+                original_timestamp = float(original_timestamp_str[:-1]) / 30
+            else:
+                original_timestamp = float(original_timestamp_str) / 30
 
         # What is relative mode???
        # # IF it ends with r (relative), then we don't need to shift from absolute to relative,
@@ -590,15 +622,16 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         if getattr(obj, property_name, "") != "":
             layout.prop(obj, property_name)
 
-    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None):
+    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None, editable=True):
+        # Editable parameter was added so I can disable the old sound effects event list from being used
         events_list = getattr(obj, events_list_name)
+        #print(f"{obj} - {len(events_list)} - {events_list_name}")
         layout.label(
             text=f"{event_name}: {len(events_list)} - {description}")
         for idx, item in enumerate(events_list):
             row = layout.row()
             if item.info != "":
                 if parameters is not None:
-                    concat_string = ""
                     parameter_list = list(zip(parameters, item.info.split(",")))
                     for key, value in parameter_list:
                         layout.row().label(text=f"{key}: {value}")
@@ -609,7 +642,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                         layout.row().label(text="Not enough parameters.")
                     if len(parameters) < len(item.info.split(",")):
                         layout.row().label(text="Too many parameters.")
-                   # layout.row().label(text=concat_string[:-2])
             row2 = row.row()
             row.scale_x = x_scale
 
@@ -619,7 +651,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             row.operator('s4animtools.move_new_element', text='↑').args = f"{events_list_name},{idx},up"
             row.operator('s4animtools.move_new_element', text='↓').args = f"{events_list_name},{idx},down"
             row.operator('s4animtools.move_new_element', text='✖').args = f"{events_list_name},{idx},delete"
-            row.operator('s4animtools.move_new_element', text='+').args = f"{events_list_name},{idx},create"
+            if editable:
+                row.operator('s4animtools.move_new_element', text='+').args = f"{events_list_name},{idx},create"
         layout.label(text="")
 
     def draw(self, context):
@@ -627,8 +660,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
         layout = self.layout
         old_version = False
-        for obj in context.scene.objects:
-            if len(obj.sound_events_list_UI) > 0:
+
+        # There used to be a bug here where this used to be called obj and was causing it to replace the original obj defined just before.
+        for obj_maybe_needs_update in context.scene.objects:
+            if len(obj_maybe_needs_update.sound_events_list) > 0:
                 old_version = True
                 break
 
@@ -884,7 +919,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
 
                 self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
-                                 "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"])
+                                 "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"], editable=False)
 
                 for idx, item in enumerate(obj.sound_events_list_UI):
                     self.layout.row().prop(item, "frame_number", text="Frame")
@@ -898,8 +933,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     self.layout.row().label(text="")
 
                 if len(obj.sound_events_list_UI) == 0:
-                    row =  self.layout.row()
-                    row.operator("s4animtools.add_sound_events_list_ui", text="+")
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"sound_events_list_UI,{0},create"
 
                 self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
                                  "Script Events",
@@ -907,6 +941,25 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
                                  "Snap Events", self.layout,
                                  parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ])
+
+                for idx, item in enumerate(obj.snap_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    self.layout.row().prop_search(item, "target_actor", context.scene, "objects", text="Target Actor")
+                    if item.target_actor != "":
+                        self.layout.row().prop_search(item, "target_bone", context.scene.objects[item.target_actor].pose, "bones",
+                                               text="Target Bone")
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"snap_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"snap_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"snap_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"snap_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+
+                if len(obj.snap_events_list_UI) == 0:
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"snap_events_list_UI,{0},create"
+
+
                 self.draw_events(obj, "reaction_events_list", 0.1,
                                  "Parameters (Frame Number/Reaction ASM/Reaction State)",
                                  "Reaction Events", self.layout,
@@ -1182,6 +1235,27 @@ class SoundEventInfo(PropertyGroup):
     frame_number : bpy.props.IntProperty()
     sound_name : bpy.props.StringProperty()
 
+
+
+class SnapEventInfo(PropertyGroup):
+    @property
+    def info(self):
+        return json.dumps({"frame_number" : self.frame_number, "target_actor" : self.target_actor, "target_bone" : self.target_bone})
+
+    @info.setter
+    def info(self, value):
+        try:
+            value = json.loads(value)
+
+            self.frame_number = value["frame_number"]
+            self.target_actor = value["target_actor"]
+            self.target_bone = value["target_bone"]
+        except json.decoder.JSONDecodeError:
+            pass
+    frame_number : bpy.props.IntProperty()
+    target_actor : bpy.props.StringProperty()
+    target_bone : bpy.props.StringProperty()
+
 class ClipData(PropertyGroup):
     clip_name: bpy.props.StringProperty()
     clip_uses_prefix: bpy.props.BoolProperty()
@@ -1304,6 +1378,20 @@ class OT_S4ANIMTOOLS_UpgradeData(bpy.types.Operator):
     def execute(self, context):
         handle_version_upgrade(context)
         return {"FINISHED"}
+def get_offset(source_obj, source_root, target_obj, target_bone):
+    object_matrix = target_obj.matrix_world @ target_bone.matrix
+    actor_matrix = source_obj.matrix_world @ source_root.matrix
+    offset = object_matrix.inverted() @ actor_matrix
+
+    rotation = offset.to_quaternion()
+    translation = offset.to_translation()
+
+    return translation, rotation
+def format_offset_to_list(translation, rotation):
+    translation_list = [translation[0],translation[1],translation[2]]
+    rotation_list = [rotation[1], rotation[2], rotation[3] ,rotation[0]]
+    return translation_list, rotation_list
+
 def update_initial_offsets(self, context):
     active_object_root = context.active_object.pose.bones["b__ROOT__"]
     if context.object.relative_rig == "":
@@ -1312,13 +1400,8 @@ def update_initial_offsets(self, context):
     else:
         relative_rig = bpy.data.objects[context.object.relative_rig]
         relative_bone = relative_rig.pose.bones[context.object.relative_bone]
-    object_matrix = relative_rig.matrix_world @ relative_bone.matrix
-    x_matrix = context.active_object.matrix_world @ active_object_root.matrix
-    offset = object_matrix.inverted() @ x_matrix
 
-    rotation = offset.to_quaternion()
-    translation = offset.to_translation()
-
+    translation, rotation = get_offset(context.active_object, active_object_root, relative_rig, relative_bone)
     # It bothered me far too much to have the height sticking out of the ground or under the ground.
     # This shouldn't actually do anything in game, just for my own sanity.
 
@@ -2288,7 +2371,7 @@ classes = (
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
-    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData)
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo)
 
 def update_selected_bones(self, context):
     pass
@@ -2303,14 +2386,14 @@ def handle_version_upgrade(context):
 
     for obj in context.scene.objects:
         if len(obj.sound_events_list) > 0:
+            # Iterate through all sound events and upgrade them to the new format.
             for event in obj.sound_events_list:
                 if event.info != "":
                     frame_number, sound_name = event.info.split(",")
                     obj.sound_events_list_UI.add()
                     obj.sound_events_list_UI[-1].frame_number = int(frame_number)
                     obj.sound_events_list_UI[-1].sound_name = sound_name
-
-
+            obj.sound_events_list.clear()
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register():
@@ -2403,6 +2486,7 @@ def register():
     bpy.types.Object.sound_events_list = CollectionProperty(type=AnimationEvent)
     # New version where each events list get their own unique "bespoke" UI.
     bpy.types.Object.sound_events_list_UI = CollectionProperty(type=SoundEventInfo)
+    bpy.types.Object.snap_events_list_UI = CollectionProperty(type=SnapEventInfo)
 
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
