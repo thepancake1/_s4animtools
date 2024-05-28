@@ -338,7 +338,8 @@ class NewClipExporter(bpy.types.Operator):
             original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp_frame,
                                                                                           start_time,
                                                                                           sampling_rate=sampling_rate)
-
+            snap_frames.append(math.floor(timeshifted_timestamp * 30))
+            print("Snap frames: {}".format(snap_frames))
             target_rig_object = context.scene.objects[event.target_actor]
             if target_rig_object.rig_name.strip() == "":
                 raise Exception(f"Targeting {target_rig_object}, but it has no rig name. This will not work so fix this and try again")
