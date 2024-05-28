@@ -94,9 +94,14 @@ class RCOL:
                # print(stream.tell())
             elif "FTPT" in tag:
                 chunk_data = Footprint().read(stream)
-
             else:
-                chunk_data = Bytes(stream.read(self.chunk_info[i].chunk_size))
+                print(hex(self.internal_tgis[i].t))
+                if self.internal_tgis[i].t == 0x355E0A6:
+                    from s4animtools.rcol.bone_delta import BoneDelta
+                    chunk_data = BoneDelta().read(stream)
+
+                else:
+                    chunk_data = Bytes(stream.read(self.chunk_info[i].chunk_size))
             self.chunk_data.append(chunk_data)
         return self
 
@@ -446,16 +451,20 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
         rcol.update_chunk_position_size_automatically(0)
 
         all_data = io.BytesIO()
-        anim_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
-        if not os.path.exists(anim_path):
-            os.mkdir(anim_path)
+        default_export_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
+        selected_export_path = context.scene.s4animtools_export_path
+        if selected_export_path == "":
+            selected_export_path = default_export_path
+
+        if not os.path.exists(selected_export_path):
+            os.mkdir(selected_export_path)
         try:
             s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
         except:
             print(traceback.format_exc())
 
 
-        with open(os.path.join(anim_path, f"D382BF57!80000000!{hex(new_tgi.i).upper()[2:]}.Footprint.binary"), "wb") as file:
+        with open(os.path.join(selected_export_path, f"D382BF57!80000000!{hex(new_tgi.i).upper()[2:]}.Footprint.binary"), "wb") as file:
             file.write(all_data.getvalue())
 
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
@@ -535,6 +544,8 @@ class OT_S4ANIMTOOLS_VisualizeFootprint(bpy.types.Operator):
                     else:
                         obj.active_material = red_material
         return {"FINISHED"}
+
+
 
 if __name__ == "__main__":
     pass

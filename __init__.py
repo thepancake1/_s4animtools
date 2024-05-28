@@ -347,7 +347,7 @@ class NewClipExporter(bpy.types.Operator):
             # For snap events, the event must start on the first frame the sim is snapped on. NOT the frame where before they snap
             context.scene.frame_set(original_timestamp_frame)
             active_rig = context.object
-            active_rig_root = context.object.pose.bones["b__ROOT__"]
+            active_rig_root = context.object.pose.bones['b__ROOT__']
             target_rig = target_rig_object
             target_rig_root = target_rig.pose.bones[event.target_bone]
 
@@ -411,7 +411,7 @@ class NewClipExporter(bpy.types.Operator):
         # For the new events widgets that are ui based instead of being a sad csv
         if isinstance(original_timestamp_str, int):
             # / 30 for frame to second, then sampling rate for 60 to 30 downsample
-            original_timestamp = original_timestamp_str / 30 / sampling_rate
+            original_timestamp = original_timestamp_str / 30
 
         else:
             if original_timestamp_str.endswith("s"):
@@ -965,10 +965,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  "Reaction Events", self.layout,
                                  parameters=["Frame", "Reaction ASM Name", "Reaction State Name"])
                 self.draw_events(obj, "play_effect_events_list", 0.1,
-                                 "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/(almost always 0)/Unique VFX Name)",
+                                 "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/Target Actor Name/Target Bone Name/Unique VFX Name)",
                                  "Play Effect Events", self.layout,
                                  parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)",
-                                             "(almost always 0)", "Unique VFX Name"])
+                                             "Target Actor Name", "Target Bone Name", "Unique VFX Name"])
                 self.draw_events(obj, "stop_effect_events_list", 0.1,
                                  "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
                                  "Stop Effect Events", self.layout,

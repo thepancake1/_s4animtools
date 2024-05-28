@@ -221,9 +221,9 @@ class SoundEvent:
 
 
 class PlayEffectEvent:
-    arg_count = 6
+    arg_count = 7
 
-    def __init__(self, timecode, effect_name, actor_name_or_hash, bone_name_hash, u1, u2, slot_name):
+    def __init__(self, timecode, effect_name, actor_name_or_hash, bone_name_hash, u1, actor_name_or_hash_2, bone_name_hash_2, slot_name):
         self.event_type = UInt32(5)
         self.length = UInt32(292)
         self.header1 = UInt32(2)
@@ -233,12 +233,13 @@ class PlayEffectEvent:
         self.actor_hash = hash_name_or_get_hash(actor_name_or_hash)
         self.bone_name_hash = hash_name_or_get_hash(bone_name_hash, lowercase=True)
         self.u1 = get_int64_from_hex_string_or_int(u1)
-        self.u2 = get_int64_from_hex_string_or_int(u2)
+        self.actor_hash_2 = hash_name_or_get_hash(actor_name_or_hash_2)
+        self.bone_name_hash_2 = hash_name_or_get_hash(bone_name_hash_2, lowercase=True)
         self.slot_name = get_bytes_from_string(slot_name)
 
     def serialize(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
-                      self.effect_name, self.actor_hash, self.bone_name_hash, self.u1, self.u2, self.slot_name]
+                      self.effect_name, self.actor_hash, self.bone_name_hash, self.u1, self.actor_hash_2, self.bone_name_hash_2, self.slot_name]
 
         serialized_stuff = []
         for value in serialized:
