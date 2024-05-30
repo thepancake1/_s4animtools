@@ -309,6 +309,8 @@ class NewClipExporter(bpy.types.Operator):
         """
         start_time = start_frame * (1 / 30)
         frame_time = frame_count * (1 / 30)
+        if sampling_rate == 2:
+            frame_time /= 2
         variable_to_event = {context.object.parent_events_list: ParentEvent,
                              context.object.sound_events_list: SoundEvent,
                              context.object.snap_events_list: SnapEvent,
@@ -409,6 +411,7 @@ class NewClipExporter(bpy.types.Operator):
         return snap_frames
 
     def create_timeshifted_timestamp(self, original_timestamp_str, start_time, sampling_rate):
+        # This returns the frame count in 30 fps
         # For the new events widgets that are ui based instead of being a sad csv
         if isinstance(original_timestamp_str, int):
             # / 30 for frame to second, then sampling rate for 60 to 30 downsample
