@@ -479,6 +479,7 @@ class NewClipExporter(bpy.types.Operator):
         initial_offset_t = self.context.object.initial_offset_t
         initial_offset_q = self.context.object.initial_offset_q
         # Set the initial offsets to the default if the user doesn't enter anything.
+        # Should this be a string?
         if initial_offset_t == "":
             initial_offset_t = "0,0,0"
         if initial_offset_q == "":
@@ -497,7 +498,6 @@ class NewClipExporter(bpy.types.Operator):
                              reference_namespace_hash=self.get_reference_namespace_hash(),
                              initial_offset_q=Quaternion4.from_str(initial_offset_q),
                              initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
-            self.clip_infos = clip_infos
         return self.clip_infos
 
     def get_downsampled_frame_idx(self, frame, sampling_rate):
@@ -507,28 +507,28 @@ class NewClipExporter(bpy.types.Operator):
     def execute(self, context):
         t1 = time.time()
         self.context = context
-        self.clip_infos = []
 
         # Check if the user has toggled 60 fps downsampling to 30 fps
         if self.context.scene.downsample_60_to_30:
             if bpy.context.scene.render.fps != 60:
                 raise ValueError("You need to set your render settings to 60 fps to downsample to 30.")
 
-
-
+        # Set the source filename in the exported clip to be this blend's filename.
         source_filename = bpy.data.filepath.split(os.sep)[-1]
         ik_targets_to_bone = determine_ik_slot_targets(self.context.active_object)
 
-        self.clip_infos = self.get_clip_infos()
+        clip_infos = self.get_clip_infos()
 
         world_rig = self.context.object.world_rig
         world_root = self.context.object.world_bone
 
+        # World Rig is a string here.
         if len(world_rig) == 0:
             world_rig = self.context.object
         else:
             world_rig = bpy.data.objects[world_rig]
 
+        # World Root is a string here.
         if len(world_root) == 0:
             world_root = world_rig.pose.bones["b__ROOT__"]
         else:
@@ -537,7 +537,7 @@ class NewClipExporter(bpy.types.Operator):
         base_rig = self.context.object.base_rig
 
 
-        for idx, clip_info in enumerate(self.clip_infos):
+        for idx, clip_info in enumerate(clip_infos):
             current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
                                         clip_info.explicit_namespaces,
                                         clip_info.reference_namespace_hash, clip_info.initial_offset_q,
@@ -569,7 +569,7 @@ class NewClipExporter(bpy.types.Operator):
 
 
             # The +1 is for ensuring the last frame is included in the downsampled animation data.
-
+            # Need to clean this up one of these days
             for frame_idx in range(clip_info.start_frame, clip_info.end_frame+1, sampling_rate):
                 bpy.context.scene.frame_set(frame_idx)
                 bpy.context.view_layer.update()
