@@ -20,7 +20,6 @@ class ClipBody:
         self._tickLength = 1/30
         self._numTicks = 0
         self._padding = 0
-        self._channel_count = 0
         self._f1PaletteSize = 0
         # Offset to the start of the channel data
         self._channelDataOffset = OFFSET_TO_CHANNEL_DATA
@@ -42,17 +41,16 @@ class ClipBody:
 
     def add_channel(self, new_channel):
         """
-        Adds a new channel to the clip body and updates the channel count
+        Adds a new channel to the clip body
         """
-        self._channel_count += 1
         self._channels.append(new_channel)
-
-
-
+    @property
+    def _channel_count(self):
+        return len(self._channels)
 
     def set_palette_values(self, palette_values):
         self._f1PaletteData = list(map(Float32, map(abs,  palette_values)))
-        #print(self._f1PaletteData[0].value)
+
     def set_clip_length(self, length):
         """
         Sets the clip length in ticks
