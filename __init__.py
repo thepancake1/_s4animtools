@@ -484,21 +484,20 @@ class NewClipExporter(bpy.types.Operator):
             initial_offset_t = "0,0,0"
         if initial_offset_q == "":
             initial_offset_q = "0,0,0,1"
-        if len(self.clip_infos) == 0:
-            clip_infos = []
-            clip_names = self.get_clip_names()
-            clip_indices = self.get_clip_splits()
-            if len(clip_names) != len(clip_indices) - 1:
-                raise ValueError(
-                    "Clip names doesn't match clip indices. Please check your splits and names are the same length.")
-            for clip_idx in range(len(clip_names)):
-                clip_infos.append(
-                    ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
-                             explicit_namespaces=self.get_explicit_namespaces(),
-                             reference_namespace_hash=self.get_reference_namespace_hash(),
-                             initial_offset_q=Quaternion4.from_str(initial_offset_q),
-                             initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
-        return self.clip_infos
+        clip_infos = []
+        clip_names = self.get_clip_names()
+        clip_indices = self.get_clip_splits()
+        if len(clip_names) != len(clip_indices) - 1:
+            raise ValueError(
+                "Clip names doesn't match clip indices. Please check your splits and names are the same length.")
+        for clip_idx in range(len(clip_names)):
+            clip_infos.append(
+                ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
+                         explicit_namespaces=self.get_explicit_namespaces(),
+                         reference_namespace_hash=self.get_reference_namespace_hash(),
+                         initial_offset_q=Quaternion4.from_str(initial_offset_q),
+                         initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
+        return clip_infos
 
     def get_downsampled_frame_idx(self, frame, sampling_rate):
         if sampling_rate == 1:
@@ -535,7 +534,6 @@ class NewClipExporter(bpy.types.Operator):
             world_root = world_rig.pose.bones[world_root]
 
         base_rig = self.context.object.base_rig
-
 
         for idx, clip_info in enumerate(clip_infos):
             current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
