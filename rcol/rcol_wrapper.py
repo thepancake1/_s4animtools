@@ -207,8 +207,9 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
     bl_options = {"REGISTER", "UNDO"}
 
 
-    def setup_properties(self, obj, footprint, context):
+    def setup_properties(self, obj, footprint, is_routing_footprint, context):
         obj.is_footprint = True
+        obj.show_footprint_options = True
         obj.for_placement = footprint.area_type_flags.for_placement
         obj.for_pathing = footprint.area_type_flags.for_pathing
         obj.is_enabled = footprint.area_type_flags.is_enabled
@@ -261,7 +262,8 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
         obj.slope = footprint.surface_attribute_flags.slope
         obj.outside = footprint.surface_attribute_flags.outside
         obj.inside = footprint.surface_attribute_flags.inside
-
+        # Not an actual property, just for determining whether this goes in the first or second list in the footprint file
+        obj.is_routing_footprint = is_routing_footprint
     def execute(self, context):
         reader = StreamReader(self.filepath)
         print(self.filepath)
@@ -272,9 +274,10 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
                 footprint_chunk = chunk
                 break
 
-        footprint_areas = footprint_chunk.footprint_areas
+        footprint_areas = [*footprint_chunk.footprint_areas, *footprint_chunk.routing_areas]
 
         for footprint_area in footprint_areas:
+            is_routing_area = footprint_area in footprint_chunk.routing_areas
             vertices = []
             edges = []
             faces = []
@@ -321,7 +324,7 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             bpy.context.object.modifiers["Solidify"].use_even_offset = True
             bpy.context.object.modifiers["Solidify"].use_quality_normals = True
             bpy.context.object.modifiers["Solidify"].use_rim = True
-            self.setup_properties(ob, footprint_area, context)
+            self.setup_properties(ob, footprint_area, is_routing_area, context)
         #bpy.ops.object.select_all(action='DESELECT')
            #ob.select_set(True)
            #bpy.context.view_layer.objects.active = ob
@@ -356,6 +359,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
                 max_z = point[1]
         return min_x, max_x, min_z, max_z
     def  create_area(self, obj, footprint, points, context):
+        # Should really set a property on the object instead of relying on name
         footprint.name_hash = hash_name_or_get_hash(obj.name.split(" ")[0]).value
         footprint.area_type_flags.for_placement = obj.for_placement
         footprint.area_type_flags.for_pathing = obj.for_pathing
@@ -419,53 +423,79 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             points)
 
     def execute(self, context):
-        instance_id = hash_name_or_get_hash_64(context.scene.footprint_name)
 
-        rcol = RCOL()
-        footprint_chunk = Footprint()
-        rcol.chunk_data.append(footprint_chunk)
-        rcol.chunk_info.append(ChunkInfo(0,0))
-        new_tgi = TGI()
-        new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.value
-        print(new_tgi)
-        rcol.internal_tgis.append(new_tgi)
-        footprint_areas = footprint_chunk.footprint_areas
+
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
         min_height = 9999
         max_height = -999
+        valid_instance_ids = []
+        valid_objs = []
         for obj in bpy.data.objects:
             if obj.is_footprint:
-                points = self.sort_vertices_clockwise(obj)
-                bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
-                area = Area()
-                self.create_area(obj, area, points, context)
+                valid_objs.append(obj)
+                instance_id = hash_name_or_get_hash_64(obj.footprint_name)
+                if instance_id not in valid_instance_ids:
+                    valid_instance_ids.append(instance_id)
+        for instance_id in valid_instance_ids:
+            rcol = RCOL()
+            footprint_chunk = Footprint()
+            rcol.chunk_data.append(footprint_chunk)
+            rcol.chunk_info.append(ChunkInfo(0, 0))
+            new_tgi = TGI()
+            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.value
+            print(new_tgi)
+            footprint_areas = footprint_chunk.footprint_areas
+            routing_areas = footprint_chunk.routing_areas
+            footprint_name = ""
+            for obj in valid_objs:
+                print(obj, instance_id, hash_name_or_get_hash_64(obj.footprint_name) )
 
-                footprint_areas.append(area)
-                if area.bounding_box.max_y > max_height:
-                    max_height = area.bounding_box.max_y
-                if area.bounding_box.min_y < min_height:
-                    min_height = area.bounding_box.min_y
-        footprint_chunk.minimum_height, footprint_chunk.maximum_height = min_height, max_height
+                if hash_name_or_get_hash_64(obj.footprint_name).value == instance_id.value:
+                    footprint_name = obj.footprint_name
+                    print(obj.footprint_resource_variant)
+                    if obj.footprint_resource_variant == "World Camera Bounds":
+                        # Footprint is WorldLandingStripResource
+                        new_tgi.t = 0x4F726BBE
+                    points = self.sort_vertices_clockwise(obj)
+                    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
-        rcol.update_chunk_position_size_automatically(0)
+                    area = Area()
+                    self.create_area(obj, area, points, context)
 
-        all_data = io.BytesIO()
-        default_export_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
-        selected_export_path = context.scene.s4animtools_export_path
-        if selected_export_path == "":
-            selected_export_path = default_export_path
+                    if area.bounding_box.max_y > max_height:
+                        max_height = area.bounding_box.max_y
+                    if area.bounding_box.min_y < min_height:
+                        min_height = area.bounding_box.min_y
 
-        if not os.path.exists(selected_export_path):
-            os.mkdir(selected_export_path)
-        try:
-            s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
-        except:
-            print(traceback.format_exc())
+                    if obj.is_routing_footprint:
+                        max_height = 0
+                        min_height = 0
+                        area.bounding_box.max_y = 0
+                        area.bounding_box.min_y =  0
+                        routing_areas.append(area)
+                    else:
+                        footprint_areas.append(area)
+            footprint_chunk.minimum_height, footprint_chunk.maximum_height = min_height, max_height
+            rcol.internal_tgis.append(new_tgi)
 
+            rcol.update_chunk_position_size_automatically(0)
 
-        with open(os.path.join(selected_export_path, f"D382BF57!80000000!{hex(new_tgi.i).upper()[2:]}.Footprint.binary"), "wb") as file:
-            file.write(all_data.getvalue())
+            all_data = io.BytesIO()
+            default_export_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
+            selected_export_path = context.scene.s4animtools_export_path
+            if selected_export_path == "":
+                selected_export_path = default_export_path
+
+            if not os.path.exists(selected_export_path):
+                os.mkdir(selected_export_path)
+            try:
+                s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
+            except:
+                print(traceback.format_exc())
+
+            with open(os.path.join(selected_export_path, f"{hex(new_tgi.t).upper()[2:]}!80000000!{hex(new_tgi.i).upper()[2:]}.{footprint_name}.Footprint.binary"), "wb") as file:
+                file.write(all_data.getvalue())
 
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 

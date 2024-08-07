@@ -356,7 +356,7 @@ class Footprint(Serializable):
         self.max_height_overrides = []
 
         self.footprint_areas = []
-        self.slot_areas = []
+        self.routing_areas = []
         self.maximum_height = 0
         self.minimum_height = 0
 
@@ -370,8 +370,8 @@ class Footprint(Serializable):
     def footprint_areas_count(self):
         return len(self.footprint_areas)
     @property
-    def slot_areas_count(self):
-        return len(self.slot_areas)
+    def routing_areas_count(self):
+        return len(self.routing_areas)
 
     def read(self, reader:StreamReader):
         self.identifier = reader.read(4)
@@ -391,9 +391,9 @@ class Footprint(Serializable):
             for i in range(footprint_area_count):
                 self.footprint_areas.append(Area().read(reader))
 
-            slot_area_count = reader.u8()
-            for i in range(slot_area_count):
-                self.slot_areas.append(Area().read(reader))
+            routing_area_count = reader.u8()
+            for i in range(routing_area_count):
+                self.routing_areas.append(Area().read(reader))
             self.maximum_height = reader.float32()
 
             self.minimum_height = reader.float32()
@@ -407,8 +407,8 @@ class Footprint(Serializable):
 
         else:
             subdata = [Byte(self.footprint_areas_count), *self.footprint_areas,
-                           Byte(self.slot_areas_count),
-                           *self.slot_areas, Float32(self.maximum_height), Float32(self.minimum_height)]
+                       Byte(self.routing_areas_count),
+                       *self.routing_areas, Float32(self.maximum_height), Float32(self.minimum_height)]
         data = [Bytes(self.identifier), UInt32(self.version), self.template_key, *subdata]
 
         for value in data:
