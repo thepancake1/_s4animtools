@@ -453,8 +453,8 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
 
                 if hash_name_or_get_hash_64(obj.footprint_name).value == instance_id.value:
                     footprint_name = obj.footprint_name
-                    print(obj.footprint_resource_variant)
-                    if obj.footprint_resource_variant == "World Camera Bounds":
+                    print(obj.footprint_resource_variant, obj.footprint_resource_variant == "World Camera Bounds")
+                    if obj.footprint_resource_variant == "World Camera Bounds" or obj.footprint_resource_variant == "World Allowed Routing":
                         # Footprint is WorldLandingStripResource
                         new_tgi.t = 0x4F726BBE
                     points = self.sort_vertices_clockwise(obj)
@@ -472,7 +472,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
                         max_height = 0
                         min_height = 0
                         area.bounding_box.max_y = 0
-                        area.bounding_box.min_y =  0
+                        area.bounding_box.min_y = 0
                         routing_areas.append(area)
                     else:
                         footprint_areas.append(area)

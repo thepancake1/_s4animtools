@@ -323,10 +323,10 @@ class Area(Serializable):
         for i in range(point_count):
             self.points.append(Point().read(reader))
         self.intersection_object_type = IntersectionFlags().read(reader)
-        self.allow_intersection_types =   IntersectionFlags().read(reader)
-        self.surface_type_flags =  SurfaceTypeFlags().read(reader)
-        self.surface_attribute_flags =  SurfaceAttributeFlags().read(reader)
-        self.deprected_level_offset =  reader.u8()
+        self.allow_intersection_types = IntersectionFlags().read(reader)
+        self.surface_type_flags = SurfaceTypeFlags().read(reader)
+        self.surface_attribute_flags = SurfaceAttributeFlags().read(reader)
+        self.deprected_level_offset = reader.u8()
         self.bounding_box = BoundingBox().read(reader)
         return self
 

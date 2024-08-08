@@ -2547,7 +2547,7 @@ def register():
         # (identifier, name, description, icon, number)
         items=[('Regular Object', 'Regular Object', '', '', 0),
                ('World Camera Bounds', 'World Camera Bounds', '', '', 1),
-               ('World Landing Strip', 'World Landing Strip', '', '', 2)],
+               ('World Allowed Routing', 'World Allowed Routing', '', '', 2)],
         name="Footprint Type Variant",
         default='Regular Object')
 
