@@ -501,15 +501,28 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
 
         return {"FINISHED"}
 
+    def get_angle(self, vertex, center):
+        return pi - math.atan2(vertex[1] - center[1], vertex[0] - center[0])
+
     def sort_vertices_clockwise(self, obj):
         points = []
-        # from https://blender.stackexchange.com/questions/241880/vertex-ordering-in-mesh-object-created-from-curve-with-bevel-object
         me = obj.data
         bm = bmesh.new()
         bm.from_mesh(me)
-        up = Vector((0, -1))
         verts = bm.verts[:]
-        verts.sort(key=lambda v: pi - up.angle_signed(v.co.xy))
+
+        center_position_x = 0
+        center_position_y = 0
+        vert_count = len(verts)
+
+        for vert in verts:
+            center_position_x += vert.co.x
+            center_position_y += vert.co.y
+
+        center_position_x /= vert_count
+        center_position_y /= vert_count
+
+        verts.sort(key=lambda v: self.get_angle(v.co.xy, (center_position_x, center_position_y)))
         verts.insert(0, verts.pop())
         for i, v in enumerate(verts):
             v.index = i
@@ -518,6 +531,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
         bm.to_mesh(me)
         me.update()
         return points
+
 
 class OT_S4ANIMTOOLS_VisualizeFootprint(bpy.types.Operator):
     bl_idname = "s4animtools.visualize_footprint"
