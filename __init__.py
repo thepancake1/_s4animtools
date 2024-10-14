@@ -286,7 +286,7 @@ class ClipInfo:
         return (f"\nName: {self.name}\n"
             f"Start Frame: {self.start_frame} End Frame: {self.end_frame}, \n"
                 f"Reference Namespace Hash: {self.reference_namespace_hash}\n"
-                f"Explicit Namespaces: {hex(self.explicit_namespaces)}\n"
+                f"Explicit Namespaces: {self.explicit_namespaces}\n"
                 f"Initial Offset Q: {self.initial_offset_q}\n"
                 f"Initial Offset T: {self.initial_offset_t}")
     def __repr__(self):
@@ -625,8 +625,8 @@ class S4ANIMTOOL_OT_NEWCLIPEXPORTER(bpy.types.Operator):
     def __init__(self):
         self.anim_exporter = NewClipExporter()
         self.anim_exporter.additive = self.additive
-    def execute(self):
-        self.anim_exporter.execute(self.context)
+    def execute(self, context):
+        self.anim_exporter.execute(context)
 class S4ANIMTOOL_OT_ExportAllClips(bpy.types.Operator):
     bl_idname = "s4animtools.export_all_clips"
     bl_label = "Export All Clips"
@@ -2406,7 +2406,7 @@ classes = (
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
-    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo)
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, S4ANIMTOOL_OT_NEWCLIPEXPORTER)
 
 def update_selected_bones(self, context):
     pass
