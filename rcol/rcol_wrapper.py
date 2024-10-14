@@ -19,6 +19,8 @@ import bmesh
 from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash, hash_name_or_get_hash_64
 
 from math import pi
+
+
 def get_combined_len(value):
     size = 0
     if isinstance(value, list):
@@ -27,8 +29,10 @@ def get_combined_len(value):
     else:
         return len(value)
     return size
+
+
 class ChunkInfo:
-    def __init__(self, chunk_position = 0, chunk_size = 0):
+    def __init__(self, chunk_position=0, chunk_size=0):
         self.chunk_position = chunk_position
         self.chunk_size = chunk_size
 
@@ -91,7 +95,7 @@ class RCOL:
             tag = data.decode("ascii")
             if "SKIN" in tag:
                 chunk_data = Skin().read(stream)
-               # print(stream.tell())
+            # print(stream.tell())
             elif "FTPT" in tag:
                 chunk_data = Footprint().read(stream)
             else:
@@ -117,19 +121,17 @@ class RCOL:
 
         print(current_pos)
 
-
         for i in range(self.internal_count):
             print(current_pos)
-           # if isinstance(self.chunk_data[i], Skin):
+            # if isinstance(self.chunk_data[i], Skin):
             current_pos = self.pad(current_pos, serialized_body)
 
             serialized_body.append(self.chunk_data[i].serialize())
             current_chunk_len = get_size(self.chunk_data[i].value)
             print(current_chunk_len, "chunklength")
-            #print(self.chunk_data[i].value)
+            # print(self.chunk_data[i].value)
             new_chunk_infos.append(ChunkInfo(current_pos, current_chunk_len))
             current_pos += current_chunk_len
-
 
         for i in range(self.internal_count):
             serialized_chunk_info.append(new_chunk_infos[i].serialize())
@@ -156,13 +158,11 @@ class RCOL:
                 self.chunk_data[i].hashes.clear()
                 self.chunk_data[i].count = len(vertex_groups)
                 for v in range(len(vertex_groups)):
-
                     self.chunk_data[i].hashes.append(vertex_groups[v].name)
 
                 for v in range(len(vertex_groups)):
                     flattened_matrix = vertex_groups[v].flattened_matrix
                     self.chunk_data[i].matrices.append(flattened_matrix)
-
 
     def change_chunk_position_size(self, chunk_idx, position, size):
         chunk_info = self.chunk_info[chunk_idx]
@@ -171,10 +171,13 @@ class RCOL:
 
     def update_chunk_position_size_automatically(self, chunk_idx):
         offset = self.serialize_to_get_current_offset(chunk_idx)
-        self.change_chunk_position_size(chunk_idx, self.serialize_to_get_current_offset(chunk_idx), get_size(self.chunk_data[chunk_idx].value))
+        self.change_chunk_position_size(chunk_idx, self.serialize_to_get_current_offset(chunk_idx),
+                                        get_size(self.chunk_data[chunk_idx].value))
+
     def serialize_to_get_current_offset(self, chunk_idx):
         data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
-                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info, *self.chunk_data[:chunk_idx-1]]
+                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
+                *self.chunk_data[:chunk_idx - 1]]
 
         serialized_stuff = []
         total_len = 0
@@ -185,30 +188,27 @@ class RCOL:
         # Pad to next DWORD between chunks
         return total_len
 
-
     def serialize(self):
         data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
-                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info, *self.chunk_data]
+                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
+                *self.chunk_data]
 
         serialized_stuff = []
         total_len = 0
         for value in data:
             serialied = value.serialize()
             serialized_stuff.append(serialied)
-          #  print(total_len, serialied)
-        #print(total_len)
+        #  print(total_len, serialied)
+        # print(total_len)
         # Pad to next DWORD between chunks
-        #serialized_stuff.append(self.align_dword_boundaries(total_len))
+        # serialized_stuff.append(self.align_dword_boundaries(total_len))
         return serialized_stuff
 
-class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
-    bl_idname = "s4animtools.import_footprint"
-    bl_label = "Import Footprint"
-    bl_options = {"REGISTER", "UNDO"}
 
-
-    def setup_properties(self, obj, footprint, context):
+class ImportFootprint:
+    def setup_properties(self, obj, footprint, is_routing_footprint, context):
         obj.is_footprint = True
+        obj.show_footprint_options = True
         obj.for_placement = footprint.area_type_flags.for_placement
         obj.for_pathing = footprint.area_type_flags.for_pathing
         obj.is_enabled = footprint.area_type_flags.is_enabled
@@ -248,7 +248,6 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
         obj.ignores_fenestration_node = footprint.allow_intersection_types.fenestration_node
         obj.ignores_trim = footprint.allow_intersection_types.trim
 
-
         obj.terrain = footprint.surface_type_flags.terrain
         obj.floor = footprint.surface_type_flags.floor
         obj.pool = footprint.surface_type_flags.pool
@@ -261,10 +260,11 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
         obj.slope = footprint.surface_attribute_flags.slope
         obj.outside = footprint.surface_attribute_flags.outside
         obj.inside = footprint.surface_attribute_flags.inside
+        # Not an actual property, just for determining whether this goes in the first or second list in the footprint file
+        obj.is_routing_footprint = is_routing_footprint
 
-    def execute(self, context):
-        reader = StreamReader(self.filepath)
-        print(self.filepath)
+    def execute(self, context, filepath):
+        reader = StreamReader(filepath)
         rcol = RCOL().read(reader)
         footprint_chunk = None
         for chunk in rcol.chunk_data:
@@ -272,9 +272,10 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
                 footprint_chunk = chunk
                 break
 
-        footprint_areas = footprint_chunk.footprint_areas
+        footprint_areas = [*footprint_chunk.footprint_areas, *footprint_chunk.routing_areas]
 
         for footprint_area in footprint_areas:
+            is_routing_area = footprint_area in footprint_chunk.routing_areas
             vertices = []
             edges = []
             faces = []
@@ -283,19 +284,20 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             ob = bpy.data.objects.new(footprint_obj_name, me)
             point_count = len(footprint_area.points)
             bounding_box = footprint_area.bounding_box
-            print(bounding_box.min_x, bounding_box.max_x, bounding_box.min_y, bounding_box.max_y, bounding_box.min_z, bounding_box.max_z)
+            print(bounding_box.min_x, bounding_box.max_x, bounding_box.min_y, bounding_box.max_y, bounding_box.min_z,
+                  bounding_box.max_z)
             min_y, max_y = bounding_box.min_y, bounding_box.max_y
             for idx, point in enumerate(footprint_area.points):
                 vertices.append((point.x, -point.z, 0))
                 if idx < point_count - 1:
-                    edges.append((idx, idx+1))
+                    edges.append((idx, idx + 1))
                 else:
                     edges.append((idx, 0))
 
-            #for idx in range(0, point_count-3, 3):
+            # for idx in range(0, point_count-3, 3):
             #    faces.append((idx, idx+1, idx+2))
-            #if point_count != idx:
-              #  faces.append((point_count-1, 0, point_count-2))
+            # if point_count != idx:
+            #  faces.append((point_count-1, 0, point_count-2))
             faces.append(list(range(0, point_count)))
             me.from_pydata(vertices, [], faces)
             ob.show_name = True
@@ -321,25 +323,33 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
             bpy.context.object.modifiers["Solidify"].use_even_offset = True
             bpy.context.object.modifiers["Solidify"].use_quality_normals = True
             bpy.context.object.modifiers["Solidify"].use_rim = True
-            self.setup_properties(ob, footprint_area, context)
-        #bpy.ops.object.select_all(action='DESELECT')
-           #ob.select_set(True)
-           #bpy.context.view_layer.objects.active = ob
-           #bpy.ops.object.mode_set(mode='EDIT')
+            self.setup_properties(ob, footprint_area, is_routing_area, context)
+        # bpy.ops.object.select_all(action='DESELECT')
+        # ob.select_set(True)
+        # bpy.context.view_layer.objects.active = ob
+        # bpy.ops.object.mode_set(mode='EDIT')
 
-           #bpy.ops.mesh.select_all(action='SELECT')
+        # bpy.ops.mesh.select_all(action='SELECT')
 
-           #bpy.ops.mesh.normals_make_consistent(inside=False)
-           #bpy.ops.object.mode_set(mode='OBJECT')
+        # bpy.ops.mesh.normals_make_consistent(inside=False)
+        # bpy.ops.object.mode_set(mode='OBJECT')
 
         return {"FINISHED"}
+
+
+class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
+    bl_idname = "s4animtools.import_footprint"
+    bl_label = "Import Footprint"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context, filepath=None):
+        return ImportFootprint().execute(context, self.filepath)
 
 
 class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
     bl_idname = "s4animtools.export_footprint"
     bl_label = "Export Footprint"
     bl_options = {"REGISTER", "UNDO"}
-
 
     def get_bounding_box_points(self, points):
         min_x, max_x, min_z, max_z = 999, -999, 999, -999
@@ -355,7 +365,9 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             if point[1] > max_z:
                 max_z = point[1]
         return min_x, max_x, min_z, max_z
-    def  create_area(self, obj, footprint, points, context):
+
+    def create_area(self, obj, footprint, points, context):
+        # Should really set a property on the object instead of relying on name
         footprint.name_hash = hash_name_or_get_hash(obj.name.split(" ")[0]).value
         footprint.area_type_flags.for_placement = obj.for_placement
         footprint.area_type_flags.for_pathing = obj.for_pathing
@@ -419,67 +431,107 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             points)
 
     def execute(self, context):
-        instance_id = hash_name_or_get_hash_64(context.scene.footprint_name)
 
-        rcol = RCOL()
-        footprint_chunk = Footprint()
-        rcol.chunk_data.append(footprint_chunk)
-        rcol.chunk_info.append(ChunkInfo(0,0))
-        new_tgi = TGI()
-        new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.value
-        print(new_tgi)
-        rcol.internal_tgis.append(new_tgi)
-        footprint_areas = footprint_chunk.footprint_areas
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
         min_height = 9999
         max_height = -999
+        valid_instance_ids = []
+        valid_objs = []
         for obj in bpy.data.objects:
             if obj.is_footprint:
-                points = self.sort_vertices_clockwise(obj)
-                bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
-                area = Area()
-                self.create_area(obj, area, points, context)
+                valid_objs.append(obj)
+                instance_id = hash_name_or_get_hash_64(obj.footprint_name)
+                if instance_id not in valid_instance_ids:
+                    valid_instance_ids.append(instance_id)
+        for instance_id in valid_instance_ids:
+            rcol = RCOL()
+            footprint_chunk = Footprint()
+            rcol.chunk_data.append(footprint_chunk)
+            rcol.chunk_info.append(ChunkInfo(0, 0))
+            new_tgi = TGI()
+            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.value
+            print(new_tgi)
+            footprint_areas = footprint_chunk.footprint_areas
+            routing_areas = footprint_chunk.routing_areas
+            footprint_name = ""
+            for obj in valid_objs:
+                print(obj, instance_id, hash_name_or_get_hash_64(obj.footprint_name))
 
-                footprint_areas.append(area)
-                if area.bounding_box.max_y > max_height:
-                    max_height = area.bounding_box.max_y
-                if area.bounding_box.min_y < min_height:
-                    min_height = area.bounding_box.min_y
-        footprint_chunk.minimum_height, footprint_chunk.maximum_height = min_height, max_height
+                if hash_name_or_get_hash_64(obj.footprint_name).value == instance_id.value:
+                    footprint_name = obj.footprint_name
+                    print(obj.footprint_resource_variant, obj.footprint_resource_variant == "World Camera Bounds")
+                    if obj.footprint_resource_variant == "World Camera Bounds" or obj.footprint_resource_variant == "World Allowed Routing":
+                        # Footprint is WorldLandingStripResource
+                        new_tgi.t = 0x4F726BBE
+                    points = self.sort_vertices_clockwise(obj)
+                    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
-        rcol.update_chunk_position_size_automatically(0)
+                    area = Area()
+                    self.create_area(obj, area, points, context)
 
-        all_data = io.BytesIO()
-        default_export_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
-        selected_export_path = context.scene.s4animtools_export_path
-        if selected_export_path == "":
-            selected_export_path = default_export_path
+                    if area.bounding_box.max_y > max_height:
+                        max_height = area.bounding_box.max_y
+                    if area.bounding_box.min_y < min_height:
+                        min_height = area.bounding_box.min_y
 
-        if not os.path.exists(selected_export_path):
-            os.mkdir(selected_export_path)
-        try:
-            s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
-        except:
-            print(traceback.format_exc())
+                    if obj.is_routing_footprint:
+                        max_height = 0
+                        min_height = 0
+                        area.bounding_box.max_y = 0
+                        area.bounding_box.min_y = 0
+                        routing_areas.append(area)
+                    else:
+                        footprint_areas.append(area)
+            footprint_chunk.minimum_height, footprint_chunk.maximum_height = min_height, max_height
+            rcol.internal_tgis.append(new_tgi)
 
+            rcol.update_chunk_position_size_automatically(0)
 
-        with open(os.path.join(selected_export_path, f"D382BF57!80000000!{hex(new_tgi.i).upper()[2:]}.Footprint.binary"), "wb") as file:
-            file.write(all_data.getvalue())
+            all_data = io.BytesIO()
+            default_export_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
+            selected_export_path = context.scene.s4animtools_export_path
+            if selected_export_path == "":
+                selected_export_path = default_export_path
+
+            if not os.path.exists(selected_export_path):
+                os.mkdir(selected_export_path)
+            try:
+                s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
+            except:
+                print(traceback.format_exc())
+
+            with open(os.path.join(selected_export_path,
+                                   f"{hex(new_tgi.t).upper()[2:]}!80000000!{hex(new_tgi.i).upper()[2:]}.{footprint_name}.Footprint.binary"),
+                      "wb") as file:
+                file.write(all_data.getvalue())
 
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
         return {"FINISHED"}
 
+    def get_angle(self, vertex, center):
+        return pi - math.atan2(vertex[1] - center[1], vertex[0] - center[0])
+
     def sort_vertices_clockwise(self, obj):
         points = []
-        # from https://blender.stackexchange.com/questions/241880/vertex-ordering-in-mesh-object-created-from-curve-with-bevel-object
         me = obj.data
         bm = bmesh.new()
         bm.from_mesh(me)
-        up = Vector((0, -1))
         verts = bm.verts[:]
-        verts.sort(key=lambda v: pi - up.angle_signed(v.co.xy))
+
+        center_position_x = 0
+        center_position_y = 0
+        vert_count = len(verts)
+
+        for vert in verts:
+            center_position_x += vert.co.x
+            center_position_y += vert.co.y
+
+        center_position_x /= vert_count
+        center_position_y /= vert_count
+
+        verts.sort(key=lambda v: self.get_angle(v.co.xy, (center_position_x, center_position_y)))
         verts.insert(0, verts.pop())
         for i, v in enumerate(verts):
             v.index = i
@@ -488,6 +540,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
         bm.to_mesh(me)
         me.update()
         return points
+
 
 class OT_S4ANIMTOOLS_VisualizeFootprint(bpy.types.Operator):
     bl_idname = "s4animtools.visualize_footprint"
@@ -544,7 +597,6 @@ class OT_S4ANIMTOOLS_VisualizeFootprint(bpy.types.Operator):
                     else:
                         obj.active_material = red_material
         return {"FINISHED"}
-
 
 
 if __name__ == "__main__":

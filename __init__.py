@@ -355,7 +355,7 @@ class NewClipExporter:
             # For snap events, the event must start on the first frame the sim is snapped on. NOT the frame where before they snap
             context.scene.frame_set(original_timestamp_frame)
             active_rig = context.object
-            active_rig_root = context.object.pose.bones['b__ROOT__']
+            active_rig_root = context.object.pose.bones['b__ROOT__Adjust']
             target_rig = target_rig_object
             target_rig_root = target_rig.pose.bones[event.target_bone]
 
@@ -723,9 +723,13 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Terrain Footprints").command="terrain"
                 layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Floor Footprints").command="floor"
                 layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pool Footprints").command="pool"
-                layout.prop(context.scene, "footprint_name", text="Footprint Name Or Hash")
+                layout.prop(context.object, "footprint_name", text="Footprint Name Or Hash")
 
                 if obj.is_footprint:
+                    layout.prop(obj, "footprint_resource_variant", text="Variant")
+
+                    layout.prop(obj, "is_routing_footprint", text="Is World Pathing Footprint")
+
                     layout = self.layout.row()
                     self.layout.label(text="Footprint is in: ")
                     layout = self.layout.row()
@@ -2398,7 +2402,7 @@ classes = (
     ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig,
     CopySelectedLeftSideToRightSide, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_ExportFootprint,
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim,  OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
@@ -2457,6 +2461,7 @@ def register():
     bpy.types.Object.terrain_cutout = bpy.props.BoolProperty(default=False)
 
 
+    bpy.types.Object.is_routing_footprint = bpy.props.BoolProperty(default=False)
 
 
     bpy.types.Object.slope = bpy.props.BoolProperty(default=False)
@@ -2565,7 +2570,15 @@ def register():
     bpy.types.Scene.clip_name_prefix = bpy.props.StringProperty()
     bpy.types.Scene.clip_splits = bpy.props.StringProperty()
 
-    bpy.types.Scene.footprint_name = bpy.props.StringProperty()
+    bpy.types.Object.footprint_name = bpy.props.StringProperty()
+
+    bpy.types.Object.footprint_resource_variant = bpy.props.EnumProperty(
+        # (identifier, name, description, icon, number)
+        items=[('Regular Object', 'Regular Object', '', '', 0),
+               ('World Camera Bounds', 'World Camera Bounds', '', '', 1),
+               ('World Allowed Routing', 'World Allowed Routing', '', '', 2)],
+        name="Footprint Type Variant",
+        default='Regular Object')
 
     bpy.types.Scene.s4animtools_export_path = bpy.props.StringProperty()
 
