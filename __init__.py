@@ -282,7 +282,15 @@ class ClipInfo:
         self.initial_offset_t = initial_offset_t
         self.rig_name = rig_name
 
-
+    def __str__(self):
+        return (f"\nName: {self.name}\n"
+            f"Start Frame: {self.start_frame} End Frame: {self.end_frame}, \n"
+                f"Reference Namespace Hash: {self.reference_namespace_hash}\n"
+                f"Explicit Namespaces: {hex(self.explicit_namespaces)}\n"
+                f"Initial Offset Q: {self.initial_offset_q}\n"
+                f"Initial Offset T: {self.initial_offset_t}")
+    def __repr__(self):
+        return self.__str__()
 class SlotAssignmentBlender:
     def __init__(self, source_rig, source_bone, target_rig, target_bone, slot_assignment_idx, chain_idx):
         self.source_rig = source_rig
@@ -292,14 +300,11 @@ class SlotAssignmentBlender:
         self.slot_assignment_idx = slot_assignment_idx
         self.chain_idx = chain_idx
 
-class NewClipExporter(bpy.types.Operator):
-    bl_idname = "s4animtools.new_export_clip"
-    bl_label = "New Export Clip"
-    bl_options = {"REGISTER", "UNDO"}
+class NewClipExporter:
 
-    additive: bpy.props.BoolProperty(default=False)
     def __init__(self):
         self.context = None
+        self.additive = False
         self.clip_infos = []
 
     def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames, sampling_rate):
@@ -365,15 +370,28 @@ class NewClipExporter(bpy.types.Operator):
             for event_instance in parameter_fields:
                 parameters = event_instance.info.split(",")
                 parameter_length = len(parameters)
+                # If parameter length is not filled out, there are no parameters at all
                 if parameter_length == 1:
                     continue
+                # If there are less parameters than the event needs, raise an exception
                 if parameter_length < event.arg_count:
                     raise Exception(
                         f"Your event has incomplete parameters. Expected {event.arg_count} parameters. Got {parameter_length}")
                 original_timestamp = parameters[0].strip()
+                # If the first parameter, the timestamp, starts with //, this event has been disabled and ignore it.
                 if original_timestamp.startswith("//"):
                     continue
 
+                # Original timestamp is the time in seconds the event has been to occur on.
+                # If there is only one clip in this sequence, it doesn't matter, these are the same.
+                # if there are multiple clips, timeshifted timestamp is the time within the clip itself.
+
+                # Say yopu have two clips, clip1, and clip2. Clip1 takes 10 frames, while Clip2 takes 25 frames.
+                # If your clip event is at frame 10, or timestamp 0.333333. It will be considered as part of the next animation
+                # at timeshifted timestamp 0.0 and frame 0.
+
+                # I should probably clean up the distinction between frames and timestamps, but it works, and only one
+                # frame rate is supported by the game, so it's not *THAT* confusing.
 
                 original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp, start_time, sampling_rate=sampling_rate)
                 if event == SnapEvent:
@@ -382,6 +400,7 @@ class NewClipExporter(bpy.types.Operator):
                         snap_frames.append(math.floor(timeshifted_timestamp * 30))
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
 
+                # if event type is Focus Compatibility or Suppress Lipsync, create timeshifted timestamps for both start and end.
                 elif event == FocusCompatibilityEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
                         _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
@@ -399,8 +418,8 @@ class NewClipExporter(bpy.types.Operator):
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
         if context.object.allow_jaw_animation_for_entire_animation:
             current_clip.add_event(SuppressLipsyncEvent(0, JAW_ANIMATE_DURATION))
-#                    raise Exception("You're missing parameters for your event..")
-
+        # Additional snap frames, handy for weird blending between different frames.
+        # Originally used for snap events, but this flag gets set automatically on snap events now.
         if additional_snap_frames != "":
             additional_snap_frames = additional_snap_frames.split(",")
             for frame in additional_snap_frames:
@@ -475,7 +494,6 @@ class NewClipExporter(bpy.types.Operator):
         rig_name = self.context.object.rig_name
         if rig_name == "":
             raise Exception("You need to specify a rig name")
-            return
         initial_offset_t = self.context.object.initial_offset_t
         initial_offset_q = self.context.object.initial_offset_q
         # Set the initial offsets to the default if the user doesn't enter anything.
@@ -598,7 +616,17 @@ class NewClipExporter(bpy.types.Operator):
         print(f"Took {t2 - t1} seconds for clip export")
         return {"FINISHED"}
 
+class S4ANIMTOOL_OT_NEWCLIPEXPORTER(bpy.types.Operator):
+    bl_idname = "s4animtools.new_export_clip"
+    bl_label = "New Export Clip"
+    bl_options = {"REGISTER", "UNDO"}
 
+    additive: bpy.props.BoolProperty(default=False)
+    def __init__(self):
+        self.anim_exporter = NewClipExporter()
+        self.anim_exporter.additive = self.additive
+    def execute(self):
+        self.anim_exporter.execute(self.context)
 class S4ANIMTOOL_OT_ExportAllClips(bpy.types.Operator):
     bl_idname = "s4animtools.export_all_clips"
     bl_label = "Export All Clips"
@@ -2359,6 +2387,7 @@ class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
 
         return {"FINISHED"}
 
+
 classes = (
     Snapper, ExportRig, SyncRigToMesh,
     S4ANIMTOOLS_PT_MainPanel,
@@ -2384,7 +2413,7 @@ def handle_version_upgrade(context):
     # This code handles upgrading the addon from an older version.
 
     # This portion handles updating from older versions of the code before the version var was added.
-    # This always runs.'
+    # This always runs.
 
     for obj in context.scene.objects:
         if len(obj.sound_events_list) > 0:

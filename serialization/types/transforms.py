@@ -27,6 +27,11 @@ class Vector3(Serializable):
     def to_binary(self):
         return list(map(Float32, self))
 
+    def __str__(self):
+        return "XYZ: {:.02f} {:.02f} {:.02f}".format(self.x, self.y, self.z)
+
+    def __repr__(self):
+        return self.__str__()
 
 class Quaternion4(Serializable):
     def __init__(self, w, x, y, z):
@@ -48,3 +53,8 @@ class Quaternion4(Serializable):
     def to_binary(self):
         return list(map(Float32, self))
 
+    def __str__(self):
+        return "XYZW: {:.02f} {:.02f} {:.02f} {:.02f}".format(self.x, self.y, self.z, self.w)
+
+    def __repr__(self):
+        return self.__str__()

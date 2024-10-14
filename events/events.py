@@ -233,8 +233,14 @@ class PlayEffectEvent:
         self.actor_hash = hash_name_or_get_hash(actor_name_or_hash)
         self.bone_name_hash = hash_name_or_get_hash(bone_name_hash, lowercase=True)
         self.u1 = get_int64_from_hex_string_or_int(u1)
-        self.actor_hash_2 = hash_name_or_get_hash(actor_name_or_hash_2)
-        self.bone_name_hash_2 = hash_name_or_get_hash(bone_name_hash_2, lowercase=True)
+        if actor_name_or_hash_2.lstrip() == "0":
+            self.actor_hash_2 = UInt32(0)
+        else:
+            self.actor_hash_2 = hash_name_or_get_hash(actor_name_or_hash_2)
+        if bone_name_hash_2.lstrip() == "0":
+            self.bone_name_hash_2 = UInt32(0)
+        else:
+            self.bone_name_hash_2 = hash_name_or_get_hash(bone_name_hash_2, lowercase=True)
         self.slot_name = get_bytes_from_string(slot_name)
 
     def serialize(self):
