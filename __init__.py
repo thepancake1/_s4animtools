@@ -285,7 +285,7 @@ class ClipInfo:
     def __str__(self):
         return (f"\nName: {self.name}\n"
             f"Start Frame: {self.start_frame} End Frame: {self.end_frame}, \n"
-                f"Reference Namespace Hash: {self.reference_namespace_hash}\n"
+                f"Reference Namespace Hash: {hex(self.reference_namespace_hash)}\n"
                 f"Explicit Namespaces: {self.explicit_namespaces}\n"
                 f"Initial Offset Q: {self.initial_offset_q}\n"
                 f"Initial Offset T: {self.initial_offset_t}")
@@ -470,6 +470,15 @@ class NewClipExporter:
                     clip_names.append(clip_input_name)
                 else:
                     clip_names.append(f"{self.context.scene.clip_name_prefix}_{clip_input_name}")
+        return clip_names
+    def get_clip_names_with_actor_suffix(self):
+        clip_names = self.get_clip_names()
+       # This object supports rig suffixes, will stick them on to the end.
+
+        if not self.context.object.disable_rig_suffix:
+            for idx in range(clip_names):
+                clip_names[idx] += "_" + self.context.opbject.rig_name
+
         return clip_names
 
     def get_clip_splits(self):

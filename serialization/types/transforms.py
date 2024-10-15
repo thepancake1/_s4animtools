@@ -8,6 +8,8 @@ like a Vector3 or a Quaternion.
 """
 
 
+#UI lists them as XYZW
+#but Vector3 takes in WXYZ
 class Vector3(Serializable):
     def __init__(self, x, y, z):
         self.x = x
