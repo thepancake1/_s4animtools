@@ -4,7 +4,6 @@ import bpy
 import os
 import time
 import math
-import importlib
 
 import s4animtools.bone_names
 from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
@@ -37,10 +36,12 @@ import s4animtools.animation_exporter.animation
 from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
 import s4animtools.rig.create_rig
 from s4animtools.serialization.types.transforms import Vector3, Quaternion4
+from s4animtools.clip_operators import OT_S4ANIMTOOLS_CreateClipData, get_formatted_clip_name, \
+    OT_S4ANIMTOOLS_InitializeThumbnails
 import s4animtools.clip_processing.clip_body
 import s4animtools.clip_processing.f1_palette
 from bpy_extras.io_utils import ImportHelper
-from mathutils import Vector, Quaternion, Matrix
+from mathutils import Vector, Matrix
 from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
@@ -54,7 +55,6 @@ JAW_ANIMATE_DURATION = 100000
 
 CHAIN_STR_IDX = 2
 bl_info = {"name": "s4animtools", "category": "Object", "blender": (2, 80, 0)}
-
 
 
 def update_valid_skins(scene, context):
@@ -693,7 +693,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             row.operator('s4animtools.move_new_element', text='✖').args = f"{events_list_name},{idx},delete"
             if editable:
                 row.operator('s4animtools.move_new_element', text='+').args = f"{events_list_name},{idx},create"
-        layout.label(text="")
+        #layout.label(text="")
 
     def draw(self, context):
         obj = context.object
@@ -711,6 +711,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
+        layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
 
@@ -720,9 +721,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             if obj.is_s4_actor:
                 layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
                 layout.prop(obj, "actor_type", text="Actor Type")
-                if obj.actor_type == "sim":
-                    #layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
-                    layout.prop(obj, "allow_slots", text="Allow Slots")
+                layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
 
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
             if obj.show_footprint_options:
@@ -832,11 +831,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                     layout.prop(obj, "ignores_fenestration_node", text="Fenestration Node")
                     layout.prop(obj, "ignores_trim", text="Trim")
-            layout.prop(obj, "show_mirror_and_masking_options", text="Show Mirror/Mask/Maintain/Bake Options")
+            layout.prop(obj, "show_mirror_and_masking_options", text="Show Mirror/Maintain/Bake Options")
 
             if obj.show_mirror_and_masking_options:
-                layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
-                layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
+
                 # Trackmasks are not working yet
                 #layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
                 # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
@@ -855,10 +853,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
 
-            layout.prop(obj, "show_ik_options", text="Show IK Options")
+            layout.prop(obj, "show_ik_options", text="Show Slot Assignments")
             if obj.show_ik_options:
-                layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
-                layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
+
                 self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
 
                 layout = self.layout
@@ -1042,9 +1039,18 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.layout.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
                 self.layout.label(text="Export an Additive Clip. Do not use for normal animations")
                 self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
-
-        if obj is not None:
-            layout = self.layout
+                self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
+                self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
+                self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
+                self.layout.prop(obj, "is_overlay", text="Is Overlay")
+                if obj.is_s4_actor:
+                    if obj.actor_type == "sim":
+                        # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
+                        layout.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
+                layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
+                layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
+                layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
+                layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
             layout = self.layout.row()
 
 
@@ -1077,35 +1083,39 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
 
                 self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
-                self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
-
                 self.layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
-
-                self.layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix(es)")  # clip_name_prefix
-
-
-
+                self.layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
                 self.layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
-                self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
-
-              #  layout.label(text="The world rig is where the root of your exported animation will be located.")
-               # layout.label(text="This is handy if you accidentally animated your sim in the wrong spot and don't want to remake it.")
-                self.layout.prop_search(context.object, "world_rig", context.scene, "objects", text="World Rig")
+                self.layout.label(text="The center rig is where the root of your exported animation will be located.")
+                self.layout.label(text="Useful for poses with multiple sims.")
+                self.layout.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
                 if len(context.object.world_rig) > 0:
                     if context.object.world_rig in bpy.data.objects:
                         target_bone_obj = bpy.data.objects[obj.world_rig]
-                        self.layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="World Bone")
+                        self.layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
 
 
                 self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
                 self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
-
-
-                self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
-                self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
-                self.layout.prop(obj, "is_overlay", text="Is Overlay")
-
             layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
+            self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+            self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
+
+            for item in context.scene.clips:
+                if context.scene.pose_pack_mode_enabled:
+                    self.layout.prop(item, "clip_name", text="Clip Name")
+
+
+                else:
+                    formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
+                    if formatted_clip_name in bpy.data.textures:
+                        tex = bpy.data.textures[formatted_clip_name]
+                        col = self.layout.box().column()
+                        col.template_preview(tex)
+                    self.layout.prop(item, "clip_display_name", text="Clip Display Name")
+                    self.layout.prop(item, "clip_description", text="Clip Description")
+                self.layout.prop(item, "start_frame", text="Start Frame")
+                self.layout.prop(item, "end_frame", text="End Frame")
 
     def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
@@ -1305,13 +1315,14 @@ class SnapEventInfo(PropertyGroup):
 
 class ClipData(PropertyGroup):
     clip_name: bpy.props.StringProperty()
-    clip_uses_prefix: bpy.props.BoolProperty()
-    actor_1: bpy.props.StringProperty()
-    actor_2: bpy.props.StringProperty()
-    actor_3: bpy.props.StringProperty()
+    referenced_actors: bpy.props.StringProperty()
+    clip_display_name: bpy.props.StringProperty()
 
-    ranges: CollectionProperty(type=TimeRange)
-
+    clip_description: bpy.props.StringProperty()
+    start_frame: IntProperty(name="Start", description="Start Frame",
+                            default=0, min=0, soft_max=360)
+    end_frame: IntProperty(name="End", description="End Frame",
+                          default=0, min=0, soft_max=360)
 
 class s4animtool_PT_IKTargetPanel(bpy.types.Panel):
     """Create the IK Event Panel"""
@@ -2446,12 +2457,12 @@ classes = (
     ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig,
     CopySelectedLeftSideToRightSide, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim,  OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
     OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, S4ANIMTOOL_OT_NEWCLIPEXPORTER,
-    OT_S4ANIMTOOLS_ToggleSlots)
+    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
 def update_selected_bones(self, context):
     pass
@@ -2651,6 +2662,10 @@ def register():
     bpy.types.Scene.downsample_60_to_30 = bpy.props.BoolProperty(default=False)
 
     bpy.types.Scene.s4animtools_version = IntProperty(default=CURRENT_S4ANIMTOOLS_VERSION)
+
+    bpy.types.Scene.clips = CollectionProperty(type=ClipData)
+
+    bpy.types.Scene.pose_pack_mode_enabled = bpy.props.BoolProperty(default=False)
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
