@@ -1053,19 +1053,19 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 selected_bone = bpy.context.selected_pose_bones[0]
 
                 self.layout.label(text=selected_bone.name)
-                for ik_idx in range(-1,11):
-                    row = self.layout.row()
-                    row.scale_x = 1
-                    if ik_idx == -1:
-                        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"Pos")
-                        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"Rot")
-
-                    else:
-                        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"IK Pos {ik_idx}")
-                        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"IK Rot {ik_idx}")
-                    row.scale_x = 2.5
-                    row.prop(selected_bone, f"ik_weight_{ik_idx}", text=f"IK Weight {ik_idx}")
-
+                #for ik_idx in range(-1,11):
+                #    row = self.layout.row()
+                #    row.scale_x = 1
+                #    if ik_idx == -1:
+                #        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"Pos")
+                #        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"Rot")
+#
+                #    else:
+                #        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"IK Pos {ik_idx}")
+                #        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"IK Rot {ik_idx}")
+                #    row.scale_x = 2.5
+                #    row.prop(selected_bone, f"ik_weight_{ik_idx}", text=f"IK Weight {ik_idx}")
+#
             except Exception as e:
                 pass
 
