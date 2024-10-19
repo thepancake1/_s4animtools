@@ -342,7 +342,7 @@ class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
     bl_label = "Import Footprint"
     bl_options = {"REGISTER", "UNDO"}
 
-    def execute(self, context, filepath=None):
+    def execute(self, context):
         return ImportFootprint().execute(context, self.filepath)
 
 

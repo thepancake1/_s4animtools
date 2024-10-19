@@ -74,30 +74,6 @@ class BoneDelta(Serializable):
 
 
 
-class OT_S4ANIMTOOLS_ImportFootprint(bpy.types.Operator, ImportHelper):
-    bl_idname = "s4animtools.import_footprint"
-    bl_label = "Import Footprint"
-    bl_options = {"REGISTER", "UNDO"}
-
-
-    def setup_properties(self, obj, footprint, context):
-        obj.is_footprint = True
-    def execute(self, context):
-        reader = StreamReader(self.filepath)
-        print(self.filepath)
-        rcol = RCOL().read(reader)
-        bonedelta_chunk = None
-        for chunk in rcol.chunk_data:
-            if isinstance(chunk, BoneDelta):
-                bonedelta_chunk = chunk
-                break
-
-
-         #   bpy.ops.object.mode_set(mode='EDIT')
-
-
-        return {"FINISHED"}
-
 
 
 if __name__ == "__main__":

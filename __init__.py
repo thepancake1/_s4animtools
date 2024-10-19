@@ -636,6 +636,7 @@ class S4ANIMTOOL_OT_NEWCLIPEXPORTER(bpy.types.Operator):
         self.anim_exporter.additive = self.additive
     def execute(self, context):
         self.anim_exporter.execute(context)
+        return {"FINISHED"}
 class S4ANIMTOOL_OT_ExportAllClips(bpy.types.Operator):
     bl_idname = "s4animtools.export_all_clips"
     bl_label = "Export All Clips"
@@ -708,9 +709,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
         if old_version:
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
+        layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
+        layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
 
-        layout.prop(context.scene, "downsample_60_to_30",text="Downsample 60 fps to 30")
         if obj is not None:
+
+            layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
             #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
             layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
             if obj.is_s4_actor:
@@ -1025,6 +1029,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  "Focus Compatibility Events", self.layout)
             self.layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
             if obj.show_experimental_options:
+                self.layout.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
+
                 self.layout.label(text="Use Full Precision means using full precision for all animation data.")
                 self.layout.label(text="Don't enable if you don't know what that means! ")
                 self.layout.label(text="This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
@@ -1066,8 +1072,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
             if obj.is_enabled_for_animation:
-                self.layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
-                self.layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
 
                 self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
@@ -2400,6 +2404,37 @@ class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
 
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_ToggleSlots(bpy.types.Operator):
+    bl_idname = "s4animtools.toggle_slots"
+    bl_label = "Toggle Slots"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        if hasattr(context.object, "pose") is None:
+            return {"FINISHED"}
+
+        # The current count of slot bones that are enabled
+        visible_slot_bones = 0
+        # The current count of slot bones that are hidden
+        invisible_slot_bones = 0
+        for bone in context.object.pose.bones:
+            if bone.name.endswith("_slot"):
+                if not bone.bone.hide:
+                    visible_slot_bones += 1
+                else:
+                    invisible_slot_bones += 1
+        # If most bones are visible, assume that the user wants to hide them,
+        # otherwise, show all of them
+        if visible_slot_bones > invisible_slot_bones:
+            for bone in context.object.pose.bones:
+                if bone.name.endswith("_slot"):
+                    bone.bone.hide = True
+        else:
+            for bone in context.object.pose.bones:
+                if bone.name.endswith("_slot"):
+                    bone.bone.hide = False
+
+        return {"FINISHED"}
 
 classes = (
     Snapper, ExportRig, SyncRigToMesh,
@@ -2415,7 +2450,8 @@ classes = (
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
-    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, S4ANIMTOOL_OT_NEWCLIPEXPORTER)
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, S4ANIMTOOL_OT_NEWCLIPEXPORTER,
+    OT_S4ANIMTOOLS_ToggleSlots)
 
 def update_selected_bones(self, context):
     pass
