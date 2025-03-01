@@ -534,6 +534,8 @@ class NewClipExporter:
         t1 = time.time()
         self.context = context
 
+        export_as_loose_files = self.context.scene.export_as_loose_files
+
         # Check if the user has toggled 60 fps downsampling to 30 fps
         if self.context.scene.downsample_60_to_30:
             if bpy.context.scene.render.fps != 60:
@@ -620,7 +622,7 @@ class NewClipExporter:
             current_clip.clip_body.set_palette_values(exporter.paletteHolder.palette_values)
             current_clip.update_duration(self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate)- self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate))
 
-            current_clip.export(export_path=self.context.scene.s4animtools_export_path)
+            current_clip.export(export_path=self.context.scene.s4animtools_export_path, alternative_export_path=self.context.scene.s4animtools_export_path2, export_as_loose_filenames=export_as_loose_files)
         t2 = time.time()
         print(f"Took {t2 - t1} seconds for clip export")
         return {"FINISHED"}
@@ -711,6 +713,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
+        layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
+
+        layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
+                                                                 "2 as regular files")
         layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
@@ -2637,6 +2643,9 @@ def register():
         default='Regular Object')
 
     bpy.types.Scene.s4animtools_export_path = bpy.props.StringProperty()
+    bpy.types.Scene.s4animtools_export_path2 = bpy.props.StringProperty()
+
+    bpy.types.Scene.export_as_loose_files = bpy.props.BoolProperty()
 
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
 

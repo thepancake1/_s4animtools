@@ -103,10 +103,13 @@ class ClipResource:
     def get_clip_header_filename(self):
         if self.s3pe_naming:
             return "S4_BC4A5044_00000000_{}_{}.ClipHeader".format(get_64bithash(self.clip_name), self.file_name)
-
         return "BC4A5044!00000000!{}.{}.ClipHeader".format(get_64bithash(self.clip_name), self.file_name)
+    def get_loose_clip_naming(self):
+        return "0x00000000!0x{}.6b20c4f3".format(get_64bithash(self.clip_name).lower())
+    def get_loose_clip_header_naming(self):
+        return "0x00000000!0x{}.bc4a5044".format(get_64bithash(self.clip_name).lower())
 
-    def export(self, export_path):
+    def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy
         anim_path = os.path.abspath(export_path)
 
@@ -118,8 +121,15 @@ class ClipResource:
             anim_path = os.path.join(os.path.expanduser("~/Desktop"), "Animation Workspace")
         if not os.path.exists(anim_path):
             os.mkdir(anim_path)
-
-        with open(os.path.join(anim_path, self.get_clip_filename()), "wb") as file:
+        clip_filename = ""
+        clip_header_filename = ""
+        if export_as_loose_filenames:
+            clip_filename = self.get_loose_clip_naming()
+            clip_header_filename = self.get_loose_clip_header_naming()
+        else:
+            clip_filename = self.get_clip_filename()
+            clip_header_filename = self.get_clip_header_filename()
+        with open(os.path.join(anim_path, clip_filename), "wb") as file:
             serialized = [UInt32(self.version), UInt32(self.flags), Float32(self.duration),
                           *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
                           UInt32(self.reference_namespace_hash), UInt32(self.surface_namespace_hash),
@@ -147,7 +157,13 @@ class ClipResource:
             write_data = all_data.getvalue()
 
             file.write(write_data)
-            with open(os.path.join(anim_path, self.get_clip_header_filename()), "wb") as clip_header_file:
+            with open(os.path.join(anim_path, clip_header_filename), "wb") as clip_header_file:
+                clip_header_file.write(write_data)
+
+        if alternative_export_path != "":
+            with open(os.path.join(alternative_export_path, self.get_clip_filename()), "wb") as clip_file:
+                clip_file.write(write_data)
+            with open(os.path.join(alternative_export_path, self.get_clip_header_filename()), "wb") as clip_header_file:
                 clip_header_file.write(write_data)
 if __name__ == "__main__":
     ClipResource().serialize()
