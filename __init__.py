@@ -627,13 +627,14 @@ class NewClipExporter:
         print(f"Took {t2 - t1} seconds for clip export")
         return {"FINISHED"}
 
-class S4ANIMTOOL_OT_NEWCLIPEXPORTER(bpy.types.Operator):
+class OT_S4ANIMTOOLS_NewExportClip(bpy.types.Operator):
     bl_idname = "s4animtools.new_export_clip"
     bl_label = "New Export Clip"
     bl_options = {"REGISTER", "UNDO"}
 
     additive: bpy.props.BoolProperty(default=False)
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.anim_exporter = NewClipExporter()
         self.anim_exporter.additive = self.additive
     def execute(self, context):
@@ -2467,7 +2468,7 @@ classes = (
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
-    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, S4ANIMTOOL_OT_NEWCLIPEXPORTER,
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
 def update_selected_bones(self, context):
