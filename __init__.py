@@ -268,7 +268,7 @@ class Snapper(bpy.types.Operator):
 
 class ClipInfo:
     def __init__(self, start_frame, end_frame, name, reference_namespace_hash, explicit_namespaces, initial_offset_q,
-                 initial_offset_t, rig_name):
+                 initial_offset_t, rig_name, loco):
         self.start_frame = start_frame
         self.end_frame = end_frame
         self.name = name
@@ -281,6 +281,7 @@ class ClipInfo:
         self.initial_offset_q = initial_offset_q
         self.initial_offset_t = initial_offset_t
         self.rig_name = rig_name
+        self.loco = loco
 
     def __str__(self):
         return (f"\nName: {self.name}\n"
@@ -493,6 +494,20 @@ class NewClipExporter:
                 clip_indices.append(int(split))
         return clip_indices
 
+    def get_clip_locos(self):
+        clip_locos_bool = []
+        clip_locos = self.context.scene.clip_locos.split(",")
+        # If the clip locos string is of zero length, then the user hasn't entered anything and needs to enter it.
+        if len(self.context.scene.clip_locos) == 0:
+            for split in self.get_clip_splits():
+                clip_locos_bool.append(False)
+        elif len(self.get_clip_splits()) - 1 != len(clip_locos):
+            raise Exception("Clip splits does not match clip locos")
+        elif len(clip_locos) > 0:
+            for split in clip_locos:
+                clip_locos_bool.append(split=="+")
+        return clip_locos_bool
+
     def get_explicit_namespaces(self):
         return self.context.object.explicit_namespaces
 
@@ -514,6 +529,8 @@ class NewClipExporter:
         clip_infos = []
         clip_names = self.get_clip_names()
         clip_indices = self.get_clip_splits()
+        clip_locos = self.get_clip_locos()
+
         if len(clip_names) != len(clip_indices) - 1:
             raise ValueError(
                 "Clip names doesn't match clip indices. Please check your splits and names are the same length.")
@@ -523,7 +540,7 @@ class NewClipExporter:
                          explicit_namespaces=self.get_explicit_namespaces(),
                          reference_namespace_hash=self.get_reference_namespace_hash(),
                          initial_offset_q=Quaternion4.from_str(initial_offset_q),
-                         initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
+                         initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name, loco=clip_locos[clip_idx]))
         return clip_infos
 
     def get_downsampled_frame_idx(self, frame, sampling_rate):
@@ -568,7 +585,7 @@ class NewClipExporter:
             current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
                                         clip_info.explicit_namespaces,
                                         clip_info.reference_namespace_hash, clip_info.initial_offset_q,
-                                        clip_info.initial_offset_t, source_filename, False, context.object.disable_rig_suffix)
+                                        clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
             rig = self.context.object
 
             # sampling rate. 1 for every frame, 2 for every other frame, etc.
@@ -1091,6 +1108,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
                 self.layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
+                self.layout.prop(context.scene, "clip_locos", text="Clip Loco(s)")
                 self.layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
                 self.layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
                 self.layout.label(text="The center rig is where the root of your exported animation will be located.")
@@ -2632,6 +2650,7 @@ def register():
     bpy.types.Scene.clip_name = bpy.props.StringProperty()
     bpy.types.Scene.clip_name_prefix = bpy.props.StringProperty()
     bpy.types.Scene.clip_splits = bpy.props.StringProperty()
+    bpy.types.Scene.clip_locos = bpy.props.StringProperty()
 
     bpy.types.Object.footprint_name = bpy.props.StringProperty()
 
