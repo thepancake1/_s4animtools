@@ -129,41 +129,47 @@ class ClipResource:
         else:
             clip_filename = self.get_clip_filename()
             clip_header_filename = self.get_clip_header_filename()
-        with open(os.path.join(anim_path, clip_filename), "wb") as file:
-            serialized = [UInt32(self.version), UInt32(self.flags), Float32(self.duration),
-                          *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
-                          UInt32(self.reference_namespace_hash), UInt32(self.surface_namespace_hash),
-                          UInt32(self.surface_joint_name_hash), UInt32(self.surface_child_namespace_hash),
-                          UInt32(self.clip_name_length), String(self.clip_name),
-                          UInt32(self.rig_name_length), String(self.rig_name), UInt32(self.explicit_namespace_count), *self.explicit_namespaces,
-                          UInt32(self.slot_assignment_count), *self.slot_assignments, UInt32(self.clipEventCount), *self.clipEventList, UInt32(self.codecDataLength)]
-            header_data = []
 
-            header_length = 0
-            for item in serialized:
-                serialized_data = item.serialize()
-                header_data.append(serialized_data)
-                header_length += get_size(serialized_data)
+        serialized = [UInt32(self.version), UInt32(self.flags), Float32(self.duration),
+                      *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
+                      UInt32(self.reference_namespace_hash), UInt32(self.surface_namespace_hash),
+                      UInt32(self.surface_joint_name_hash), UInt32(self.surface_child_namespace_hash),
+                      UInt32(self.clip_name_length), String(self.clip_name),
+                      UInt32(self.rig_name_length), String(self.rig_name), UInt32(self.explicit_namespace_count),
+                      *self.explicit_namespaces,
+                      UInt32(self.slot_assignment_count), *self.slot_assignments, UInt32(self.clipEventCount),
+                      *self.clipEventList, UInt32(self.codecDataLength)]
+        header_data = []
 
-            clip_body, frame_data = self.clip_body.serialize()
+        header_length = 0
+        for item in serialized:
+            serialized_data = item.serialize()
+            header_data.append(serialized_data)
+            header_length += get_size(serialized_data)
 
-            actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
-            # Replace codec data length with actual one
-            header_data[-1] = UInt32(actual_codec_data_length).serialize()
-            all_data = io.BytesIO()
-            # offsets
+        clip_body, frame_data = self.clip_body.serialize()
 
-            s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
-            write_data = all_data.getvalue()
+        actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
+        # Replace codec data length with actual one
+        header_data[-1] = UInt32(actual_codec_data_length).serialize()
+        all_data = io.BytesIO()
+        # offsets
 
-            file.write(write_data)
-            with open(os.path.join(anim_path, clip_header_filename), "wb") as clip_header_file:
-                clip_header_file.write(write_data)
+        s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
+        write_data = all_data.getvalue()
 
-        if alternative_export_path != "":
-            with open(os.path.join(alternative_export_path, self.get_clip_filename()), "wb") as clip_file:
-                clip_file.write(write_data)
-            with open(os.path.join(alternative_export_path, self.get_clip_header_filename()), "wb") as clip_header_file:
-                clip_header_file.write(write_data)
+        try:
+            with open(os.path.join(anim_path, clip_filename), "wb") as file:
+                file.write(write_data)
+                with open(os.path.join(anim_path, clip_header_filename), "wb") as clip_header_file:
+                    clip_header_file.write(write_data)
+
+            if alternative_export_path != "":
+                with open(os.path.join(alternative_export_path, self.get_clip_filename()), "wb") as clip_file:
+                    clip_file.write(write_data)
+                with open(os.path.join(alternative_export_path, self.get_clip_header_filename()), "wb") as clip_header_file:
+                    clip_header_file.write(write_data)
+        except Exception as e:
+            print(e)
 if __name__ == "__main__":
     ClipResource().serialize()
