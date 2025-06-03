@@ -613,8 +613,13 @@ class NewClipExporter:
 
 
             # The +1 is for ensuring the last frame is included in the downsampled animation data.
+            # Selectively add + 1 to the end frame if the sampling rate is 2, and don't add anything if the sampling rate is 1.
+            # Previous versions would *always* add +1, which would cause walkstyles to absolutely break
             # Need to clean this up one of these days
-            for frame_idx in range(clip_info.start_frame, clip_info.end_frame+1, sampling_rate):
+            end_frame_offset = 0
+            if sampling_rate == 2:
+                end_frame_offset = 1
+            for frame_idx in range(clip_info.start_frame, clip_info.end_frame+end_frame_offset, sampling_rate):
                 bpy.context.scene.frame_set(frame_idx)
                 bpy.context.view_layer.update()
                 exporter.animate_recursively(self.get_downsampled_frame_idx(frame_idx, sampling_rate), start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate), force=frame_idx == clip_info.start_frame
