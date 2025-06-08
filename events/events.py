@@ -302,3 +302,27 @@ class FocusCompatibilityEvent:
             serialized_stuff.append(value.serialize())
 
         return serialized_stuff
+
+
+class GeometryStateChangeEvent:
+    arg_count = 3
+
+    def __init__(self, timecode, actor_name, geometry_state_name):
+        self.event_type = UInt32(17)
+        self.length = UInt32(144)
+        self.header1 = UInt32(1)
+        self.header2 = UInt32(86)
+        self.timecode = Float32(float(timecode))
+        self.actor_hash = hash_name_or_get_hash(actor_name)
+        geometry_state_name = geometry_state_name.lstrip().encode("ascii")
+        self.geometry_state_name = Bytes(get_null_terminated_string(geometry_state_name))
+
+    def serialize(self):
+        serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
+                      self.actor_hash, self.geometry_state_name]
+
+        serialized_stuff = []
+        for value in serialized:
+            serialized_stuff.append(value.serialize())
+
+        return serialized_stuff

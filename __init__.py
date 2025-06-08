@@ -12,7 +12,7 @@ from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4A
 from s4animtools.rig.create_rig import Trackmask
 from s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
-    PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent
+    PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent, GeometryStateChangeEvent
 from s4animtools.serialization.types.basic import Float32, UInt32
 from s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
 from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
@@ -46,9 +46,6 @@ from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
 
-# Current version used for serialization.
-# Useful for writing versioned code!
-# Programmers hate this one weird trick for not breaking backwards compatibility!!
 CURRENT_S4ANIMTOOLS_VERSION = 1
 JAW_ANIMATE_DURATION = 100000
 
@@ -326,7 +323,8 @@ class NewClipExporter:
                              context.object.play_effect_events_list: PlayEffectEvent,
                              context.object.focus_compatibility_events_list: FocusCompatibilityEvent,
                              context.object.disable_lipsync_events_list: SuppressLipsyncEvent,
-                             context.object.stop_effect_events_list: StopEffectEvent}
+                             context.object.stop_effect_events_list: StopEffectEvent,
+                             context.object.geometry_state_change_events_list: GeometryStateChangeEvent,}
 
 
         snap_frames = []
@@ -1053,6 +1051,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  parameters=["Frame", "Actor Name", "Visibility (0 or 1)"])
                 self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
                                  "Focus Compatibility Events", self.layout)
+                self.draw_events(obj, "geometry_state_change_events_list", 0.1, "Parameters (Frame/Actor Name/Geometry State Name)",
+                                 "Geometry State Change Events", self.layout)
             self.layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
             if obj.show_experimental_options:
                 self.layout.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
@@ -1445,6 +1445,8 @@ class InitializeEvents(bpy.types.Operator):
             context.object.visibility_events_list.add()
         if len(context.object.focus_compatibility_events_list) == 0:
             context.object.focus_compatibility_events_list.add()
+        if len(context.object.geometry_state_change_events_list) == 0:
+            context.object.geometry_state_change_events_list.add()
         return {"FINISHED"}
 
 
@@ -2618,6 +2620,7 @@ def register():
     bpy.types.Object.snap_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.visibility_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.focus_compatibility_events_list = CollectionProperty(type=AnimationEvent)
+    bpy.types.Object.geometry_state_change_events_list = CollectionProperty(type=AnimationEvent)
 
     bpy.types.Object.ik_targets = CollectionProperty(type=IKTarget)
     bpy.types.Object.ik_idx = IntProperty(default=0)
