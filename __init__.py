@@ -46,6 +46,9 @@ from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
 
+from s4animtools.walkstyles.blender import LocomotionBuilderVariantData, draw_locomotion_builder_data, locomotion_register, \
+    locomotion_unregister
+
 CURRENT_S4ANIMTOOLS_VERSION = 1
 JAW_ANIMATE_DURATION = 100000
 
@@ -415,6 +418,8 @@ class NewClipExporter:
                 else:
                     if frame_time >= timeshifted_timestamp >= 0:
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
+
+        # Force enable the jaw to animate for the entire animation.
         if context.object.allow_jaw_animation_for_entire_animation:
             current_clip.add_event(SuppressLipsyncEvent(0, JAW_ANIMATE_DURATION))
         # Additional snap frames, handy for weird blending between different frames.
@@ -428,7 +433,7 @@ class NewClipExporter:
                     snap_frames.append(timeshifted_frame)
         return snap_frames
 
-    def create_timeshifted_timestamp(self, original_timestamp_str, start_time, sampling_rate):
+    def create_timeshifted_timestamp(self, original_timestamp_str, start_time:float, sampling_rate:int) -> tuple[float, float]:
         # This returns the frame count in 30 fps
         # For the new events widgets that are ui based instead of being a sad csv
         if isinstance(original_timestamp_str, int):
@@ -440,17 +445,12 @@ class NewClipExporter:
                 original_timestamp = float(original_timestamp_str[:-1])
             elif original_timestamp_str.endswith("e"):
                 original_timestamp = float(eval(original_timestamp_str[:-1]))
+            # Float mode (f mode) very redundant since https://github.com/thepancake1/_s4animtools/commit/39cd6430cc5cf82dd9022c9011de8e2e342b7267
             elif original_timestamp_str.endswith("f"):
                 original_timestamp = float(original_timestamp_str[:-1]) / 30
             else:
                 original_timestamp = float(original_timestamp_str) / 30
 
-        # What is relative mode???
-       # # IF it ends with r (relative), then we don't need to shift from absolute to relative,
-       # # because we're already in relative
-       # if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
-       #     timeshifted_timestamp = original_timestamp
-       # else:
         timeshifted_timestamp = original_timestamp - start_time
 
 
@@ -458,7 +458,7 @@ class NewClipExporter:
             original_timestamp = original_timestamp / 2
             timeshifted_timestamp = timeshifted_timestamp / 2
         return original_timestamp, timeshifted_timestamp
-    def get_clip_names(self):
+    def get_clip_names(self) -> list[str]:
         clip_names = []
         if self.context.scene.clip_name == "":
             raise Exception("You need to specify a clip name")
@@ -470,7 +470,7 @@ class NewClipExporter:
                 else:
                     clip_names.append(f"{self.context.scene.clip_name_prefix}_{clip_input_name}")
         return clip_names
-    def get_clip_names_with_actor_suffix(self):
+    def get_clip_names_with_actor_suffix(self) -> list[str]:
         clip_names = self.get_clip_names()
        # This object supports rig suffixes, will stick them on to the end.
 
@@ -480,7 +480,7 @@ class NewClipExporter:
 
         return clip_names
 
-    def get_clip_splits(self):
+    def get_clip_splits(self) -> list[int]:
         clip_indices = [0, ]
         clip_splits = self.context.scene.clip_splits.split(",")
         # If the clip splits string is of zero length, then the user hasn't entered anything and needs to enter it.
@@ -492,7 +492,7 @@ class NewClipExporter:
                 clip_indices.append(int(split))
         return clip_indices
 
-    def get_clip_locos(self):
+    def get_clip_locos(self) -> list[bool]:
         clip_locos_bool = []
         clip_locos = self.context.scene.clip_locos.split(",")
         # If the clip locos string is of zero length, then the user hasn't entered anything and needs to enter it.
@@ -506,13 +506,13 @@ class NewClipExporter:
                 clip_locos_bool.append(split=="+")
         return clip_locos_bool
 
-    def get_explicit_namespaces(self):
+    def get_explicit_namespaces(self) -> str:
         return self.context.object.explicit_namespaces
 
-    def get_reference_namespace_hash(self):
+    def get_reference_namespace_hash(self) -> str:
         return self.context.object.reference_namespace_hash
 
-    def get_clip_infos(self):
+    def get_clip_infos(self) -> list[ClipInfo]:
         rig_name = self.context.object.rig_name
         if rig_name == "":
             raise Exception("You need to specify a rig name")
@@ -622,7 +622,8 @@ class NewClipExporter:
                 bpy.context.view_layer.update()
                 exporter.animate_recursively(self.get_downsampled_frame_idx(frame_idx, sampling_rate), start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate), force=frame_idx == clip_info.start_frame
                                                               or frame_idx == clip_info.end_frame)
-
+                # Please shorten this!
+                # These lines are too wide!
                 for source_bone_ik in slot_assignment_source_bones:
                     for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
 
@@ -1127,7 +1128,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
                 self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
-            layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
+            self.layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
             self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
             self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
 
@@ -1146,7 +1147,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     self.layout.prop(item, "clip_description", text="Clip Description")
                 self.layout.prop(item, "start_frame", text="Start Frame")
                 self.layout.prop(item, "end_frame", text="End Frame")
+        self.layout.operator("s4animtools.add_new_locomotion_builder", text="Add New Locomotion Builder")
+        self.layout.operator("s4animtools.read_locomotion_builder_from_folder", text="Read Locomotion Builder From Folder Extracted By S4S")
 
+        draw_locomotion_builder_data(self.layout, context)
     def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
         box = row.column()
@@ -2631,6 +2635,9 @@ def unregister_footprint_properties():
 def register():
     """Register classes for the things."""
     from bpy.utils import register_class
+    locomotion_register()
+
+
     for cls in classes:
         try:
             register_class(cls)
@@ -2757,9 +2764,6 @@ def register():
 
     bpy.types.Scene.pose_pack_mode_enabled = bpy.props.BoolProperty(default=False)
 
-    bpy.types.Scene.locomotion_builders = CollectionProperty(type=LocomotonBuilderData)
-
-
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2860,4 +2864,5 @@ def unregister():
     del bpy.types.Scene.s4animtools_version
     del bpy.types.Scene.clips
     del bpy.types.Scene.pose_pack_mode_enabled
-    del bpy.types.Scene.locomotion_builders
+
+    locomotion_unregister()
