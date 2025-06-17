@@ -2519,23 +2519,8 @@ def handle_version_upgrade(context):
             obj.sound_events_list.clear()
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
-def register():
-    """Register classes for the things."""
-    from bpy.utils import register_class
-    for cls in classes:
-        try:
-            register_class(cls)
-        except Exception as e:
-            print(e)
-    bpy.types.PoseBone.mirrored_bone = bpy.props.StringProperty()
-    bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
-
-    # This is for the baked IK data
-    for ik_idx in range(-1,11):
-        setattr(bpy.types.PoseBone, f"ik_pos_{ik_idx}", bpy.props.FloatVectorProperty(size=3))
-        setattr(bpy.types.PoseBone, f"ik_rot_{ik_idx}", bpy.props.FloatVectorProperty(default=(0,0,0,1), size=4, min=-1, max=1))
-        setattr(bpy.types.PoseBone, f"ik_weight_{ik_idx}", bpy.props.FloatProperty(min=0, max=1))
-
+def register_footprint_properties():
+    # Tons of footprint related stuff
     bpy.types.Object.is_footprint = bpy.props.BoolProperty(default=False)
 
     bpy.types.Object.for_placement = bpy.props.BoolProperty(default=False)
@@ -2548,9 +2533,7 @@ def register():
     bpy.types.Object.encouraged = bpy.props.BoolProperty(default=False)
     bpy.types.Object.terrain_cutout = bpy.props.BoolProperty(default=False)
 
-
     bpy.types.Object.is_routing_footprint = bpy.props.BoolProperty(default=False)
-
 
     bpy.types.Object.slope = bpy.props.BoolProperty(default=False)
     bpy.types.Object.outside = bpy.props.BoolProperty(default=False)
@@ -2594,7 +2577,76 @@ def register():
     bpy.types.Object.ignores_foundations = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_fenestration_node = bpy.props.BoolProperty(default=False)
     bpy.types.Object.ignores_trim = bpy.props.BoolProperty(default=False)
+
+def unregister_footprint_properties():
+    del bpy.types.Object.is_footprint
+    del bpy.types.Object.for_placement
+    del bpy.types.Object.for_pathing
+    del bpy.types.Object.is_enabled
+    del bpy.types.Object.discouraged
+    del bpy.types.Object.landing_strip
+    del bpy.types.Object.no_raycast
+    del bpy.types.Object.placement_slotted
+    del bpy.types.Object.encouraged
+    del bpy.types.Object.terrain_cutout
+    del bpy.types.Object.is_routing_footprint
+    del bpy.types.Object.slope
+    del bpy.types.Object.outside
+    del bpy.types.Object.inside
+    del bpy.types.Object.terrain
+    del bpy.types.Object.floor
+    del bpy.types.Object.pool
+    del bpy.types.Object.pond
+    del bpy.types.Object.fence_post
+    del bpy.types.Object.any_surface
+    del bpy.types.Object.air
+    del bpy.types.Object.roof
+    del bpy.types.Object.is_none
+    del bpy.types.Object.is_walls
+    del bpy.types.Object.is_objects
+    del bpy.types.Object.is_sims
+    del bpy.types.Object.is_roofs
+    del bpy.types.Object.is_fences
+    del bpy.types.Object.is_modular_stairs
+    del bpy.types.Object.is_objects_of_same_type
+    del bpy.types.Object.is_columns
+    del bpy.types.Object.is_reserved_space
+    del bpy.types.Object.is_foundations
+    del bpy.types.Object.is_fenestration_node
+    del bpy.types.Object.is_trim
+    del bpy.types.Object.ignores_none
+    del bpy.types.Object.ignores_walls
+    del bpy.types.Object.ignores_objects
+    del bpy.types.Object.ignores_sims
+    del bpy.types.Object.ignores_roofs
+    del bpy.types.Object.ignores_fences
+    del bpy.types.Object.ignores_modular_stairs
+    del bpy.types.Object.ignores_objects_of_same_type
+    del bpy.types.Object.ignores_columns
+    del bpy.types.Object.ignores_reserved_space
+    del bpy.types.Object.ignores_foundations
+    del bpy.types.Object.ignores_fenestration_node
+    del bpy.types.Object.ignores_trim
+
+def register():
+    """Register classes for the things."""
+    from bpy.utils import register_class
+    for cls in classes:
+        try:
+            register_class(cls)
+        except Exception as e:
+            print(e)
+    bpy.types.PoseBone.mirrored_bone = bpy.props.StringProperty()
+    bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
+
+    # This is for the baked IK data
+    for ik_idx in range(-1,11):
+        setattr(bpy.types.PoseBone, f"ik_pos_{ik_idx}", bpy.props.FloatVectorProperty(size=3))
+        setattr(bpy.types.PoseBone, f"ik_rot_{ik_idx}", bpy.props.FloatVectorProperty(default=(0,0,0,1), size=4, min=-1, max=1))
+        setattr(bpy.types.PoseBone, f"ik_weight_{ik_idx}", bpy.props.FloatProperty(min=0, max=1))
+
     bpy.types.Object.balance = bpy.props.FloatProperty(default=0, soft_min=0, soft_max=1)
+
 
     # One for IK, zero for fk
     bpy.types.Object.l_hand_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
@@ -2603,8 +2655,6 @@ def register():
     bpy.types.Object.l_foot_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
     bpy.types.Object.r_foot_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
     bpy.types.Object.disable_rig_suffix = bpy.props.BoolProperty(default=False)
-
-    bpy.types.Object.ik_idx = IntProperty(default=0)
 
     bpy.types.Object.parent_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.sound_events_list = CollectionProperty(type=AnimationEvent)
@@ -2624,6 +2674,7 @@ def register():
 
     bpy.types.Object.ik_targets = CollectionProperty(type=IKTarget)
     bpy.types.Object.ik_idx = IntProperty(default=0)
+
     bpy.types.Object.rig_name = bpy.props.StringProperty()
     bpy.types.Object.reset_initial_offset_t = bpy.props.StringProperty()
     bpy.types.Object.allow_jaw_animation_for_entire_animation = bpy.props.BoolProperty(default=False)
@@ -2631,9 +2682,11 @@ def register():
     bpy.types.Object.reference_namespace_hash = bpy.props.StringProperty()
     bpy.types.Object.initial_offset_q = bpy.props.StringProperty()
     bpy.types.Object.initial_offset_t = bpy.props.StringProperty()
+
     bpy.types.Object.snap_events = bpy.props.StringProperty()
     bpy.types.Object.additional_snap_frames = bpy.props.StringProperty()
     bpy.types.Object.visibility_events = bpy.props.StringProperty()
+
     bpy.types.Object.base_rig = bpy.props.StringProperty()
     bpy.types.Object.world_rig = bpy.props.StringProperty()
     bpy.types.Object.world_bone = bpy.props.StringProperty()
@@ -2703,6 +2756,10 @@ def register():
     bpy.types.Scene.clips = CollectionProperty(type=ClipData)
 
     bpy.types.Scene.pose_pack_mode_enabled = bpy.props.BoolProperty(default=False)
+
+    bpy.types.Scene.locomotion_builders = CollectionProperty(type=LocomotonBuilderData)
+
+
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2710,6 +2767,8 @@ def unregister():
             unregister_class(cls)
         except:
             pass
+
+    unregister_footprint_properties()
     for ik_idx in range(-1, 11):
         pos, rot = getattr(bpy.types.PoseBone, f"ik_pos_{ik_idx}"), getattr(bpy.types.PoseBone, f"ik_rot_{ik_idx}")
         del pos
@@ -2719,32 +2778,68 @@ def unregister():
     del bpy.types.Object.r_hand_fk_ik
     del bpy.types.Object.l_foot_fk_ik
     del bpy.types.Object.r_foot_fk_ik
+    del bpy.types.Object.disable_rig_suffix
+
+
+    del bpy.types.Object.parent_events_list
+    del bpy.types.Object.sound_events_list
+    del bpy.types.Object.sound_events_list_UI
+    del bpy.types.Object.snap_events_list_UI
+    del bpy.types.Object.script_events_list
+    del bpy.types.Object.reaction_events_list
+    del bpy.types.Object.play_effect_events_list
+    del bpy.types.Object.stop_effect_events_list
+    del bpy.types.Object.disable_lipsync_events_list
+    del bpy.types.Object.snap_events_list
+    del bpy.types.Object.focus_compatibility_events_list
+    del bpy.types.Object.geometry_state_change_events_list
+
 
     del bpy.types.Object.ik_targets
     del bpy.types.Object.ik_idx
+
     del bpy.types.Object.rig_name
     del bpy.types.Object.reset_initial_offset_t
+    del bpy.types.Object.allow_jaw_animation_for_entire_animation
     del bpy.types.Object.explicit_namespaces
     del bpy.types.Object.reference_namespace_hash
     del bpy.types.Object.initial_offset_q
     del bpy.types.Object.initial_offset_t
+
     del bpy.types.Object.snap_events
     del bpy.types.Object.additional_snap_frames
+    del bpy.types.Object.visibility_events
+
     del bpy.types.Object.base_rig
     del bpy.types.Object.world_rig
     del bpy.types.Object.world_bone
+    del bpy.types.Object.use_world_bone_as_root
 
+    del bpy.types.Object.relative_rig
+    del bpy.types.Object.relative_bone
+    del bpy.types.Object.use_full_precision
 
-    # bpy.types.Object.script_idx = IntProperty(name="Index for my_list", default=0)
-    # bpy.types.Object.sound_idx = IntProperty(name="Index for sound_idx", default=0)
-    # bpy.types.Object.actor_idx = IntProperty(name="Index for actors", default=0)
-    # bpy.types.Object.state_idx = IntProperty(name="Index for state", default=0)
-    #  bpy.types.Object.clip_idx = IntProperty(name="Index for clip", default=0)
+    del bpy.types.Object.actor_idx
+    del bpy.types.Object.state_idx
+    del bpy.types.Object.controller_idx
+    del bpy.types.Object.posture_idx
+    del bpy.types.Object.state_connection_idx
+
+    del bpy.types.Object.is_overlay
 
     del bpy.types.Scene.watcher_running
     del bpy.types.Scene.clip_name
     del bpy.types.Scene.clip_name_prefix
     del bpy.types.Scene.clip_splits
+    del bpy.types.Scene.clip_locos
+
+    del bpy.types.Object.footprint_name
+    del bpy.types.Object.footprint_resource_variant
+
+    del bpy.types.Scene.s4animtools_export_path
+    del bpy.types.Scene.s4animtools_export_path2
+
+    del bpy.types.Scene.export_as_loose_files
 
     del bpy.types.Object.is_s4_actor
     del bpy.types.Object.actor_type
@@ -2752,6 +2847,17 @@ def unregister():
     del bpy.types.Object.show_footprint_options
     del bpy.types.Object.show_mirror_and_masking_options
     del bpy.types.Object.show_ik_options
+    del bpy.types.Object.show_events
+    del bpy.types.Object.show_clip_options
+    del bpy.types.Object.show_initial_offset_options
     del bpy.types.Object.show_experimental_options
     del bpy.types.Object.is_sim_skin
+    del bpy.types.Object.active_sim_skin
+
     del bpy.types.Object.allow_slots
+
+    del bpy.types.Scene.downsample_60_to_30
+    del bpy.types.Scene.s4animtools_version
+    del bpy.types.Scene.clips
+    del bpy.types.Scene.pose_pack_mode_enabled
+    del bpy.types.Scene.locomotion_builders
