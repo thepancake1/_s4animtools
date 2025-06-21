@@ -35,7 +35,7 @@ from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_Cr
 import s4animtools.animation_exporter.animation
 from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
 import s4animtools.rig.create_rig
-from s4animtools.serialization.types.transforms import Vector3, Quaternion4
+from s4animtools.serialization.types.transforms import Vector3, Quaternion
 from s4animtools.clip_operators import OT_S4ANIMTOOLS_CreateClipData, get_formatted_clip_name, \
     OT_S4ANIMTOOLS_InitializeThumbnails
 import s4animtools.clip_processing.clip_body
@@ -537,7 +537,7 @@ class NewClipExporter:
                 ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
                          explicit_namespaces=self.get_explicit_namespaces(),
                          reference_namespace_hash=self.get_reference_namespace_hash(),
-                         initial_offset_q=Quaternion4.from_str(initial_offset_q),
+                         initial_offset_q=Quaternion.from_str(initial_offset_q),
                          initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name, loco=clip_locos[clip_idx]))
         return clip_infos
 
