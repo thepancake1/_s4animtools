@@ -35,7 +35,7 @@ class Vector3(Serializable):
     def __repr__(self):
         return self.__str__()
 
-class Quaternion4(Serializable):
+class Quaternion(Serializable):
     def __init__(self, w, x, y, z):
         self.w = w
         self.x = x
@@ -50,7 +50,7 @@ class Quaternion4(Serializable):
         values = string.split(separator)
         if len(values) != 4:
             raise ValueError("Quaternion requires 4 values, Got: {}".format(values))
-        return Quaternion4(*map(float, values))
+        return Quaternion(*map(float, values))
 
     def to_binary(self):
         return list(map(Float32, self))
