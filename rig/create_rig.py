@@ -18,9 +18,9 @@ class Bone:
         self.flags = 0
 
     def read(self, reader):
-        self.position = [reader.float32(), reader.float32(), reader.float32()]
-        self.rotation = [reader.float32(), reader.float32(), reader.float32(), reader.float32()]
-        self.scale = [reader.float32(), reader.float32(), reader.float32()]
+        self.position = [reader.f32(), reader.f32(), reader.f32()]
+        self.rotation = [reader.f32(), reader.f32(), reader.f32(), reader.f32()]
+        self.scale = [reader.f32(), reader.f32(), reader.f32()]
         self.bone_name_length = reader.u32()
         self.bone_name = reader.read_string(self.bone_name_length)
         self.mirrored_bone_idx = reader.u32()
@@ -186,9 +186,9 @@ class Trackmask:
         track_blend_count = reader.u32()
         reader.u32()
         reader.u32()
-        reader.float32()
+        reader.f32()
         if track_blend_count > 1000:
             raise ValueError("Invalid track mask.")
         for i in range(track_blend_count):
-            self.track_blends.append(reader.float32())
+            self.track_blends.append(reader.f32())
         return self

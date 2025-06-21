@@ -40,7 +40,7 @@ class StreamReader:
 
         return uint64().read(self.stream[self.current_pos-8:self.current_pos])
 
-    def float32(self, raw=False):
+    def f32(self, raw=False):
         self.current_pos += 4
         return float32().read(self.stream[self.current_pos-4:self.current_pos])
     def tell(self):

@@ -23,17 +23,17 @@ class SlotAdjust(Serializable):
         self.rot_w = 0
 
     def read(self, reader:StreamReader):
-        self.pos_x = reader.float32()
-        self.pos_y = reader.float32()
-        self.pos_z = reader.float32()
-        self.scale_x = reader.float32()
-        self.scale_y = reader.float32()
-        self.scale_z = reader.float32()
+        self.pos_x = reader.f32()
+        self.pos_y = reader.f32()
+        self.pos_z = reader.f32()
+        self.scale_x = reader.f32()
+        self.scale_y = reader.f32()
+        self.scale_z = reader.f32()
 
-        self.rot_x = reader.float32()
-        self.rot_y = reader.float32()
-        self.rot_z = reader.float32()
-        self.rot_w = reader.float32()
+        self.rot_x = reader.f32()
+        self.rot_y = reader.f32()
+        self.rot_z = reader.f32()
+        self.rot_w = reader.f32()
 
         return self
 

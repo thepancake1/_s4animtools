@@ -18,7 +18,7 @@ class PolygonHeightOverride(Serializable):
 
     def read(self, reader:StreamReader):
         self.name_hash = reader.u32()
-        self.height = reader.float32()
+        self.height = reader.f32()
         return self
 
     def serialize(self):
@@ -258,12 +258,12 @@ class BoundingBox(Serializable):
         self.max_z = 0
 
     def read(self, reader:StreamReader):
-        self.min_x = reader.float32()
-        self.min_z = reader.float32()
-        self.max_x = reader.float32()
-        self.max_z = reader.float32()
-        self.min_y = reader.float32()
-        self.max_y = reader.float32()
+        self.min_x = reader.f32()
+        self.min_z = reader.f32()
+        self.max_x = reader.f32()
+        self.max_z = reader.f32()
+        self.min_y = reader.f32()
+        self.max_y = reader.f32()
         return self
     def serialize(self):
         data = [Float32(self.min_x), Float32(self.min_z), Float32(self.max_x), Float32(self.max_z),
@@ -283,8 +283,8 @@ class Point(Serializable):
         self.z = 0
 
     def read(self, reader:StreamReader):
-        self.x = reader.float32()
-        self.z = reader.float32()
+        self.x = reader.f32()
+        self.z = reader.f32()
         return self
 
 
@@ -394,9 +394,9 @@ class Footprint(Serializable):
             routing_area_count = reader.u8()
             for i in range(routing_area_count):
                 self.routing_areas.append(Area().read(reader))
-            self.maximum_height = reader.float32()
+            self.maximum_height = reader.f32()
 
-            self.minimum_height = reader.float32()
+            self.minimum_height = reader.f32()
         return self
     def serialize(self):
         serialized_stuff = []
