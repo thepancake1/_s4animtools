@@ -26,6 +26,10 @@ class Vector3(Serializable):
             raise ValueError("Vector3 requires 3 values, Got: {}".format(values))
         return Vector3(*map(float, values))
 
+    @staticmethod
+    def from_binary(reader):
+        x, y, z = reader.f32(), reader.f32(), reader.f32()
+        return Vector3(x, y, z)
     def to_binary(self):
         return list(map(Float32, self))
 
@@ -51,6 +55,11 @@ class Quaternion(Serializable):
         if len(values) != 4:
             raise ValueError("Quaternion requires 4 values, Got: {}".format(values))
         return Quaternion(*map(float, values))
+
+    @staticmethod
+    def from_binary(reader):
+        x, y, z, w = reader.f32(), reader.f32(), reader.f32(), reader.f32()
+        return Quaternion(w, x, y, z)
 
     def to_binary(self):
         return list(map(Float32, self))
