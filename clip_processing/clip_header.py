@@ -14,6 +14,18 @@ bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
                            "b__L_Foot__" : 2, "b__R_Foot__" : 3,
                            "b__ROOT_bind__" : 4}
 
+class IOString:
+    def __init__(self, string):
+        self.string = string
+
+    @staticmethod
+    def from_binary(reader):
+        length = reader.u32()
+        value = reader.read_string(length)
+        return IOString(value)
+
+    def to_binary(self):
+        return UInt32(len(self.string)).serialize() + self.string.encode("ascii"):
 
 class ExplicitNamespace:
     def __init__(self, value):
