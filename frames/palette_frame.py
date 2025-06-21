@@ -1,4 +1,4 @@
-from s4animtools.serialization.types.basic import UInt16
+from s4animtools.serialization.types.basic import u16
 from s4animtools.frames.frame import Frame
 
 class PaletteFrame(Frame):
@@ -10,12 +10,12 @@ class PaletteFrame(Frame):
         Due to that, these values are never negative or below zero.
         The sign bits are never set to anything than zero because of this.
         """
-        self._startTick = UInt16(startTick)
+        self._startTick = u16(startTick)
         #print(sign_bits)
         if not snap_frame:
-            self._sign_bits = UInt16(0)
+            self._sign_bits = u16(0)
         else:
-            self._sign_bits = UInt16(16)
+            self._sign_bits = u16(16)
         self._frame_data = frame_data
 
     def serialize(self):

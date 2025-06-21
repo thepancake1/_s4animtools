@@ -3,10 +3,12 @@ import os
 import importlib
 import s4animtools.clip_processing
 import s4animtools.serialization
-from s4animtools.serialization.types.basic import UInt32, Float32, String
+from s4animtools import Quaternion, Vector3
+from s4animtools.serialization.types.basic import u32, f32, String
 from s4animtools.clip_processing.clip_body import ClipBody
 from s4animtools.serialization import get_size
 from s4animtools.serialization.fnv import get_64bithash
+from s4animtools.serialization.types.strings import IOString
 from s4animtools.slot_assignments import SlotAssignment
 importlib.reload(s4animtools.clip_processing.clip_body)
 
@@ -21,12 +23,33 @@ class ExplicitNamespace:
         self.value = value
 
     def serialize(self):
-        return UInt32(self.length).serialize() + self.value.encode("ascii")
-class ClipResource:
+        return u32(self.length).serialize() + self.value.encode("ascii")
+
+
+class BaseClipResource:
+
+    @property
+    def version(self):
+        return self.version
+
+    @version.setter
+    def version(self, value):
+        if not isinstance(value, int):
+            raise TypeError("Version must be an integer")
+        self.version = value
+
+
+class ClipResource(BaseClipResource):
     def __init__(self, clip_name, rig_name, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
-                 initial_offset_t, source_file_name, loco_animation,disable_rig_suffix):
+                 initial_offset_t, source_file_name, loco_animation,disable_rig_suffix, version=14,
+                    surface_namespace_hash=2166136261, surface_joint_name_hash=2166136261, surface_child_namespace_hash=2166136261,
+                 duration=0):
         # If version number were to ever be updated to include later versions, make sure to remember that events and strings were updated.
-        self.version = 14
+        if version is None:
+            self.version = 14
+
+        else:
+            self.version = version
         self.s3pe_naming = False
         self.flags = 0
         if loco_animation:
@@ -36,9 +59,9 @@ class ClipResource:
         self.initial_offset_t =  initial_offset_t
         #TODO Add support for user-specified namespace hashes
         self.reference_namespace_hash = reference_namespace_hash
-        self.surface_namespace_hash = 2166136261
-        self.surface_joint_name_hash = 2166136261
-        self.surface_child_namespace_hash = 2166136261
+        self.surface_namespace_hash = surface_namespace_hash
+        self.surface_joint_name_hash = surface_joint_name_hash
+        self.surface_child_namespace_hash = surface_child_namespace_hash
         if disable_rig_suffix:
             #TODO Hack to support sims 4 pose packs from s4s
             encoded_clipname = clip_name
@@ -130,15 +153,15 @@ class ClipResource:
             clip_filename = self.get_clip_filename()
             clip_header_filename = self.get_clip_header_filename()
 
-        serialized = [UInt32(self.version), UInt32(self.flags), Float32(self.duration),
+        serialized = [u32(self.version), u32(self.flags), f32(self.duration),
                       *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
-                      UInt32(self.reference_namespace_hash), UInt32(self.surface_namespace_hash),
-                      UInt32(self.surface_joint_name_hash), UInt32(self.surface_child_namespace_hash),
-                      UInt32(self.clip_name_length), String(self.clip_name),
-                      UInt32(self.rig_name_length), String(self.rig_name), UInt32(self.explicit_namespace_count),
+                      u32(self.reference_namespace_hash), u32(self.surface_namespace_hash),
+                      u32(self.surface_joint_name_hash), u32(self.surface_child_namespace_hash),
+                      u32(self.clip_name_length), String(self.clip_name),
+                      u32(self.rig_name_length), String(self.rig_name), u32(self.explicit_namespace_count),
                       *self.explicit_namespaces,
-                      UInt32(self.slot_assignment_count), *self.slot_assignments, UInt32(self.clipEventCount),
-                      *self.clipEventList, UInt32(self.codecDataLength)]
+                      u32(self.slot_assignment_count), *self.slot_assignments, u32(self.clipEventCount),
+                      *self.clipEventList, u32(self.codecDataLength)]
         header_data = []
 
         header_length = 0
@@ -151,7 +174,7 @@ class ClipResource:
 
         actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
         # Replace codec data length with actual one
-        header_data[-1] = UInt32(actual_codec_data_length).serialize()
+        header_data[-1] = u32(actual_codec_data_length).serialize()
         all_data = io.BytesIO()
         # offsets
 
@@ -171,5 +194,47 @@ class ClipResource:
                     clip_header_file.write(write_data)
         except Exception as e:
             print(e)
+
+    @staticmethod
+    def from_binary(reader):
+        version = reader.u32()
+        if version >= 18:
+            raise ValueError("Clip version {} is not supported.".format(version))
+        flags = reader.u32()
+        duration = reader.f32()
+        initial_offset_q = Quaternion.from_binary(reader)
+        initial_offset_t = Vector3.from_binary(reader)
+        if version >= 5:
+            reference_namespace_hash = reader.u32()
+        if version >= 10:
+            surface_namespace_hash = reader.u32()
+            surface_joint_name_hash = reader.u32()
+
+        if version >= 11:
+            surface_child_namespace_hash = reader.u32()
+
+        if version >= 7:
+            clip_name = IOString.from_binary(reader)
+
+
+        rig_namespace = IOString.from_binary(reader)
+        if version >= 4:
+            explicit_namespace_count = reader.u32()
+            explicit_namespaces = []
+            for _ in range(explicit_namespace_count):
+                explicit_namespaces.append(IOString.from_binary(reader))
+
+        slot_assignment_count = reader.u32()
+        slot_assignments = []
+        for _ in range(slot_assignment_count):
+            slot_assignments.append(SlotAssignment.from_binary(reader))
+
+
+        clip = ClipResource(clip_name, rig_name, slot_assigments, explicit_namespaces, reference_namespace_hash,
+                            initial_offset_t, initial_offset_q, source_file_name, False, False)
+
+class ClipResourceTS3(BaseClipResource):
+    def __init__(self):
+        pass
 if __name__ == "__main__":
     ClipResource().serialize()

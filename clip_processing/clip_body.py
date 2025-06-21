@@ -1,4 +1,4 @@
-from s4animtools.serialization.types.basic import UInt32, Float32, String, UInt16, Byte
+from s4animtools.serialization.types.basic import u32, f32, String, u16, u8
 from s4animtools.serialization import get_size
 
 # You will need to update this should serialize_order change
@@ -31,13 +31,13 @@ class ClipBody:
         self._sourceAssetNameOffset = 0
 
         # Set the clip name by converting it to bytes using ascii encoding
-        self._clipName = clipname.encode("ascii") + Byte(0).serialize()
+        self._clipName = clipname.encode("ascii") + u8(0).serialize()
         # Initialize channels
         self._channels = []
         # Initialize f1 palette data
         self._f1PaletteData = []
         # Set source file name
-        self._source_file_name = source_file_name.encode("ascii") + Byte(0).serialize()
+        self._source_file_name = source_file_name.encode("ascii") + u8(0).serialize()
 
     def add_channel(self, new_channel):
         """
@@ -49,7 +49,7 @@ class ClipBody:
         return len(self._channels)
 
     def set_palette_values(self, palette_values):
-        self._f1PaletteData = list(map(Float32, map(abs,  palette_values)))
+        self._f1PaletteData = list(map(f32, map(abs, palette_values)))
 
     def set_clip_length(self, length):
         """
@@ -58,11 +58,11 @@ class ClipBody:
         self._numTicks = length
 
     def serialize(self):
-        serialize_order = [String(self._formatToken), UInt32(self._version),
-                      UInt32(self._flags), Float32(self._tickLength), UInt16(self._numTicks),
-                      UInt16(self._padding), UInt32(self._channel_count), UInt32(self._f1PaletteSize),
-                      UInt32(self._channelDataOffset), UInt32(self._f1DataPaletteOffset), UInt32(self._clipNameOffset),
-                      UInt32(self._sourceAssetNameOffset)]
+        serialize_order = [String(self._formatToken), u32(self._version),
+                           u32(self._flags), f32(self._tickLength), u16(self._numTicks),
+                           u16(self._padding), u32(self._channel_count), u32(self._f1PaletteSize),
+                           u32(self._channelDataOffset), u32(self._f1DataPaletteOffset), u32(self._clipNameOffset),
+                           u32(self._sourceAssetNameOffset)]
 
         serialized_channels = []
         clip_body_data = []
@@ -81,16 +81,16 @@ class ClipBody:
             serialized_channels.append((header, data))
             clip_body_data.append(header)
 
-        serialize_order[CLIP_NAME_OFFSET_IDX] = UInt32(data_offset)
+        serialize_order[CLIP_NAME_OFFSET_IDX] = u32(data_offset)
         clip_body_data.append(self._clipName)
         data_offset += len(self._clipName)
 
-        serialize_order[SOURCE_ASSET_NAME_OFFSET_IDX] = UInt32(data_offset)
+        serialize_order[SOURCE_ASSET_NAME_OFFSET_IDX] = u32(data_offset)
         clip_body_data.append(self._source_file_name)
         data_offset += len(self._source_file_name)
 
-        serialize_order[F1_PALETTE_OFFSET] = UInt32(data_offset)
-        serialize_order[F1_PALETTE_SIZE] = UInt32(len(self._f1PaletteData))
+        serialize_order[F1_PALETTE_OFFSET] = u32(data_offset)
+        serialize_order[F1_PALETTE_SIZE] = u32(len(self._f1PaletteData))
         for idx, data in enumerate(self._f1PaletteData):
             data_offset += 4
             clip_body_data.append(data.serialize())
@@ -104,7 +104,7 @@ class ClipBody:
             clip_body_data.append(data)
             data_offset += get_size(data)
         for idx in range(len(serialized_channels)):
-            clip_body_data[idx][0] = UInt32(channel_offsets[idx]).serialize()
+            clip_body_data[idx][0] = u32(channel_offsets[idx]).serialize()
 
         serialized_stuff = []
         for value in serialize_order:

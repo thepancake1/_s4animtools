@@ -1,4 +1,4 @@
-from s4animtools.serialization.types.basic import UInt64, UInt32
+from s4animtools.serialization.types.basic import u64, u32
 
 
 def get_addon_path():
@@ -69,12 +69,12 @@ def get_64bithash_as_int(to_hash, lowercase=True):
 
 def hash_name_or_get_hash(string, lowercase=False):
     if string.startswith("0x"):
-        return UInt32(int(string.strip(), 16))
+        return u32(int(string.strip(), 16))
     else:
-        return UInt32(get_32bit_hash(string.strip(), lowercase=lowercase))
+        return u32(get_32bit_hash(string.strip(), lowercase=lowercase))
 
 def hash_name_or_get_hash_64(string, lowercase=False):
     if string.startswith("0x"):
-        return UInt64(int(string.strip(), 16))
+        return u64(int(string.strip(), 16))
     else:
-        return UInt64(get_64bithash_as_int(string.strip(), lowercase=lowercase))
+        return u64(get_64bithash_as_int(string.strip(), lowercase=lowercase))

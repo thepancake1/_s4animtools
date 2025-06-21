@@ -1,13 +1,13 @@
-from s4animtools.serialization.types.basic import UInt32, UInt16
+from s4animtools.serialization.types.basic import u32, u16
 from s4animtools.serialization.types.strings import IOString
 
 
 class SlotAssignment:
-    def __init__(self, chainIdx, slotIdx, actor, target):
-        self._chainIdx = chainIdx
-        self._slotIdx = slotIdx
-        self._actor = actor
-        self._target = target
+    def __init__(self, chain_idx, slot_idx, target_object_namespace, target_joint_name):
+        self._chain_idx = chain_idx
+        self._slot_idx = slot_idx
+        self._actor = target_object_namespace
+        self._target = target_joint_name
 
     @staticmethod
     def from_binary(reader):
@@ -15,7 +15,10 @@ class SlotAssignment:
         slot_idx = reader.u16()
         target_object_namespace = IOString.from_binary(reader)
         target_joint_name = IOString.from_binary(reader)
+        return SlotAssignment(chain_idx, slot_idx, target_object_namespace, target_joint_name)
 
     def serialize(self):
-        return [UInt16(self._chainIdx).serialize(), UInt16(self._slotIdx).serialize(), UInt32(len(self._actor)).serialize(),
-                self._actor, UInt32(len(self._target)).serialize(), self._target]
+        return [u16(self._chain_idx).serialize(),
+                u16(self._slot_idx).serialize(),
+                IOString(self._actor).to_binary(),
+                IOString(self._target).to_binary()]

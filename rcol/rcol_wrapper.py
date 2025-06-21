@@ -7,7 +7,7 @@ import s4animtools
 from s4animtools.rcol.footprints import Footprint, Area, Point
 from s4animtools.serialization.types.tgi import TGI
 from s4animtools.rcol.skin import Skin
-from s4animtools.serialization.types.basic import UInt32, Bytes
+from s4animtools.serialization.types.basic import u32, Bytes
 from s4animtools.serialization import get_size
 from s4animtools.stream import StreamReader
 import bpy
@@ -42,7 +42,7 @@ class ChunkInfo:
         return self
 
     def serialize(self):
-        data = [UInt32(self.chunk_position), UInt32(self.chunk_size)]
+        data = [u32(self.chunk_position), u32(self.chunk_size)]
         serialized_stuff = []
         for value in data:
             serialized_stuff.append(value.serialize())
@@ -175,8 +175,8 @@ class RCOL:
                                         get_size(self.chunk_data[chunk_idx].value))
 
     def serialize_to_get_current_offset(self, chunk_idx):
-        data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
-                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
+        data = [u32(self.version), u32(self.public_chunks), u32(self.index3), u32(self.external_count),
+                u32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
                 *self.chunk_data[:chunk_idx - 1]]
 
         serialized_stuff = []
@@ -189,8 +189,8 @@ class RCOL:
         return total_len
 
     def serialize(self):
-        data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
-                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
+        data = [u32(self.version), u32(self.public_chunks), u32(self.index3), u32(self.external_count),
+                u32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
                 *self.chunk_data]
 
         serialized_stuff = []

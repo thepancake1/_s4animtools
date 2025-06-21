@@ -1,6 +1,6 @@
 import importlib
 import s4animtools.frames.frame
-from s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
+from s4animtools.serialization.types.basic import u16, u32, f32, u8
 import s4animtools.serialization
 from s4animtools.serialization.fnv import get_32bit_hash
 import math
@@ -10,7 +10,7 @@ importlib.reload(s4animtools.frames.frame)
 class QuaternionChannel:
     def __init__(self, channel_name, channel_type, sub_type):
         self._channel_name = channel_name
-        self._target = UInt32(get_32bit_hash(channel_name))
+        self._target = u32(get_32bit_hash(channel_name))
         self._data_offset = 0
         self._offset = 0
         self._scale = 0
@@ -26,7 +26,7 @@ class QuaternionChannel:
         return (value - self._offset) / self._scale
 
     def serialize_data(self, value):
-        return UInt16(value)
+        return u16(value)
 
     def quantize_data(self, value):
         # Throw away the sign. Watch it burn.
@@ -67,8 +67,8 @@ class QuaternionChannel:
 
     def serialize(self):
 
-        serialize_order = [UInt32(self._data_offset), self._target, Float32(self._offset), Float32(self._scale),
-                 UInt16(self._frame_count), Byte(self._channel_type), Byte(self._sub_type)]
+        serialize_order = [u32(self._data_offset), self._target, f32(self._offset), f32(self._scale),
+                           u16(self._frame_count), u8(self._channel_type), u8(self._sub_type)]
         serialized_header = []
         serialized_frames = []
 

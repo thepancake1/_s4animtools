@@ -18,7 +18,7 @@ class Bytes:
         return self.value
 
 
-class Byte:
+class u8:
     def __init__(self, value):
         self.value = value
 
@@ -26,7 +26,7 @@ class Byte:
         return pack("<B", self.value)
 
 
-class UInt16:
+class u16:
     def __init__(self, value):
         self.value = value
 
@@ -34,7 +34,7 @@ class UInt16:
         return pack("<H", self.value)
 
 
-class UInt32:
+class u32:
     def __init__(self, value):
         self.value = value
 
@@ -46,7 +46,7 @@ class UInt32:
         return unpack("<L", value)[0]
 
 
-class UInt64:
+class u64:
     def __init__(self, value):
         self.value = value
 
@@ -58,7 +58,7 @@ class UInt64:
         return unpack("<Q", value)[0]
 
 
-class Int32:
+class i32:
     def __init__(self, value):
         self.value = value
 
@@ -66,7 +66,7 @@ class Int32:
         return pack("<l", self.value)
 
 
-class Float32:
+class f32:
     def __init__(self, value):
         self.value = value
 

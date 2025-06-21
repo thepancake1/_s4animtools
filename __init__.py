@@ -13,7 +13,7 @@ from s4animtools.rig.create_rig import Trackmask
 from s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent, GeometryStateChangeEvent
-from s4animtools.serialization.types.basic import Float32, UInt32
+from s4animtools.serialization.types.basic import f32, u32
 from s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
 from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
 

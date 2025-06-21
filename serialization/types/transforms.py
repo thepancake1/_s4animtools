@@ -1,4 +1,4 @@
-from s4animtools.serialization.types.basic import Float32
+from s4animtools.serialization.types.basic import f32
 from s4animtools.serialization import Serializable
 
 """
@@ -31,7 +31,7 @@ class Vector3(Serializable):
         x, y, z = reader.f32(), reader.f32(), reader.f32()
         return Vector3(x, y, z)
     def to_binary(self):
-        return list(map(Float32, self))
+        return list(map(f32, self))
 
     def __str__(self):
         return "XYZ: {:.02f} {:.02f} {:.02f}".format(self.x, self.y, self.z)
@@ -62,7 +62,7 @@ class Quaternion(Serializable):
         return Quaternion(w, x, y, z)
 
     def to_binary(self):
-        return list(map(Float32, self))
+        return list(map(f32, self))
 
     def __str__(self):
         return "XYZW: {:.02f} {:.02f} {:.02f} {:.02f}".format(self.x, self.y, self.z, self.w)

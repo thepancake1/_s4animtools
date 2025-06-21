@@ -1,7 +1,7 @@
 import os
 
 from s4animtools.serialization.fnv import get_32bit_hash
-from s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Int32
+from s4animtools.serialization.types.basic import u32, f32, Bytes, i32
 import bpy
 from s4animtools.stream import StreamReader
 
@@ -40,18 +40,18 @@ class Bone:
 
         print("Bone: {}, Parent: {}".format(current_bone.name, parent_bone.name))
         print("Location: {}, Rotation: {}".format(location, rotation))
-        self.position = [Float32(round(location.x, 4)), Float32(round(location.y, 4)),
-                         Float32(round(location.z, 4))]
-        self.rotation = [Float32(round(rotation.x, 4)), Float32(round(rotation.y, 4)), Float32(round(rotation.z, 4)),
-                         Float32(round(rotation.w, 4))]
+        self.position = [f32(round(location.x, 4)), f32(round(location.y, 4)),
+                         f32(round(location.z, 4))]
+        self.rotation = [f32(round(rotation.x, 4)), f32(round(rotation.y, 4)), f32(round(rotation.z, 4)),
+                         f32(round(rotation.w, 4))]
 
-        self.scale = [Float32(1), Float32(1), Float32(1)]
-        self.bone_name_length, self.bone_name = UInt32(len(current_bone.name)), \
+        self.scale = [f32(1), f32(1), f32(1)]
+        self.bone_name_length, self.bone_name = u32(len(current_bone.name)), \
                                                 Bytes(current_bone.name.encode('ascii'))
-        self.mirrored_bone_idx = Int32(current_idx)
-        self.parent_idx = Int32(parent_idx)
-        self.bone_hash = UInt32(get_32bit_hash(current_bone.name))
-        self.flags = UInt32(Rig.determine_bone_type(current_bone.name))
+        self.mirrored_bone_idx = i32(current_idx)
+        self.parent_idx = i32(parent_idx)
+        self.bone_hash = u32(get_32bit_hash(current_bone.name))
+        self.flags = u32(Rig.determine_bone_type(current_bone.name))
         return self
     def serialize(self):
         serialized = [*self.position, *self.rotation, *self.scale, self.bone_name_length, self.bone_name,
@@ -95,9 +95,9 @@ class Rig:
             self.bones.append(Bone().read(reader))
         return self
     def create(self, bones):
-        self.major_version = UInt32(3)
-        self.minor_version = UInt32(1)
-        self.bone_count = UInt32(len(bones))
+        self.major_version = u32(3)
+        self.minor_version = u32(1)
+        self.bone_count = u32(len(bones))
         self.bones = []
         bone_to_idx = {}
         for i in range(len(bones)):
@@ -111,7 +111,7 @@ class Rig:
                 parent_bone = current_bone
                 parent_bone_idx = -1
             self.bones.append(Bone().create(current_bone, parent_bone, parent_bone_idx, i))
-        self.rig_name_length = UInt32(0)
+        self.rig_name_length = u32(0)
         return self
 
     def serialize(self):

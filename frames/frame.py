@@ -1,4 +1,4 @@
-from s4animtools.serialization.types.basic import UInt16
+from s4animtools.serialization.types.basic import u16
 
 
 class Frame:
@@ -13,13 +13,13 @@ class Frame:
         :param frame_data: The frame data.
         :param snap_frame: The frame for snaping
         """
-        self._startTick = UInt16(startTick)
+        self._startTick = u16(startTick)
         sign_bits = [frame_data[0] < 0, frame_data[1] < 0, frame_data[2] < 0, frame_data[3] < 0,
                      0, 0, 0, snap_frame]
         sign_bits = [str(int(x)) for x in sign_bits]
         # Flip the sign bits for endianness
         sign_bits = "".join(sign_bits)[::-1]
-        self._sign_bits = UInt16(int(sign_bits, 2))
+        self._sign_bits = u16(int(sign_bits, 2))
         self._frame_data = frame_data
 
     def serialize(self):
@@ -44,13 +44,13 @@ class PaletteFrame:
         :param frame_data: The frame data.
         :param snap_frame: The frame for snaping
         """
-        self._startTick = UInt16(startTick)
+        self._startTick = u16(startTick)
         sign_bits = [original_values[0] < 0, original_values[1] < 0, original_values[2] < 0, original_values[3] < 0,
                      0, 0, 0, snap_frame]
         sign_bits = [str(int(x)) for x in sign_bits]
         # Flip the sign bits for endianness
         sign_bits = "".join(sign_bits)[::-1]
-        self._sign_bits = UInt16(int(sign_bits, 2))
+        self._sign_bits = u16(int(sign_bits, 2))
         self._frame_data = frame_data
 
     def serialize(self):
@@ -76,13 +76,13 @@ class PaletteTranslationFrame:
         :param frame_data: The frame data.
         :param snap_frame: The frame for snaping
         """
-        self._startTick = UInt16(startTick)
+        self._startTick = u16(startTick)
         sign_bits = [original_values[0] < 0, original_values[1] < 0, original_values[2] < 0, 0,
                      0, 0, 0, snap_frame]
         sign_bits = [str(int(x)) for x in sign_bits]
         # Flip the sign bits for endianness
         sign_bits = "".join(sign_bits)[::-1]
-        self._sign_bits = UInt16(int(sign_bits, 2))
+        self._sign_bits = u16(int(sign_bits, 2))
         self._frame_data = frame_data
 
     def serialize(self):
