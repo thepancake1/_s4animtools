@@ -76,7 +76,7 @@ class ClipBody:
         It also updates the channel offsets to point to the correct location in the serialize_order data.
         """
         for channel in self._channels:
-            header, data = channel.serialize()
+            header, data = channel.to_binary()
             data_offset += get_size(header)
             serialized_channels.append((header, data))
             clip_body_data.append(header)
@@ -93,7 +93,7 @@ class ClipBody:
         serialize_order[F1_PALETTE_SIZE] = u32(len(self._f1PaletteData))
         for idx, data in enumerate(self._f1PaletteData):
             data_offset += 4
-            clip_body_data.append(data.serialize())
+            clip_body_data.append(data.to_binary())
             #print(idx, data.value)
 
 
@@ -104,10 +104,10 @@ class ClipBody:
             clip_body_data.append(data)
             data_offset += get_size(data)
         for idx in range(len(serialized_channels)):
-            clip_body_data[idx][0] = u32(channel_offsets[idx]).serialize()
+            clip_body_data[idx][0] = u32(channel_offsets[idx]).to_binary()
 
         serialized_stuff = []
         for value in serialize_order:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff, clip_body_data

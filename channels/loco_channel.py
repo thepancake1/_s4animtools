@@ -38,9 +38,9 @@ class F1Normalized(s4animtools.channels.quaternion_channel.QuaternionChannel):
         serialized_frames = []
 
         for item in serialize_order:
-            serialized_header.append(item.serialize())
+            serialized_header.append(item.to_binary())
 
         for idx, frame in self.serialized_frames.items():
-            serialized_frames.append(frame.serialize())
+            serialized_frames.append(frame.to_binary())
 
         return serialized_header, serialized_frames

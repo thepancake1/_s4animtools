@@ -27,9 +27,9 @@ class Frame:
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
         for item in serialize_order:
-            frame_data.append(item.serialize())
+            frame_data.append(item.to_binary())
         for data in self._frame_data:
-            frame_data.append(data.serialize())
+            frame_data.append(data.to_binary())
         return frame_data
 
 class PaletteFrame:
@@ -58,9 +58,9 @@ class PaletteFrame:
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
         for item in serialize_order:
-            frame_data.append(item.serialize())
+            frame_data.append(item.to_binary())
         for data in self._frame_data:
-            frame_data.append(data.serialize())
+            frame_data.append(data.to_binary())
         return frame_data
 
 
@@ -90,9 +90,9 @@ class PaletteTranslationFrame:
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
         for item in serialize_order:
-            frame_data.append(item.serialize())
+            frame_data.append(item.to_binary())
         for data in self._frame_data:
-            frame_data.append(data.serialize())
+            frame_data.append(data.to_binary())
         return frame_data
 
 if __name__ == "__main__":

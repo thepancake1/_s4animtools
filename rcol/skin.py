@@ -44,7 +44,7 @@ class Skin:
 
 
         for value in data:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 

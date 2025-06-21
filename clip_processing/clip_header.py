@@ -23,7 +23,7 @@ class ExplicitNamespace:
         self.value = value
 
     def serialize(self):
-        return u32(self.length).serialize() + self.value.encode("ascii")
+        return u32(self.length).to_binary() + self.value.encode("ascii")
 
 
 class BaseClipResource:
@@ -166,7 +166,7 @@ class ClipResource(BaseClipResource):
 
         header_length = 0
         for item in serialized:
-            serialized_data = item.serialize()
+            serialized_data = item.to_binary()
             header_data.append(serialized_data)
             header_length += get_size(serialized_data)
 
@@ -174,7 +174,7 @@ class ClipResource(BaseClipResource):
 
         actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
         # Replace codec data length with actual one
-        header_data[-1] = u32(actual_codec_data_length).serialize()
+        header_data[-1] = u32(actual_codec_data_length).to_binary()
         all_data = io.BytesIO()
         # offsets
 

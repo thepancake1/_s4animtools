@@ -19,6 +19,6 @@ class F1NormalizedFrame(Frame):
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
         for item in serialize_order:
-            frame_data.append(item.serialize())
-        frame_data.append(self._frame_data.serialize())
+            frame_data.append(item.to_binary())
+        frame_data.append(self._frame_data.to_binary())
         return frame_data

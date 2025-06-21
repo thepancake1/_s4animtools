@@ -22,5 +22,5 @@ class PaletteFrame(Frame):
         serialize_order = [self._startTick, self._sign_bits, *self._frame_data]
         frame_data = []
         for item in serialize_order:
-            frame_data.append(item.serialize())
+            frame_data.append(item.to_binary())
         return frame_data

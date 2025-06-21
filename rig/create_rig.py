@@ -119,7 +119,7 @@ class Rig:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 

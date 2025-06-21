@@ -12,4 +12,4 @@ class IOString(Serializable):
         return IOString(value)
 
     def to_binary(self):
-        return u32(len(self.string)).serialize() + self.string.encode("ascii")
+        return u32(len(self.string)).to_binary() + self.string.encode("ascii")

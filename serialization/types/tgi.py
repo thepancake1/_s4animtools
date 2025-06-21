@@ -18,7 +18,7 @@ class TGI(Serializable):
         data = [u64(self.i), u32(self.t), u32(self.g)]
         serialized_stuff = []
         for value in data:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 

@@ -45,7 +45,7 @@ class ChunkInfo:
         data = [u32(self.chunk_position), u32(self.chunk_size)]
         serialized_stuff = []
         for value in data:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -126,7 +126,7 @@ class RCOL:
             # if isinstance(self.chunk_data[i], Skin):
             current_pos = self.pad(current_pos, serialized_body)
 
-            serialized_body.append(self.chunk_data[i].serialize())
+            serialized_body.append(self.chunk_data[i].to_binary())
             current_chunk_len = get_size(self.chunk_data[i].value)
             print(current_chunk_len, "chunklength")
             # print(self.chunk_data[i].value)
@@ -182,7 +182,7 @@ class RCOL:
         serialized_stuff = []
         total_len = 0
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
             total_len += get_combined_len(serialied)
         # Pad to next DWORD between chunks
@@ -196,7 +196,7 @@ class RCOL:
         serialized_stuff = []
         total_len = 0
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         #  print(total_len, serialied)
         # print(total_len)

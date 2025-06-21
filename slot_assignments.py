@@ -18,7 +18,7 @@ class SlotAssignment:
         return SlotAssignment(chain_idx, slot_idx, target_object_namespace, target_joint_name)
 
     def serialize(self):
-        return [u16(self._chain_idx).serialize(),
-                u16(self._slot_idx).serialize(),
+        return [u16(self._chain_idx).to_binary(),
+                u16(self._slot_idx).to_binary(),
                 IOString(self._actor).to_binary(),
                 IOString(self._target).to_binary()]

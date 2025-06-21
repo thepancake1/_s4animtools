@@ -61,7 +61,7 @@ class ParentEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -81,7 +81,7 @@ class ScriptEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -102,7 +102,7 @@ class SuppressLipsyncEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -135,7 +135,7 @@ class ReactionEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -168,7 +168,7 @@ class SnapEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -192,7 +192,7 @@ class VisibilityEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -215,7 +215,7 @@ class SoundEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -249,7 +249,7 @@ class PlayEffectEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -276,7 +276,7 @@ class StopEffectEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -299,7 +299,7 @@ class FocusCompatibilityEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -323,6 +323,6 @@ class GeometryStateChangeEvent:
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff

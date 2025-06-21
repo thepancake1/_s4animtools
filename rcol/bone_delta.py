@@ -44,7 +44,7 @@ class SlotAdjust(Serializable):
 
         serialized_stuff = []
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 class BoneDelta(Serializable):
@@ -68,7 +68,7 @@ class BoneDelta(Serializable):
         serialized_stuff = []
         data = [u32(self.version), u32(self.bone_count), *self.bones]
         for value in data:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 

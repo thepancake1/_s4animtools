@@ -26,7 +26,7 @@ class PolygonHeightOverride(Serializable):
 
         serialized_stuff = []
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -80,7 +80,7 @@ class FootprintPolyFlags(Serializable):
 
         serialized_stuff = []
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -152,7 +152,7 @@ class IntersectionFlags(Serializable):
 
         serialized_stuff = []
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -206,7 +206,7 @@ class SurfaceTypeFlags(Serializable):
 
         serialized_stuff = []
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -243,7 +243,7 @@ class SurfaceAttributeFlags(Serializable):
 
         serialized_stuff = []
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -272,7 +272,7 @@ class BoundingBox(Serializable):
         serialized_stuff = []
         total_len = 0
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -294,7 +294,7 @@ class Point(Serializable):
         serialized_stuff = []
         total_len = 0
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -342,7 +342,7 @@ class Area(Serializable):
         for value in data:
             print(idx)
             idx+= 1
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 
@@ -412,7 +412,7 @@ class Footprint(Serializable):
         data = [Bytes(self.identifier), u32(self.version), self.template_key, *subdata]
 
         for value in data:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
