@@ -114,3 +114,4 @@ dmypy.json
 .pyre/
 *.xml
 *.iml
+/tests/test_data
