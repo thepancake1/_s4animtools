@@ -3,14 +3,13 @@ import os
 import importlib
 import s4animtools.clip_processing
 import s4animtools.serialization
-from s4animtools import Quaternion, Vector3
+from s4animtools.serialization.types.transforms import Quaternion, Vector3
 from s4animtools.serialization.types.basic import u32, f32, String
 from s4animtools.clip_processing.clip_body import ClipBody
 from s4animtools.serialization import get_size
 from s4animtools.serialization.fnv import get_64bithash
 from s4animtools.serialization.types.strings import IOString
 from s4animtools.slot_assignments import SlotAssignment
-importlib.reload(s4animtools.clip_processing.clip_body)
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
                            "b__L_Foot__" : 2, "b__R_Foot__" : 3,
