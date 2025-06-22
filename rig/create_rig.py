@@ -27,7 +27,7 @@ class Bone:
         self.parent_idx = reader.s32()
         self.bone_hash = reader.u32()
         self.flags = reader.u32()
-        print(self.bone_name, hex(self.bone_hash))
+        #print(self.bone_name, hex(self.bone_hash))
         return self
 
 
@@ -38,8 +38,8 @@ class Bone:
         location = (bp2.inverted() @ bp1).to_translation()
         rotation = matrix_data.to_quaternion()
 
-        print("Bone: {}, Parent: {}".format(current_bone.name, parent_bone.name))
-        print("Location: {}, Rotation: {}".format(location, rotation))
+       # print("Bone: {}, Parent: {}".format(current_bone.name, parent_bone.name))
+       # print("Location: {}, Rotation: {}".format(location, rotation))
         self.position = [f32(round(location.x, 4)), f32(round(location.y, 4)),
                          f32(round(location.z, 4))]
         self.rotation = [f32(round(rotation.x, 4)), f32(round(rotation.y, 4)), f32(round(rotation.z, 4)),
@@ -139,7 +139,6 @@ def create_rig_with_context(filepath, context):
     edit_bones = ob_new.data.edit_bones
     for bone in rig_resource.bones:
         if bone.parent_idx >= 0:
-            print(bone.parent_idx)
             #print(bone.parent_idx)
             parent_matrix = edit_bones[bone.parent_idx].matrix
             parent = edit_bones[bone.parent_idx]
