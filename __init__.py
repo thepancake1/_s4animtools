@@ -46,6 +46,7 @@ from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
 
+from s4animtools.slot_assignments import SlotAssignment
 from s4animtools.walkstyles.blender import LocomotionBuilderVariantData, draw_locomotion_builder_data, locomotion_register, \
     locomotion_unregister
 
@@ -578,10 +579,32 @@ class NewClipExporter:
             world_root = world_rig.pose.bones[world_root]
 
         base_rig = self.context.object.base_rig
-
+        slot_assignments = []
+        slot_idx = 0
+        for chain_bone in ik_targets_to_bone:
+            for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
+                target_rig = slot_assignment.target_rig
+                print("target rig is {}".format(target_rig))
+                target_bone = slot_assignment.target_bone
+                chain_idx = slot_assignment.chain_idx
+                if "subroot" in target_bone:
+                    target_bone = "b__ROOT__"
+                if "loco" in target_bone:
+                    target_bone = "b__ROOT__"
+                if target_bone.endswith("Adjust"):
+                    target_bone = target_bone.replace("Adjust", "")
+                if chain_idx == -1:
+                    chain_idx = bone_to_slot_offset_idx[slot_assignment.source_bone]
+                sA = SlotAssignment(chain_idx, idx, target_rig.rig_name.encode('ascii'), target_bone.encode('ascii'))
+                slot_assignments.append(sA)
+                slot_idx += 1
+        explicit_namespaces = []
         for idx, clip_info in enumerate(clip_infos):
-            current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
-                                        clip_info.explicit_namespaces,
+            if len(clip_info.explicit_namespaces) >= 2:
+                for namespace in clip_info.explicit_namespaces.split(","):
+                    explicit_namespaces.append(namespace.lstrip())
+            current_clip = ClipResource(clip_info.name, clip_info.rig_name, slot_assignments,
+                                        explicit_namespaces,
                                         clip_info.reference_namespace_hash, clip_info.initial_offset_q,
                                         clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
             rig = self.context.object

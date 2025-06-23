@@ -61,37 +61,15 @@ class ClipResource(BaseClipResource):
         self.clip_name_length, self.clip_name = len(encoded_clipname), encoded_clipname
         self.file_name_length, self.file_name = len(export_filename), export_filename
         self.rig_name_length, self.rig_name = len(rig_name), rig_name
-        self.explicit_namespace_count = 0
-        self.explicit_namespaces = []
-        self.slot_assignment_count = 0
-        self.slot_assignments = []
-        slot_idx = 0
-        for chain_bone in slot_assignments:
-            for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
-                target_rig = slot_assignment.target_rig
-                print("target rig is {}".format(target_rig))
-                target_bone = slot_assignment.target_bone
-                chain_idx = slot_assignment.chain_idx
-                if "subroot" in target_bone:
-                    target_bone = "b__ROOT__"
-                if "loco" in target_bone:
-                    target_bone = "b__ROOT__"
-                if target_bone.endswith("Adjust"):
-                    target_bone = target_bone.replace("Adjust", "")
-                if chain_idx == -1:
-                    chain_idx = bone_to_slot_offset_idx[slot_assignment.source_bone]
-                sA = SlotAssignment(chain_idx, idx, target_rig.rig_name.encode('ascii'), target_bone.encode('ascii'))
-                self.slot_assignments.append(sA)
-                slot_idx += 1
-
-        self.slot_assignment_count += slot_idx
+        self.explicit_namespace_count = len(explicit_namespaces)
+        self.explicit_namespaces = explicit_namespaces
+        self.slot_assignments = slot_assignments
+        self.slot_assignment_count = len(slot_assignments)
         self.clipEventCount = 0
         self.clipEventList = []
         self.codecDataLength = 0
         self.clip_body = ClipBody(self.clip_name, source_file_name)
-        if len(explicit_namespaces) >= 2:
-            for namespace in explicit_namespaces.split(","):
-                self.add_explicit_namespace(namespace.lstrip())
+
 
     def update_duration(self, ticks):
         # -1 tick for some reason.
