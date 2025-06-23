@@ -76,9 +76,6 @@ class ClipResource(BaseClipResource):
         self.duration = ticks / 30 - (1 / 30)
         self.clip_body.set_clip_length(ticks)
 
-    def add_explicit_namespace(self, name):
-        self.explicit_namespace_count += 1
-        self.explicit_namespaces.append(ExplicitNamespace(name))
 
     def add_event(self, event):
         self.clipEventList.append(event)
