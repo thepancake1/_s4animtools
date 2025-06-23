@@ -25,17 +25,7 @@ class ExplicitNamespace:
 
 
 class BaseClipResource:
-
-    @property
-    def version(self):
-        return self.version
-
-    @version.setter
-    def version(self, value):
-        if not isinstance(value, int):
-            raise TypeError("Version must be an integer")
-        self.version = value
-
+    pass
 
 class ClipResource(BaseClipResource):
     def __init__(self, clip_name, rig_name, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
