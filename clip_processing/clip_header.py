@@ -167,8 +167,12 @@ class ClipResource(BaseClipResource):
         duration = reader.f32()
         initial_offset_q = Quaternion.from_binary(reader)
         initial_offset_t = Vector3.from_binary(reader)
+        reference_namespace_hash = 0
         if version >= 5:
             reference_namespace_hash = reader.u32()
+        surface_namespace_hash = 2166136261
+        surface_joint_name_hash = 2166136261
+        surface_child_namespace_hash = 2166136261
         if version >= 10:
             surface_namespace_hash = reader.u32()
             surface_joint_name_hash = reader.u32()
@@ -176,14 +180,15 @@ class ClipResource(BaseClipResource):
         if version >= 11:
             surface_child_namespace_hash = reader.u32()
 
+        clip_name = ""
         if version >= 7:
             clip_name = IOString.from_binary(reader).string
 
 
         rig_namespace = IOString.from_binary(reader).string
+        explicit_namespaces = []
         if version >= 4:
             explicit_namespace_count = reader.u32()
-            explicit_namespaces = []
             for _ in range(explicit_namespace_count):
                 explicit_namespaces.append(IOString.from_binary(reader).string)
 
