@@ -9,6 +9,7 @@ from s4animtools.serialization import get_size
 from s4animtools.serialization.fnv import get_64bithash
 from s4animtools.serialization.types.strings import IOString
 from s4animtools.slot_assignments import SlotAssignment
+from s4animtools.stream import FileReader
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
                            "b__L_Foot__" : 2, "b__R_Foot__" : 3,
@@ -179,7 +180,6 @@ class ClipResource(BaseClipResource):
 
         if version >= 11:
             surface_child_namespace_hash = reader.u32()
-
         clip_name = ""
         if version >= 7:
             clip_name = IOString.from_binary(reader).string
@@ -198,8 +198,11 @@ class ClipResource(BaseClipResource):
             slot_assignments.append(SlotAssignment.from_binary(reader))
 
 
-        clip = ClipResource(clip_name, rig_name, slot_assigments, explicit_namespaces, reference_namespace_hash,
-                            initial_offset_t, initial_offset_q, source_file_name, False, False)
+        clip = ClipResource(clip_name, rig_namespace, slot_assignments, explicit_namespaces, reference_namespace_hash,
+                            initial_offset_t,"", False, False, disable_rig_suffix=True,
+                            version=version, surface_namespace_hash=surface_namespace_hash,
+                            surface_joint_name_hash=surface_joint_name_hash,
+                            surface_child_namespace_hash=surface_child_namespace_hash)
 
 class ClipResourceTS3(BaseClipResource):
     def __init__(self):
