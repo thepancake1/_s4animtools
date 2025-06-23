@@ -582,7 +582,7 @@ class NewClipExporter:
         slot_assignments = []
         slot_idx = 0
         for chain_bone in ik_targets_to_bone:
-            for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
+            for idx, slot_assignment in enumerate(ik_targets_to_bone[chain_bone]):
                 target_rig = slot_assignment.target_rig
                 print("target rig is {}".format(target_rig))
                 target_bone = slot_assignment.target_bone
