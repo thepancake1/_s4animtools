@@ -32,7 +32,7 @@ class ClipResource(BaseClipResource):
     def __init__(self, clip_name, rig_name, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
                  initial_offset_t, source_file_name, loco_animation,disable_rig_suffix, version=14,
                     surface_namespace_hash=2166136261, surface_joint_name_hash=2166136261, surface_child_namespace_hash=2166136261,
-                 duration=0):
+                 duration=0, flags=0):
         # If version number were to ever be updated to include later versions, make sure to remember that events and strings were updated.
         if version is None:
             self.version = 14
@@ -40,10 +40,10 @@ class ClipResource(BaseClipResource):
         else:
             self.version = version
         self.s3pe_naming = False
-        self.flags = 0
+        self.flags = flags
         if loco_animation:
-            self.flags = 1
-        self.duration = 0
+            self.flags |= 1
+        self.duration = duration
         self.initial_offset_q = initial_offset_q
         self.initial_offset_t =  initial_offset_t
         #TODO Add support for user-specified namespace hashes
@@ -213,7 +213,7 @@ class ClipResource(BaseClipResource):
                             initial_offset_t,"", False, False, disable_rig_suffix=True,
                             version=version, surface_namespace_hash=surface_namespace_hash,
                             surface_joint_name_hash=surface_joint_name_hash,
-                            surface_child_namespace_hash=surface_child_namespace_hash)
+                            surface_child_namespace_hash=surface_child_namespace_hash, duration=duration, flags=flags)
 
 class ClipResourceTS3(BaseClipResource):
     def __init__(self):
