@@ -33,7 +33,6 @@ class ClipBody:
 
         self._clipName = clipname
         self._channels = []
-        # Initialize f1 palette data
         self._f1PaletteData = []
         self._source_file_name = source_file_name
 
