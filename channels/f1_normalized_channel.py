@@ -7,7 +7,7 @@ import math
 
 class F1Normalized(s4animtools.channels.quaternion_channel.QuaternionChannel):
     def serialize_data(self, value):
-        return Bytes(u8(value).serialize() + u8(0).serialize())
+        return Bytes(u8(value).to_binary() + u8(0).to_binary())
 
     def quantize_data(self, value):
         # F1 Normalized data uses 8 bits of data
