@@ -1,7 +1,7 @@
 from s4animtools.game_types import uint8, uint16, uint32, uint64, float32, int32
 
 
-class StreamReader:
+class FileReader:
     def __init__(self, file):
         self.filename = file
         self.stream = open(file, "rb").read()

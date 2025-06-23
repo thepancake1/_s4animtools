@@ -3,7 +3,7 @@ import os
 from s4animtools.serialization.fnv import get_32bit_hash
 from s4animtools.serialization.types.basic import u32, f32, Bytes, i32
 import bpy
-from s4animtools.stream import StreamReader
+from s4animtools.stream import FileReader
 
 class Bone:
     def __init__(self):
@@ -126,7 +126,7 @@ class Rig:
 def create_rig_with_context(filepath, context):
     import math
     from mathutils import Vector, Matrix, Quaternion
-    reader = StreamReader(filepath)
+    reader = FileReader(filepath)
     rig_resource = Rig().read(reader)
     rig_name = os.path.basename(filepath)
     armdata = bpy.data.armatures.new(rig_name)
@@ -179,7 +179,7 @@ class Trackmask:
         self.track_blends = []
 
     def read(self, filepath):
-        reader = StreamReader(filepath)
+        reader = FileReader(filepath)
         for i in range(24):
             reader.u8()
         track_blend_count = reader.u32()

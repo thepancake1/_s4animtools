@@ -9,7 +9,7 @@ from s4animtools.serialization.types.tgi import TGI
 from s4animtools.rcol.skin import Skin
 from s4animtools.serialization.types.basic import u32, Bytes
 from s4animtools.serialization import get_size
-from s4animtools.stream import StreamReader
+from s4animtools.stream import FileReader
 import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
@@ -264,7 +264,7 @@ class ImportFootprint:
         obj.is_routing_footprint = is_routing_footprint
 
     def execute(self, context, filepath):
-        reader = StreamReader(filepath)
+        reader = FileReader(filepath)
         rcol = RCOL().read(reader)
         footprint_chunk = None
         for chunk in rcol.chunk_data:

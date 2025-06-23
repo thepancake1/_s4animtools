@@ -1,6 +1,6 @@
 from s4animtools import f32, u32
 from s4animtools.serialization import Serializable
-from s4animtools.stream import StreamReader
+from s4animtools.stream import FileReader
 from s4animtools.rcol.rcol_wrapper import RCOL
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -22,7 +22,7 @@ class SlotAdjust(Serializable):
         self.rot_z = 0
         self.rot_w = 0
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.pos_x = reader.f32()
         self.pos_y = reader.f32()
         self.pos_z = reader.f32()
@@ -57,7 +57,7 @@ class BoneDelta(Serializable):
     def bone_count(self):
         return len(self.bones)
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.version = reader.u32()
         bone_count = reader.u32()
         for bone in range(bone_count):
@@ -78,7 +78,7 @@ class BoneDelta(Serializable):
 
 if __name__ == "__main__":
     filepath = r"D:\Assets\Projects\Sims 3 Exporter\S3_0355E0A6_00000001_000000008114DDC7_amTopNudenormal%%+BOND.bonedelta"
-    reader = StreamReader(filepath)
+    reader = FileReader(filepath)
     rcol = RCOL().read(reader)
     bonedelta_chunk = None
     for chunk in rcol.chunk_data:

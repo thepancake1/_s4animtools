@@ -1,7 +1,7 @@
 from s4animtools.serialization.types.basic import u32, f32, Serializable
 from s4animtools.serialization.types.basic import u8, Bytes
 from s4animtools.serialization.types.tgi import TGI
-from s4animtools.stream import StreamReader
+from s4animtools.stream import FileReader
 def get_combined_len(value):
     size = 0
     if isinstance(value, list):
@@ -16,7 +16,7 @@ class PolygonHeightOverride(Serializable):
         self.name_hash = 0
         self.height = 0
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.name_hash = reader.u32()
         self.height = reader.f32()
         return self
@@ -72,7 +72,7 @@ class FootprintPolyFlags(Serializable):
                "For Pathing: {}\n" \
                "For Placement: {}\n".format(self.terrain_cutout, self.encouraged, self.placement_slotted, self.no_raycast, self.landing_strip,
                                             self.discouraged, self.is_enabled, self.for_pathing, self.for_placement)
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.bitfield = reader.u32()
         return self
     def serialize(self):
@@ -144,7 +144,7 @@ class IntersectionFlags(Serializable):
         self.objects, self.walls, self.none)
 
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.bitfield = reader.u32()
         return self
     def serialize(self):
@@ -197,7 +197,7 @@ class SurfaceTypeFlags(Serializable):
                                       self.pool, self.floor, self.terrain)
 
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.bitfield = reader.u32()
         #print(self)
         return self
@@ -234,7 +234,7 @@ class SurfaceAttributeFlags(Serializable):
                "Slope: {}\n".format(self.inside, self.outside, self.slope)
 
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.bitfield = reader.u32()
        # print(self)
         return self
@@ -257,7 +257,7 @@ class BoundingBox(Serializable):
         self.min_z = 0
         self.max_z = 0
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.min_x = reader.f32()
         self.min_z = reader.f32()
         self.max_x = reader.f32()
@@ -282,7 +282,7 @@ class Point(Serializable):
         self.x = 0
         self.z = 0
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.x = reader.f32()
         self.z = reader.f32()
         return self
@@ -315,7 +315,7 @@ class Area(Serializable):
     def point_count(self):
         return len(self.points)
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.name_hash = reader.u32()
         self.priority =  reader.u8()
         self.area_type_flags = FootprintPolyFlags().read(reader)
@@ -373,7 +373,7 @@ class Footprint(Serializable):
     def routing_areas_count(self):
         return len(self.routing_areas)
 
-    def read(self, reader:StreamReader):
+    def read(self, reader:FileReader):
         self.identifier = reader.read(4)
         self.version = reader.u32()
         self.template_key = TGI().read(reader)
