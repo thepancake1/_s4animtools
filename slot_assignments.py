@@ -17,7 +17,8 @@ class SlotAssignment:
         target_joint_name = IOString.from_binary(reader).string
         return SlotAssignment(chain_idx, slot_idx, target_object_namespace, target_joint_name)
 
-    def serialize(self):
+    # This doesn't match the new convention of to_binary having a writer which it writes to.
+    def to_binary(self):
         return [u16(self._chain_idx).to_binary(),
                 u16(self._slot_idx).to_binary(),
                 IOString(self._actor).to_binary(),

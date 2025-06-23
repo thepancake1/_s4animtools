@@ -11,7 +11,7 @@ class F1NormalizedFrame(Frame):
         self._frame_data = value
 
 
-    def serialize(self):
+    def to_binary(self):
         """This function serializes the data somewhat differently as
         it frame data is a single value.
         Returns a serialized version of the frame data.

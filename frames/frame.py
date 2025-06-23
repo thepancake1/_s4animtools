@@ -22,7 +22,7 @@ class Frame:
         self._sign_bits = u16(int(sign_bits, 2))
         self._frame_data = frame_data
 
-    def serialize(self):
+    def to_binary(self):
         """Specifies the order the data is layout."""
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
@@ -53,7 +53,7 @@ class PaletteFrame:
         self._sign_bits = u16(int(sign_bits, 2))
         self._frame_data = frame_data
 
-    def serialize(self):
+    def to_binary(self):
         """Specifies the order the data is layout."""
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
@@ -85,7 +85,7 @@ class PaletteTranslationFrame:
         self._sign_bits = u16(int(sign_bits, 2))
         self._frame_data = frame_data
 
-    def serialize(self):
+    def to_binary(self):
         """Specifies the order the data is layout."""
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []

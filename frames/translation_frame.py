@@ -14,7 +14,7 @@ class TranslationFrame(Frame):
         self._sign_bits = u16(int(sign_bits, 2))
         self._frame_data = frame_data
 
-    def serialize(self):
+    def to_binary(self):
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
         for item in serialize_order:

@@ -595,7 +595,7 @@ class NewClipExporter:
                     target_bone = target_bone.replace("Adjust", "")
                 if chain_idx == -1:
                     chain_idx = bone_to_slot_offset_idx[slot_assignment.source_bone]
-                sA = SlotAssignment(chain_idx, idx, target_rig.rig_name.encode('ascii'), target_bone.encode('ascii'))
+                sA = SlotAssignment(chain_idx, idx, target_rig.rig_name, target_bone)
                 slot_assignments.append(sA)
                 slot_idx += 1
         explicit_namespaces = []

@@ -53,7 +53,7 @@ class ParentEvent:
             self.parent_actor_bone = u32(0)
         self.unused_entry = u32(0)
 
-    def serialize(self):
+    def to_binary(self):
         identity_floats = [f32(0), f32(0), f32(1), f32(0), f32(0), f32(0)]
 
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
@@ -76,7 +76,7 @@ class ScriptEvent:
         self.header2 = u32(6)
         self.timecode = f32(float(timecode))
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode]
 
         serialized_stuff = []
@@ -97,7 +97,7 @@ class SuppressLipsyncEvent:
         self.timecode = f32(float(timecode))
         self.duration = f32(float(duration))
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode, self.duration]
 
         serialized_stuff = []
@@ -129,7 +129,7 @@ class ReactionEvent:
             self.reaction_state += bytes([0])
 
         self.reaction_state = Bytes(self.reaction_state)
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.reaction_asm, self.reaction_state]
 
@@ -162,7 +162,7 @@ class SnapEvent:
         self.offset_t = translations
         print(quats, translations, actor, timecode)
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.actor, *self.offset_q, *self.offset_t]
 
@@ -186,7 +186,7 @@ class VisibilityEvent:
         self.actor_name = hash_name_or_get_hash(actor_name)
         self.visible = u8(int(visible))
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.actor_name, self.visible]
 
@@ -209,7 +209,7 @@ class SoundEvent:
         sfx_name = sound_effect_name.lstrip().encode("ascii")
         self.sound_effect_name = Bytes(get_null_terminated_string(sfx_name))
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.sound_effect_name]
 
@@ -243,7 +243,7 @@ class PlayEffectEvent:
             self.bone_name_hash_2 = hash_name_or_get_hash(bone_name_hash_2, lowercase=True)
         self.slot_name = get_bytes_from_string(slot_name)
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.effect_name, self.actor_hash, self.bone_name_hash, self.u1, self.actor_hash_2, self.bone_name_hash_2, self.slot_name]
 
@@ -270,7 +270,7 @@ class StopEffectEvent:
             self.u2 = u32(0)
         self.b1 = u8(int(b1))
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                     self.slot_name, self.u2, self.b1]
 
@@ -293,7 +293,7 @@ class FocusCompatibilityEvent:
         self.end_timecode = f32(float(end_timecode))
         self.level = u8(int(level))
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.end_timecode, self.level]
 
@@ -317,7 +317,7 @@ class GeometryStateChangeEvent:
         geometry_state_name = geometry_state_name.lstrip().encode("ascii")
         self.geometry_state_name = Bytes(get_null_terminated_string(geometry_state_name))
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.actor_hash, self.geometry_state_name]
 

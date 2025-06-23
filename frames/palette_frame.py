@@ -18,7 +18,7 @@ class PaletteFrame(Frame):
             self._sign_bits = u16(16)
         self._frame_data = frame_data
 
-    def serialize(self):
+    def to_binary(self):
         serialize_order = [self._startTick, self._sign_bits, *self._frame_data]
         frame_data = []
         for item in serialize_order:
