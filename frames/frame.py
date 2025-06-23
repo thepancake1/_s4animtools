@@ -11,7 +11,7 @@ class Frame:
         Set the animation data for this frame.
         :param startTick: The tick at which this frame starts.
         :param frame_data: The frame data.
-        :param snap_frame: The frame for snaping
+        :param snap_frame: The frame for snapping
         """
         self._startTick = u16(startTick)
         sign_bits = [frame_data[0] < 0, frame_data[1] < 0, frame_data[2] < 0, frame_data[3] < 0,
