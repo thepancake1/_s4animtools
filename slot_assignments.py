@@ -13,8 +13,8 @@ class SlotAssignment:
     def from_binary(reader):
         chain_idx = reader.u16()
         slot_idx = reader.u16()
-        target_object_namespace = IOString.from_binary(reader)
-        target_joint_name = IOString.from_binary(reader)
+        target_object_namespace = IOString.from_binary(reader).string
+        target_joint_name = IOString.from_binary(reader).string
         return SlotAssignment(chain_idx, slot_idx, target_object_namespace, target_joint_name)
 
     def serialize(self):

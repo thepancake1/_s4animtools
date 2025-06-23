@@ -212,15 +212,15 @@ class ClipResource(BaseClipResource):
             surface_child_namespace_hash = reader.u32()
 
         if version >= 7:
-            clip_name = IOString.from_binary(reader)
+            clip_name = IOString.from_binary(reader).string
 
 
-        rig_namespace = IOString.from_binary(reader)
+        rig_namespace = IOString.from_binary(reader).string
         if version >= 4:
             explicit_namespace_count = reader.u32()
             explicit_namespaces = []
             for _ in range(explicit_namespace_count):
-                explicit_namespaces.append(IOString.from_binary(reader))
+                explicit_namespaces.append(IOString.from_binary(reader).string)
 
         slot_assignment_count = reader.u32()
         slot_assignments = []
