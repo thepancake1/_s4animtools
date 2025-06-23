@@ -208,4 +208,4 @@ class ClipResourceTS3(BaseClipResource):
     def __init__(self):
         pass
 if __name__ == "__main__":
-    ClipResource().serialize()
+    clip = ClipResource.from_binary(reader=FileReader(r"D:\Assets\Resources\1.114 Clips Hold 2\6B20C4F3!00000000!1DEC500053B15F0B.a_loco_run_turnAndStop_0_x.Clip"))
