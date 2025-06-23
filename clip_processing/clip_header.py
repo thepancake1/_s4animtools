@@ -73,7 +73,7 @@ class ClipResource(BaseClipResource):
 
     @property
     def clip_name_length(self):
-        return self.clip_name_length
+        return len(self.clip_name)
 
     @property
     def rig_name_length(self):
