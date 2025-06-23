@@ -1,5 +1,6 @@
 from s4animtools.serialization.types.basic import u32, f32, String, u16, u8
 from s4animtools.serialization import get_size
+from s4animtools.serialization.types.strings import NullTerminatedString
 
 # You will need to update this should serialize_order change
 F1_PALETTE_SIZE = -5
@@ -30,14 +31,11 @@ class ClipBody:
         # Offset to the start of the source file name
         self._sourceAssetNameOffset = 0
 
-        # Set the clip name by converting it to bytes using ascii encoding
-        self._clipName = clipname.encode("ascii") + u8(0).serialize()
-        # Initialize channels
+        self._clipName = clipname
         self._channels = []
         # Initialize f1 palette data
         self._f1PaletteData = []
-        # Set source file name
-        self._source_file_name = source_file_name.encode("ascii") + u8(0).serialize()
+        self._source_file_name = source_file_name
 
     def add_channel(self, new_channel):
         """
@@ -111,3 +109,28 @@ class ClipBody:
             serialized_stuff.append(value.to_binary())
 
         return serialized_stuff, clip_body_data
+
+    @staticmethod
+    def from_binary(reader):
+        format_token = reader.read(8)
+        if format_token != b"_pilC3S_":
+            raise ValueError("Invalid format token")
+        version = u32.from_binary(reader)
+        if version != 2:
+            raise ValueError(f"Unsupported version: {version}")
+        flags = u32.from_binary(reader)
+        tick_length = f32.from_binary(reader)
+        num_ticks = u16.from_binary(reader)
+        padding = u16.from_binary(reader)
+        channel_count = u32.from_binary(reader)
+        f1_palette_size = u32.from_binary(reader)
+
+        channel_data_offset = u32.from_binary(reader)
+        f1_palette_offset = u32.from_binary(reader)
+        name_offset = u32.from_binary(reader)
+        source_asset_name_offset = u32.from_binary(reader)
+
+        current_pos = reader.tell()
+        reader.seek(current_pos+name_offset, 0)
+        clip_name = NullTerminatedString.from_binary(reader).string
+
