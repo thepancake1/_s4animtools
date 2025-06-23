@@ -28,7 +28,7 @@ class Vector3Channel(s4animtools.channels.quaternion_channel.QuaternionChannel):
             single_frame._frame_data = list(map(self.quantize_data, single_frame._frame_data))
             single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
             serialized = single_frame._frame_data
-            combined_bits = serialized[0].value + (serialized[1].value << 10) + (serialized[2].value << 20)
+            combined_bits = serialized[0].data + (serialized[1].data << 10) + (serialized[2].data << 20)
             single_frame._bitshifted_data = u32(combined_bits)
             self.serialized_frames[idx] = single_frame
 
