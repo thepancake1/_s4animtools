@@ -59,9 +59,9 @@ class ClipResource(BaseClipResource):
             encoded_clipname = "{}_{}".format(clip_name, rig_name)
             export_filename = encoded_clipname
 
-        self.clip_name_length, self.clip_name = len(encoded_clipname), encoded_clipname
-        self.file_name_length, self.file_name = len(export_filename), export_filename
-        self.rig_name_length, self.rig_name = len(rig_name), rig_name
+        self.clip_name = encoded_clipname
+        self.file_name = export_filename
+        self.rig_name = rig_name
         self.explicit_namespace_count = len(explicit_namespaces)
         self.explicit_namespaces = explicit_namespaces
         self.slot_assignments = slot_assignments
@@ -71,6 +71,17 @@ class ClipResource(BaseClipResource):
         self.codecDataLength = 0
         self.clip_body = ClipBody(self.clip_name, source_file_name)
 
+    @property
+    def clip_name_length(self):
+        return self.clip_name_length
+
+    @property
+    def rig_name_length(self):
+        return len(self.rig_name)
+
+    @property
+    def file_name_length(self):
+        return len(self.file_name)
 
     def update_duration(self, ticks):
         # -1 tick for some reason.
