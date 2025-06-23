@@ -161,7 +161,7 @@ class ClipResource(BaseClipResource):
     @staticmethod
     def from_binary(reader):
         version = reader.u32()
-        if version >= 18:
+        if version > 18:
             raise ValueError("Clip version {} is not supported.".format(version))
         flags = reader.u32()
         duration = reader.f32()
