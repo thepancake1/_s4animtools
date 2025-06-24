@@ -54,7 +54,9 @@ class ClipBody:
         """
         self._numTicks = length
 
-    def serialize(self):
+    def to_binary(self):
+
+    def to_binary(self):
         serialize_order = [String(self._formatToken), u32(self._version),
                            u32(self._flags), f32(self._tickLength), u16(self._numTicks),
                            u16(self._padding), u32(self._channel_count), u32(self._f1PaletteSize),
@@ -62,7 +64,7 @@ class ClipBody:
                            u32(self._sourceAssetNameOffset)]
 
         serialized_channels = []
-        clip_body_data = []
+        clip_body_data = bytearray()
         channel_offsets = {}
         # Offset from header
         data_offset = OFFSET_TO_CHANNEL_DATA
@@ -76,10 +78,11 @@ class ClipBody:
             header, data = channel.to_binary()
             data_offset += get_size(header)
             serialized_channels.append((header, data))
-            clip_body_data.append(header)
+            clip_body_data += header
 
         serialize_order[CLIP_NAME_OFFSET_IDX] = u32(data_offset)
-        clip_body_data.append(self._clipName)
+        # Clip name is a null-terminated string
+        clip_body_data += self._clipName
         data_offset += len(self._clipName)
 
         serialize_order[SOURCE_ASSET_NAME_OFFSET_IDX] = u32(data_offset)
@@ -103,11 +106,11 @@ class ClipBody:
         for idx in range(len(serialized_channels)):
             clip_body_data[idx][0] = u32(channel_offsets[idx]).to_binary()
 
-        serialized_stuff = []
+        serialized_bytes = bytearray()
         for value in serialize_order:
-            serialized_stuff.append(value.to_binary())
+            serialized_bytes += value.to_binary()
 
-        return serialized_stuff, clip_body_data
+        return serialized_bytes, clip_body_data
 
     @staticmethod
     def from_binary(reader):

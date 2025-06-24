@@ -128,33 +128,6 @@ class ClipResource(BaseClipResource):
             clip_filename = self.get_clip_filename()
             clip_header_filename = self.get_clip_header_filename()
 
-        serialized = [u32(self.version), u32(self.flags), f32(self.duration),
-                      *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
-                      u32(self.reference_namespace_hash), u32(self.surface_namespace_hash),
-                      u32(self.surface_joint_name_hash), u32(self.surface_child_namespace_hash),
-                      u32(self.clip_name_length), String(self.clip_name),
-                      u32(self.rig_name_length), String(self.rig_name), u32(self.explicit_namespace_count),
-                      *self.explicit_namespaces,
-                      u32(self.slot_assignment_count), *self.slot_assignments, u32(self.clipEventCount),
-                      *self.clipEventList, u32(self.codecDataLength)]
-        header_data = []
-
-        header_length = 0
-        for item in serialized:
-            serialized_data = item.to_binary()
-            header_data.append(serialized_data)
-            header_length += get_size(serialized_data)
-
-        clip_body, frame_data = self.clip_body.serialize()
-
-        actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
-        # Replace codec data length with actual one
-        header_data[-1] = u32(actual_codec_data_length).to_binary()
-        all_data = io.BytesIO()
-        # offsets
-
-        s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
-        write_data = all_data.getvalue()
 
         try:
             with open(os.path.join(anim_path, clip_filename), "wb") as file:
@@ -214,6 +187,36 @@ class ClipResource(BaseClipResource):
                             version=version, surface_namespace_hash=surface_namespace_hash,
                             surface_joint_name_hash=surface_joint_name_hash,
                             surface_child_namespace_hash=surface_child_namespace_hash, duration=duration, flags=flags)
+
+
+    def to_binary(self, writer):
+        serialized = [u32(self.version), u32(self.flags), f32(self.duration),
+                      *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
+                      u32(self.reference_namespace_hash), u32(self.surface_namespace_hash),
+                      u32(self.surface_joint_name_hash), u32(self.surface_child_namespace_hash),
+                      u32(self.clip_name_length), String(self.clip_name),
+                      u32(self.rig_name_length), String(self.rig_name), u32(self.explicit_namespace_count),
+                      *self.explicit_namespaces,
+                      u32(self.slot_assignment_count), *self.slot_assignments, u32(self.clipEventCount),
+                      *self.clipEventList, u32(self.codecDataLength)]
+        header_data = []
+
+        header_length = 0
+        for item in serialized:
+            serialized_data = item.to_binary()
+            header_data.append(serialized_data)
+            header_length += get_size(serialized_data)
+
+        clip_body, frame_data = self.clip_body.to_binary()
+
+        actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
+        # Replace codec data length with actual one
+        header_data[-1] = u32(actual_codec_data_length).to_binary()
+        all_data = io.BytesIO()
+        # offsets
+
+        s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
+        write_data = all_data.getvalue()
 
 class ClipResourceTS3(BaseClipResource):
     def __init__(self):
