@@ -28,6 +28,15 @@ def get_size(input_element):
             return len(input_element)
         return 0
 
+def get_binary_size(element):
+    """
+    Calls to_binary on the element and returns the size of the binary data.
+    """
+    if hasattr(element, 'to_binary'):
+        binary_data = element.to_binary()
+        return len(binary_data)
+    else:
+        raise TypeError("Element does not have a to_binary method.")
 
 def recursive_write(input_element, stream):
     """

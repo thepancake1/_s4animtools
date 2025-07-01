@@ -46,7 +46,6 @@ class ClipResource(BaseClipResource):
         self.duration = duration
         self.initial_offset_q = initial_offset_q
         self.initial_offset_t =  initial_offset_t
-        #TODO Add support for user-specified namespace hashes
         self.reference_namespace_hash = reference_namespace_hash
         self.surface_namespace_hash = surface_namespace_hash
         self.surface_joint_name_hash = surface_joint_name_hash
@@ -205,7 +204,7 @@ class ClipResource(BaseClipResource):
         for item in serialized:
             serialized_data = item.to_binary()
             header_data.append(serialized_data)
-            header_length += get_size(serialized_data)
+        header_length += sum(len(item) for item in header_data)
 
         clip_body, frame_data = self.clip_body.to_binary()
 

@@ -1,48 +1,48 @@
+from collections import namedtuple
+
+from s4animtools.channels.quaternion_channel import QuaternionChannel
+from s4animtools.channels.translation_channel import Vector3Channel
 from s4animtools.serialization.types.basic import u32, f32, String, u16, u8
 from s4animtools.serialization import get_size
 from s4animtools.serialization.types.strings import NullTerminatedString
 
-# You will need to update this should serialize_order change
-F1_PALETTE_SIZE = -5
-CHANNEL_DATA_OFFSET = -4
-F1_PALETTE_OFFSET = -3
-CLIP_NAME_OFFSET_IDX = -2
-SOURCE_ASSET_NAME_OFFSET_IDX = -1
-
 OFFSET_TO_CHANNEL_DATA = 48
-
+SerializedChannel = namedtuple('SerializedChannel', ['header', 'data'])
 
 class ClipBody:
-    def __init__(self, clipname, source_file_name):
+    def __init__(self, clipname, source_file_name, version=2, flags = 0, tick_length = 1/30, num_ticks= 0, padding=0, f1_palette=None, f1_data_palette_offset=0,
+                 channel_data_offset=OFFSET_TO_CHANNEL_DATA, clip_name_offset=0, source_asset_name_offset=0):
         """ Current version number"""
-        self._formatToken = "_pilC3S_"
-        self._version = 2
-        self._flags = 0
-        self._tickLength = 1/30
-        self._numTicks = 0
-        self._padding = 0
-        self._f1PaletteSize = 0
-        # Offset to the start of the channel data
-        self._channelDataOffset = OFFSET_TO_CHANNEL_DATA
-        # Offset to the start of the f1 palette data
-        self._f1DataPaletteOffset = 0
-        # Offset to the start of the clip name
-        self._clipNameOffset = 0
-        # Offset to the start of the source file name
-        self._sourceAssetNameOffset = 0
 
-        self._clipName = clipname
-        self._channels = []
-        self._f1PaletteData = []
+        self._formatToken = "_pilC3S_"
+        self._version = version
+        self._flags = flags
+        self._tickLength = tick_length
+        self._numTicks = num_ticks
+        self._padding = padding
+        self._f1PaletteSize:int = 0
+        if f1_palette is not None:
+            self._f1PaletteSize = len(f1_palette)
+        self._channelDataOffset:int = channel_data_offset
+        self._f1DataPaletteOffset:int = f1_data_palette_offset
+        self._clipNameOffset:int = clip_name_offset
+        self._sourceAssetNameOffset: int = source_asset_name_offset
+
+        self._clipName:str = clipname
+        self._channels : list[QuaternionChannel] = []
+        if f1_palette is None:
+            self._f1PaletteData = []
+        else:
+            self._f1PaletteData = f1_palette
         self._source_file_name = source_file_name
 
-    def add_channel(self, new_channel):
+    def add_channel(self, new_channel : QuaternionChannel):
         """
         Adds a new channel to the clip body
         """
         self._channels.append(new_channel)
     @property
-    def _channel_count(self):
+    def channel_count(self):
         return len(self._channels)
 
     def set_palette_values(self, palette_values):
@@ -54,17 +54,41 @@ class ClipBody:
         """
         self._numTicks = length
 
-    def to_binary(self):
+    @property
+    def clip_name_offset(self):
+        data_offset = OFFSET_TO_CHANNEL_DATA
+        for channel in self._channels:
+            header, _ = channel.to_binary()
+            data_offset += len(header)
+        return data_offset
+
+    @property
+    def source_asset_name_offset(self):
+        return self.clip_name_offset + len(self._clipName)
+
+    @property
+    def f1_palette_offset(self):
+        return self.source_asset_name_offset + len(self._source_file_name)
+
+    @property
 
     def to_binary(self):
-        serialize_order = [String(self._formatToken), u32(self._version),
-                           u32(self._flags), f32(self._tickLength), u16(self._numTicks),
-                           u16(self._padding), u32(self._channel_count), u32(self._f1PaletteSize),
-                           u32(self._channelDataOffset), u32(self._f1DataPaletteOffset), u32(self._clipNameOffset),
-                           u32(self._sourceAssetNameOffset)]
 
-        serialized_channels = []
-        clip_body_data = bytearray()
+        serialized = list()
+        serialized.append(self._formatToken.encode('ascii'))
+        serialized.append(u32(self._version).to_binary())
+        serialized.append(u32(self._flags).to_binary())
+        serialized.append(f32(self._tickLength).to_binary())
+        serialized.append(u16(self._numTicks).to_binary())
+        serialized.append(u16(self._padding).to_binary())
+        serialized.append(u32(self.channel_count).to_binary())
+        serialized.append(u32(self._f1PaletteSize).to_binary())
+        serialized.append(u32(self._channelDataOffset).to_binary())
+        serialized.append(u32(self.f1_palette_offset).to_binary())
+        serialized.append(u32(self.clip_name_offset).to_binary())
+        serialized.append(u32(self.source_asset_name_offset).to_binary())
+        serialized_channels:list[SerializedChannel] = []
+        clip_body_data = []
         channel_offsets = {}
         # Offset from header
         data_offset = OFFSET_TO_CHANNEL_DATA
@@ -76,41 +100,39 @@ class ClipBody:
         """
         for channel in self._channels:
             header, data = channel.to_binary()
-            data_offset += get_size(header)
-            serialized_channels.append((header, data))
-            clip_body_data += header
+            data_offset += len(header)
+            serialized_channels.append(SerializedChannel(header, data))
+            clip_body_data.append(header)
 
-        serialize_order[CLIP_NAME_OFFSET_IDX] = u32(data_offset)
         # Clip name is a null-terminated string
-        clip_body_data += self._clipName
+        clip_body_data.append(self._clipName)
         data_offset += len(self._clipName)
 
-        serialize_order[SOURCE_ASSET_NAME_OFFSET_IDX] = u32(data_offset)
         clip_body_data.append(self._source_file_name)
         data_offset += len(self._source_file_name)
 
-        serialize_order[F1_PALETTE_OFFSET] = u32(data_offset)
-        serialize_order[F1_PALETTE_SIZE] = u32(len(self._f1PaletteData))
         for idx, data in enumerate(self._f1PaletteData):
             data_offset += 4
             clip_body_data.append(data.to_binary())
             #print(idx, data.value)
 
 
-        for idx in range(len(serialized_channels)):
+        for idx in range(self.channel_count):
             channel_offsets[idx] = data_offset
-            data = serialized_channels[idx][1]
+            data = serialized_channels[idx].data
 
             clip_body_data.append(data)
-            data_offset += get_size(data)
-        for idx in range(len(serialized_channels)):
-            clip_body_data[idx][0] = u32(channel_offsets[idx]).to_binary()
+            data_offset += len(data)
+        for idx in range(self.channel_count):
+            clip_body_data[idx][0:4] = u32(channel_offsets[idx]).to_binary()
 
         serialized_bytes = bytearray()
-        for value in serialize_order:
-            serialized_bytes += value.to_binary()
-
-        return serialized_bytes, clip_body_data
+        for item in clip_body_data:
+            if isinstance(item, bytes):
+                serialized_bytes.extend(item)
+            else:
+                raise TypeError(f"Expected bytes, got {type(item)}")
+        return [serialized_bytes, clip_body_data]
 
     @staticmethod
     def from_binary(reader):

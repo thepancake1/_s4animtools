@@ -77,4 +77,4 @@ class QuaternionChannel:
         for idx, frame in self.serialized_frames.items():
             serialized_frames.append(frame.to_binary())
 
-        return serialized_header, serialized_frames
+        return [serialized_header, serialized_frames]
