@@ -26,7 +26,8 @@ def get_size(input_element):
     else:
         if isinstance(input_element, bytes):
             return len(input_element)
-        return 0
+        else:
+            raise TypeError("get size expects all elements to be lists,tuples or bytes, got: {}".format(type(input_element)))
 
 def get_binary_size(element):
     """
@@ -37,6 +38,26 @@ def get_binary_size(element):
         return len(binary_data)
     else:
         raise TypeError("Element does not have a to_binary method.")
+
+def concatenate_bytes(recursive_list_of_either_bytes_or_list):
+    """
+    The concatenate_bytes function takes a list of bytes or lists of bytes or bytearrays
+    and concatenates them into a single bytes object.
+    """
+    # This was supposed to be better than recursive_write, but it ends up looking terrible.
+    # Just don't think about it too much.
+    if isinstance(recursive_list_of_either_bytes_or_list, list) or isinstance(recursive_list_of_either_bytes_or_list, tuple):
+        concatenated = bytearray()
+        for item in recursive_list_of_either_bytes_or_list:
+            if isinstance(item, bytes) or isinstance(item, bytearray):
+                concatenated.extend(item)
+            elif isinstance(item, list) or isinstance(item, tuple):
+                concatenated.extend(concatenate_bytes(item))
+            else:
+                raise TypeError("Expected bytes, bytearray, list or tuple, got: {}".format(type(item)))
+        return bytes(concatenated)
+    else:
+        raise TypeError("Expected a list or tuple of bytes or lists of bytes, got: {}".format(type(recursive_list_of_either_bytes_or_list)))
 
 def recursive_write(input_element, stream):
     """

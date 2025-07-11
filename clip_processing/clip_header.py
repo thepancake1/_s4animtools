@@ -5,7 +5,7 @@ import s4animtools.serialization
 from s4animtools.serialization.types.transforms import Quaternion, Vector3
 from s4animtools.serialization.types.basic import u32, f32, String
 from s4animtools.clip_processing.clip_body import ClipBody
-from s4animtools.serialization import get_binary_size
+from s4animtools.serialization import get_binary_size, get_size, concatenate_bytes
 from s4animtools.serialization.fnv import get_64bithash
 from s4animtools.serialization.types.strings import IOString
 from s4animtools.slot_assignments import SlotAssignment
@@ -62,7 +62,12 @@ class ClipResource(BaseClipResource):
         self.file_name = export_filename
         self.rig_name = rig_name
         self.explicit_namespace_count = len(explicit_namespaces)
-        self.explicit_namespaces = explicit_namespaces
+        self.explicit_namespaces = []
+        for namespace in explicit_namespaces:
+            if isinstance(namespace, ExplicitNamespace):
+                self.explicit_namespaces.append(namespace)
+            else:
+                self.explicit_namespaces.append(ExplicitNamespace(namespace))
         self.slot_assignments = slot_assignments
         self.slot_assignment_count = len(slot_assignments)
         self.clipEventCount = 0
@@ -174,7 +179,7 @@ class ClipResource(BaseClipResource):
         if version >= 4:
             explicit_namespace_count = reader.u32()
             for _ in range(explicit_namespace_count):
-                explicit_namespaces.append(IOString.from_binary(reader).string)
+                explicit_namespaces.append(String(IOString.from_binary(reader).string))
 
         slot_assignment_count = reader.u32()
         slot_assignments = []
@@ -205,15 +210,15 @@ class ClipResource(BaseClipResource):
         for item in serialized:
             serialized_data = item.to_binary()
             header_data.append(serialized_data)
-        header_length += sum(len(item) for item in header_data)
+        header_length += get_size(header_data)
         print(self.clip_body)
         clip_body = self.clip_body.to_binary()
 
         actual_codec_data_length = len(clip_body)
         # Replace codec data length with actual one
+        print(header_data)
         header_data[-1] = u32(actual_codec_data_length).to_binary()
-
-        return b''.join([b''.join(header_data), clip_body])
+        return concatenate_bytes([header_data, clip_body])
 
 class ClipResourceTS3(BaseClipResource):
     def __init__(self):
