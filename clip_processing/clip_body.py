@@ -118,21 +118,32 @@ class ClipBody:
 
 
         for idx in range(self.channel_count):
+            #print(serialized_channels[idx])
+            all_channel_data = b""
             channel_offsets[idx] = data_offset
-            data = serialized_channels[idx].data
+            for frame in serialized_channels[idx].data:
+                channel_data = b"".join(frame)
+                all_channel_data += channel_data
 
-            clip_body_data.append(data)
-            data_offset += len(data)
+            clip_body_data.append(all_channel_data)
+            data_offset += len(all_channel_data)
         for idx in range(self.channel_count):
             clip_body_data[idx][0:4] = u32(channel_offsets[idx]).to_binary()
 
         serialized_bytes = bytearray()
-        for item in clip_body_data:
+        for idx, item in enumerate(clip_body_data):
+            print(idx, item)
             if isinstance(item, bytes):
                 serialized_bytes.extend(item)
+            elif isinstance(item, list):
+                for subitem in item:
+                    if isinstance(subitem, bytes):
+                        serialized_bytes.extend(subitem)
+                    else:
+                        raise TypeError(f"Expected bytes in subitem, got {type(subitem)}")
             else:
                 raise TypeError(f"Expected bytes, got {type(item)}")
-        return [serialized_bytes, clip_body_data]
+        return [serialized_bytes]
 
     @staticmethod
     def from_binary(reader):

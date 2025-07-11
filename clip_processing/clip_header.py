@@ -108,6 +108,7 @@ class ClipResource(BaseClipResource):
 
     def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy
+        export_bytes = b''.join(self.to_binary())
         anim_path = os.path.abspath(export_path)
 
         if export_path.startswith(".\\"):
@@ -130,15 +131,15 @@ class ClipResource(BaseClipResource):
 
         try:
             with open(os.path.join(anim_path, clip_filename), "wb") as file:
-                file.write(write_data)
+                file.write(export_bytes)
                 with open(os.path.join(anim_path, clip_header_filename), "wb") as clip_header_file:
-                    clip_header_file.write(write_data)
+                    clip_header_file.write(export_bytes)
 
             if alternative_export_path != "":
                 with open(os.path.join(alternative_export_path, self.get_clip_filename()), "wb") as clip_file:
-                    clip_file.write(write_data)
+                    clip_file.write(export_bytes)
                 with open(os.path.join(alternative_export_path, self.get_clip_header_filename()), "wb") as clip_header_file:
-                    clip_header_file.write(write_data)
+                    clip_header_file.write(export_bytes)
         except Exception as e:
             print(e)
 
@@ -181,14 +182,14 @@ class ClipResource(BaseClipResource):
             slot_assignments.append(SlotAssignment.from_binary(reader))
 
 
-        clip = ClipResource(clip_name, rig_namespace, slot_assignments, explicit_namespaces, reference_namespace_hash,
-                            initial_offset_t,"", False, False, disable_rig_suffix=True,
+        clip = ClipResource(clip_name, rig_namespace, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
+                            initial_offset_t,"", False,  disable_rig_suffix=True,
                             version=version, surface_namespace_hash=surface_namespace_hash,
                             surface_joint_name_hash=surface_joint_name_hash,
                             surface_child_namespace_hash=surface_child_namespace_hash, duration=duration, flags=flags)
 
 
-    def to_binary(self, writer):
+    def to_binary(self):
         serialized = [u32(self.version), u32(self.flags), f32(self.duration),
                       *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
                       u32(self.reference_namespace_hash), u32(self.surface_namespace_hash),
@@ -206,16 +207,13 @@ class ClipResource(BaseClipResource):
             header_data.append(serialized_data)
         header_length += sum(len(item) for item in header_data)
 
-        clip_body, frame_data = self.clip_body.to_binary()
+        clip_body = self.clip_body.to_binary()
 
-        actual_codec_data_length = get_binary_size(clip_body) + get_binary_size(frame_data)
+        actual_codec_data_length = get_binary_size(clip_body)
         # Replace codec data length with actual one
         header_data[-1] = u32(actual_codec_data_length).to_binary()
-        all_data = io.BytesIO()
-        # offsets
 
-        s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
-        write_data = all_data.getvalue()
+        return [b''.join(header_data), clip_body]
 
 class ClipResourceTS3(BaseClipResource):
     def __init__(self):
