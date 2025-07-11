@@ -108,7 +108,7 @@ class ClipResource(BaseClipResource):
 
     def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy
-        export_bytes = b''.join(self.to_binary())
+        export_bytes = self.to_binary()
         anim_path = os.path.abspath(export_path)
 
         if export_path.startswith(".\\"):
@@ -206,14 +206,14 @@ class ClipResource(BaseClipResource):
             serialized_data = item.to_binary()
             header_data.append(serialized_data)
         header_length += sum(len(item) for item in header_data)
-
+        print(self.clip_body)
         clip_body = self.clip_body.to_binary()
 
-        actual_codec_data_length = get_binary_size(clip_body)
+        actual_codec_data_length = len(clip_body)
         # Replace codec data length with actual one
         header_data[-1] = u32(actual_codec_data_length).to_binary()
 
-        return [b''.join(header_data), clip_body]
+        return b''.join([b''.join(header_data), clip_body])
 
 class ClipResourceTS3(BaseClipResource):
     def __init__(self):

@@ -59,7 +59,7 @@ class ClipBody:
         data_offset = OFFSET_TO_CHANNEL_DATA
         for channel in self._channels:
             header, _ = channel.to_binary()
-            data_offset += len(header)
+            data_offset += sum([len(item) for item in header])
         return data_offset
 
     @property
@@ -69,8 +69,6 @@ class ClipBody:
     @property
     def f1_palette_offset(self):
         return self.source_asset_name_offset + len(self._source_file_name)
-
-    @property
 
     def to_binary(self):
 
@@ -99,17 +97,21 @@ class ClipBody:
         It also updates the channel offsets to point to the correct location in the serialize_order data.
         """
         for channel in self._channels:
+            #print(type(channel))
             header, data = channel.to_binary()
-            data_offset += len(header)
+            data_offset += sum([len(item) for item in header])
+            print(data_offset)
             serialized_channels.append(SerializedChannel(header, data))
             clip_body_data.append(header)
 
         # Clip name is a null-terminated string
-        clip_body_data.append(self._clipName)
-        data_offset += len(self._clipName)
+        clip_name_encoded = NullTerminatedString(self._clipName).to_binary()
+        clip_body_data.append(clip_name_encoded)
+        data_offset += len(clip_name_encoded)
+        source_file_name_encoded = NullTerminatedString(self._source_file_name).to_binary()
 
-        clip_body_data.append(self._source_file_name)
-        data_offset += len(self._source_file_name)
+        clip_body_data.append(source_file_name_encoded)
+        data_offset += len(source_file_name_encoded)
 
         for idx, data in enumerate(self._f1PaletteData):
             data_offset += 4
@@ -128,11 +130,11 @@ class ClipBody:
             clip_body_data.append(all_channel_data)
             data_offset += len(all_channel_data)
         for idx in range(self.channel_count):
-            clip_body_data[idx][0:4] = u32(channel_offsets[idx]).to_binary()
+            clip_body_data[idx][0] = u32(channel_offsets[idx]).to_binary()
 
         serialized_bytes = bytearray()
-        for idx, item in enumerate(clip_body_data):
-            print(idx, item)
+        for idx, item in enumerate([*serialized, *clip_body_data]):
+           # print(idx, item)
             if isinstance(item, bytes):
                 serialized_bytes.extend(item)
             elif isinstance(item, list):
@@ -143,7 +145,7 @@ class ClipBody:
                         raise TypeError(f"Expected bytes in subitem, got {type(subitem)}")
             else:
                 raise TypeError(f"Expected bytes, got {type(item)}")
-        return [serialized_bytes]
+        return serialized_bytes
 
     @staticmethod
     def from_binary(reader):
