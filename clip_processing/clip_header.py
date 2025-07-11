@@ -5,7 +5,7 @@ import s4animtools.serialization
 from s4animtools.serialization.types.transforms import Quaternion, Vector3
 from s4animtools.serialization.types.basic import u32, f32, String
 from s4animtools.clip_processing.clip_body import ClipBody
-from s4animtools.serialization import get_size
+from s4animtools.serialization import get_binary_size
 from s4animtools.serialization.fnv import get_64bithash
 from s4animtools.serialization.types.strings import IOString
 from s4animtools.slot_assignments import SlotAssignment
@@ -208,7 +208,7 @@ class ClipResource(BaseClipResource):
 
         clip_body, frame_data = self.clip_body.to_binary()
 
-        actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
+        actual_codec_data_length = get_binary_size(clip_body) + get_binary_size(frame_data)
         # Replace codec data length with actual one
         header_data[-1] = u32(actual_codec_data_length).to_binary()
         all_data = io.BytesIO()
