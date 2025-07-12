@@ -4,9 +4,6 @@ from s4animtools.serialization.types.basic import u16, u32, f32, u8
 import s4animtools.serialization
 import s4animtools.channels.quaternion_channel
 import math
-from s4animtools.channels.palette_channel import PaletteTranslationChannel
-importlib.reload(s4animtools.channels.quaternion_channel)
-importlib.reload(s4animtools.frames.translation_frame)
 class Vector3Channel(s4animtools.channels.quaternion_channel.QuaternionChannel):
     def serialize_data(self, value):
         return u16(value)

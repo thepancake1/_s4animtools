@@ -6,8 +6,6 @@ import s4animtools.channels.quaternion_channel
 import s4animtools.frames
 from s4animtools.frames.frame import PaletteFrame, PaletteTranslationFrame
 
-importlib.reload(s4animtools.channels.quaternion_channel)
-importlib.reload(s4animtools.frames.palette_frame)
 class PaletteQuaternionChannel(s4animtools.channels.quaternion_channel.QuaternionChannel):
     def serialize_data(self, value):
         return u16(value)

@@ -4,7 +4,6 @@ from s4animtools.serialization.types.basic import u16, u32, f32, u8
 import s4animtools.serialization
 from s4animtools.serialization.fnv import get_32bit_hash
 import math
-importlib.reload(s4animtools.frames.frame)
 
 
 class QuaternionChannel:

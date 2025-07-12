@@ -5,7 +5,6 @@ from s4animtools.serialization.types.basic import u16, u32, f32, u8
 import s4animtools.serialization
 import s4animtools.channels.quaternion_channel
 import math
-importlib.reload(s4animtools.frames.frame)
 
 
 class F1Normalized(s4animtools.channels.quaternion_channel.QuaternionChannel):
