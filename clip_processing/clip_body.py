@@ -47,6 +47,7 @@ class ClipBody:
 
     def set_palette_values(self, palette_values):
         self._f1PaletteData = list(map(f32, map(abs, palette_values)))
+        self._f1PaletteSize = len(self._f1PaletteData)
 
     def set_clip_length(self, length):
         """
@@ -60,15 +61,18 @@ class ClipBody:
         for channel in self._channels:
             header, _ = channel.to_binary()
             data_offset += sum([len(item) for item in header])
+
         return data_offset
+
 
     @property
     def source_asset_name_offset(self):
-        return self.clip_name_offset + len(self._clipName)
+        return (self.clip_name_offset + len(self._clipName)) + 1
 
     @property
     def f1_palette_offset(self):
-        return self.source_asset_name_offset + len(self._source_file_name)
+
+        return self.source_asset_name_offset + len(self._source_file_name) + 1
 
     def to_binary(self):
 
@@ -104,6 +108,7 @@ class ClipBody:
             serialized_channels.append(SerializedChannel(header, data))
             clip_body_data.append(header)
 
+
         # Clip name is a null-terminated string
         clip_name_encoded = NullTerminatedString(self._clipName).to_binary()
         clip_body_data.append(clip_name_encoded)
@@ -113,11 +118,11 @@ class ClipBody:
         clip_body_data.append(source_file_name_encoded)
         data_offset += len(source_file_name_encoded)
 
+
         for idx, data in enumerate(self._f1PaletteData):
             data_offset += 4
             clip_body_data.append(data.to_binary())
             #print(idx, data.value)
-
 
         for idx in range(self.channel_count):
             #print(serialized_channels[idx])

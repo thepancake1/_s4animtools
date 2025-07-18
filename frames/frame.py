@@ -45,6 +45,7 @@ class PaletteFrame:
         :param snap_frame: The frame for snaping
         """
         self._startTick = u16(startTick)
+        # Ugly.
         sign_bits = [original_values[0] < 0, original_values[1] < 0, original_values[2] < 0, original_values[3] < 0,
                      0, 0, 0, snap_frame]
         sign_bits = [str(int(x)) for x in sign_bits]
