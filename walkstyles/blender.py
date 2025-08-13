@@ -74,12 +74,17 @@ class S4ANIMTOOLS_OT_ReadLocomotionBuilderFromFolderExtractedByS4S(bpy.types.Ope
                 parent = root.attrib.get("default_parent", "")
         return parent, root
 
-
-def locomotion_register():
+def _locomotion_register():
     bpy.utils.register_class(LocomotionBuilderVariantData)
     bpy.utils.register_class(S4ANIMTOOLS_OT_AddNewLocomotionBuilder)
     bpy.utils.register_class(S4ANIMTOOLS_OT_ReadLocomotionBuilderFromFolderExtractedByS4S)
     bpy.types.Scene.locomotion_builders = CollectionProperty(type=LocomotionBuilderVariantData)
+def locomotion_register():
+    try:
+        _locomotion_register()
+    except ValueError:
+        locomotion_unregister()
+        _locomotion_register()
 
 def locomotion_unregister():
     bpy.utils.unregister_class(S4ANIMTOOLS_OT_AddNewLocomotionBuilder)
