@@ -4,7 +4,8 @@ import time
 import math
 
 import s4animtools.bone_names
-from s4animtools.events.events_ui import AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo, ParentEventInfo, VisibilityEventInfo
+from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo, ParentEventInfo,
+                                          VisibilityEventInfo, ReactionEventInfo)
 from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
@@ -396,6 +397,15 @@ class NewClipExporter:
 
                 # If event.visibility is false, then set it to 0, otherwise set it to 1.
                 current_clip.add_event(VisibilityEvent(timeshifted_timestamp, event.actor, 1 if event.visibility else 0 ))
+
+        for event in context.object.reaction_events_list_UI:
+            event : ReactionEventInfo
+            original_timestamp = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(ReactionEvent(timeshifted_timestamp, event.reaction_asm, event.reaction_state))
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
                 parameters = event_instance.info.split(",")
@@ -1131,7 +1141,25 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.draw_events(obj, "reaction_events_list", 0.1,
                                  "Parameters (Frame Number/Reaction ASM/Reaction State)",
                                  "Reaction Events", self.layout,
-                                 parameters=["Frame", "Reaction ASM Name", "Reaction State Name"])
+                                 parameters=["Frame", "Reaction ASM Name", "Reaction State Name"],
+                                 corresponding_widget_list_count=len(obj.reaction_events_list_UI))
+
+                for idx, item in enumerate(obj.reaction_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    self.layout.row().prop(item, "reaction_asm", text="Reaction ASM")
+                    self.layout.row().prop(item, "reaction_state", text="Reaction State")
+
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"reaction_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"reaction_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"reaction_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"reaction_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+                if len(obj.reaction_events_list_UI) == 0:
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"reaction_events_list_UI,{0},create"
+
+
                 self.draw_events(obj, "play_effect_events_list", 0.1,
                                  "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/Target Actor Name/Target Bone Name/Unique VFX Name)",
                                  "Play Effect Events", self.layout,
@@ -2577,7 +2605,8 @@ classes = (
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
     OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_AddScriptEventsListUI, ScriptEventInfo, ParentEventInfo,
-    OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, VisibilityEventInfo, OT_S4ANIMTOOLS_NewExportClip,
+    OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, VisibilityEventInfo, ReactionEventInfo,
+    OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
 def update_selected_bones(self, context):
@@ -2622,6 +2651,16 @@ def handle_version_upgrade(context):
                     obj.script_events_list_UI[-1].frame_number = int(frame_number)
                     obj.script_events_list_UI[-1].event_id = int(event_id)
             obj.script_events_list.clear()
+        if len(obj.reaction_events_list):
+            for event in obj.reaction_events_list:
+                if event.info != "":
+                    frame_number, reaction_asm, reaction_state = event.info.split(",")
+                    obj.reaction_events_list_UI.add()
+                    obj.reaction_events_list_UI[-1].frame_number  = int(frame_number)
+
+                    obj.reaction_events_list_UI[-1].reaction_asm  = reaction_asm
+                    obj.reaction_events_list_UI[-1].reaction_state = reaction_state
+            obj.reaction_events_list.clear()
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register_footprint_properties():
@@ -2772,6 +2811,7 @@ def register():
     bpy.types.Object.script_events_list_UI = CollectionProperty(type=ScriptEventInfo)
     bpy.types.Object.parent_events_list_UI = CollectionProperty(type=ParentEventInfo)
     bpy.types.Object.visibility_events_list_UI = CollectionProperty(type=VisibilityEventInfo)
+    bpy.types.Object.reaction_events_list_UI = CollectionProperty(type=ReactionEventInfo)
 
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
@@ -2900,7 +2940,8 @@ def unregister():
     del bpy.types.Object.snap_events_list_UI
     del bpy.types.Object.script_events_list_UI
     del bpy.types.Object.parent_events_list_UI
-    del bpy.types.Object.visibiltiy_events_list_UI
+    del bpy.types.Object.visibility_events_list_UI
+    del bpy.types.Object.reaction_events_list_UI
 
     del bpy.types.Object.script_events_list
     del bpy.types.Object.reaction_events_list

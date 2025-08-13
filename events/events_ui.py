@@ -105,3 +105,24 @@ class VisibilityEventInfo(PropertyGroup):
     frame_number : bpy.props.IntProperty()
     actor : bpy.props.StringProperty()
     visibility : bpy.props.BoolProperty()
+
+
+
+class ReactionEventInfo(PropertyGroup):
+    @property
+    def info(self):
+        return json.dumps({"frame_number" : self.frame_number, "reaction_asm" : self.reaction_asm, "reaction_state" : self.reaction_state})
+
+    @info.setter
+    def info(self, value):
+        try:
+            value = json.loads(value)
+
+            self.frame_number = value["frame_number"]
+            self.reaction_asm = value["reaction_asm"]
+            self.reaction_state = value["reaction_state"]
+        except json.decoder.JSONDecodeError:
+            pass
+    frame_number : bpy.props.IntProperty()
+    reaction_asm : bpy.props.StringProperty()
+    reaction_state : bpy.props.StringProperty()
