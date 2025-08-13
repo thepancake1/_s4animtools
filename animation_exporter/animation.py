@@ -1,16 +1,16 @@
-from _s4animtools.serialization.types.basic import UInt32
-from _s4animtools.rig_constants import slot
-from _s4animtools.channels.translation_channel import Vector3Channel
-from _s4animtools.channels.quaternion_channel import QuaternionChannel
-from _s4animtools.channels.palette_channel import PaletteTranslationChannel
-from _s4animtools.frames.frame import PaletteTranslationFrame, PaletteFrame
-from _s4animtools.clip_processing.f1_palette import F1Palette
+from s4animtools.serialization.types.basic import UInt32
+from s4animtools.rig_constants import slot
+from s4animtools.channels.translation_channel import Vector3Channel
+from s4animtools.channels.quaternion_channel import QuaternionChannel
+from s4animtools.channels.palette_channel import PaletteTranslationChannel
+from s4animtools.frames.frame import PaletteTranslationFrame, PaletteFrame
+from s4animtools.clip_processing.f1_palette import F1Palette
 from collections import defaultdict
 from mathutils import Vector, Quaternion
-from _s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
+from s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
-import _s4animtools
-ENABLE_SCALE = False
+import s4animtools
+ENABLE_SCALE = True
 F4_QuaternionIdentity = 17
 
 F3 = 3
@@ -111,8 +111,9 @@ class AnimationBoneData:
     def __init__(self, animation_exporter):
         self.channels = []
         self.animation_exporter = animation_exporter
+        # Whether this bone is valid for exporting
+        self.animated = False
         self.create_animation_channels()
-
     def create_animation_channels(self):
         """
         Create AnimationData channels for Translation, Rotation, Scale,
@@ -217,7 +218,7 @@ class AnimationBoneData:
 
 
 class AnimationExporter:
-    def __init__(self, source_rig, snap_frames, world_rig, world_root, use_full_precision, base_rig=None):
+    def __init__(self, source_rig, snap_frames, world_rig, world_root, use_full_precision, base_rig=None, allow_slots=False, overlay=False):
         self.animated_frame_data = {}
         self.source_rig = source_rig
         self.snap_frames = snap_frames
@@ -228,6 +229,8 @@ class AnimationExporter:
         self.use_full_precision = use_full_precision
         self.paletteHolder = F1Palette()
         self.base_rig = base_rig
+        self.allow_slots = allow_slots
+        self.overlay = overlay
 
     @property
     def animated_bones(self):
@@ -239,21 +242,42 @@ class AnimationExporter:
         """
         return self.animated_frame_data.keys()
 
+    @staticmethod
+    def has_keyframe(ob, attr):
+        anim = ob.animation_data
+        if anim is not None and anim.action is not None:
+            for fcu in anim.action.fcurves:
+                if fcu.data_path == attr:
+                    return len(fcu.keyframe_points) > 0
+        return False
+
     def create_animation_data(self):
         """
         Create an AnimationBoneData class for each bone that can be animated.
         """
         for bone in self.source_rig.pose.bones:
-            if slot in bone.name:
+            if slot in bone.name and not self.allow_slots:
                 continue
-
+            possible_paths = ['pose.bones["{}"].location', 'pose.bones["{}"].rotation_euler',
+                              'pose.bones["{}"].rotation_quaternion']
             self.animated_frame_data[bone.name] = AnimationBoneData(self)
-
+            if self.overlay:
+                for path in possible_paths:
+                    has_keyframe = self.source_rig.animation_data.action.fcurves.find(path.format(bone.name))
+                    if has_keyframe:
+                        self.animated_frame_data[bone.name].animated = True
+                        break
+            else:
+                self.animated_frame_data[bone.name].animated = True
     def animate_recursively(self, idx, start_frame, force=False):
         """
         Recursively animate all the bones from a rig
         starting from the root bone.
         This assumes that the root bone is called "b__ROOT__"
+
+        Note that with animation downsampling, idx and start frame will be // 2
+
+        Also note that idx will be the frame index in the source animation data, not the frame index in the individual clip.
         """
         self.animate_frame(self.root_bone, idx, start_frame, force)
 
@@ -270,9 +294,9 @@ class AnimationExporter:
         """
         parent_bone = source_bone.parent
         if parent_bone is not None:
-            is_parent_root_bone = False
+            parent_is_root = False
             if source_bone.parent.name == "b__ROOT__":
-                is_parent_root_bone = True
+                parent_is_root = True
                 if source_bone.name in IK_POLE_TO_BASE.keys():
                     self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_rig =self.source_rig,
                                                                                                        source_bone=source_bone,
@@ -292,7 +316,7 @@ class AnimationExporter:
                                                              target_bone=self.world_root, frame_idx=frame_idx,
                                                              start_frame=start_frame,
                                                              force=force)
-            if not is_parent_root_bone:
+            if not parent_is_root:
                 if source_bone.name in IK_POLE_TO_BASE.keys():
                     self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_rig =self.source_rig,
                                                                                                        source_bone=source_bone,
@@ -309,7 +333,7 @@ class AnimationExporter:
 
 
         for child in source_bone.children:
-            if slot in child.name:
+            if slot in child.name and not self.allow_slots:
                 continue
             self.animate_frame(child, frame_idx, start_frame, force)
 
@@ -330,19 +354,30 @@ class AnimationExporter:
                                                                                force=force, ik_idx=ik_idx)
 
 
-    def add_baked_animation_data_to_frame(self, source_bone_name, start_frame, end_frame, ik_idx=-1):
+    def add_baked_animation_data_to_frame(self, source_bone_name, start_frame, end_frame, sampling_rate=1, ik_idx=-1):
+
+        if sampling_rate != 1 and sampling_rate != 2:
+            raise Exception("Sampling rate must be 1 or 2")
         translation_data_path = f'pose.bones["{source_bone_name}"].ik_pos_{ik_idx}'
         rotation_data_path = f'pose.bones["{source_bone_name}"].ik_rot_{ik_idx}'
 
         translation_channel_clip = self.animated_frame_data[source_bone_name].get_translation_channel(ik_idx)
         rotation_channel_clip = self.animated_frame_data[source_bone_name].get_rotation_channel(ik_idx)
         translations = defaultdict(dict)
+        # Convert from baked data from "Set IK Weights" into actual ik keyframe data
         for t_axis in range(3):
             fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
             for keyframe in fc_t.keyframe_points:
                 frame = math.floor(keyframe.co[0])
-                if start_frame <= frame < end_frame:
-                    translations[frame-start_frame][t_axis] = keyframe.co[1]
+                # Skip every other frame, sampling_rate == 2 means downsampling 60 to 30 fps
+                if sampling_rate == 2:
+                    if frame % 2 != 0:
+                        continue
+                # Need to divide by sampling rate to get the correct frame index
+                # Because this is 60 fps
+                downsampled_frame_idx = frame // sampling_rate
+                if start_frame <= downsampled_frame_idx < end_frame:
+                    translations[downsampled_frame_idx-start_frame][t_axis] = keyframe.co[1]
         for frame in translations:
             translation_channel_clip.add_keyframe(Vector(translations[frame].values()), frame, force=frame==0)
         rotations = defaultdict(dict)
@@ -350,9 +385,12 @@ class AnimationExporter:
             fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
             for keyframe in fc_r.keyframe_points:
                 frame = math.floor(keyframe.co[0])
-
-                if start_frame <= frame < end_frame:
-                    rotations[frame-start_frame][r_axis] = keyframe.co[1]
+                if sampling_rate == 2:
+                    if frame % 2 != 0:
+                        continue
+                downsampled_frame_idx = frame // sampling_rate
+                if start_frame <= downsampled_frame_idx < end_frame:
+                    rotations[downsampled_frame_idx-start_frame][r_axis] = keyframe.co[1]
         for frame in rotations:
             rotation_channel_clip.add_keyframe(Quaternion(rotations[frame].values()), frame, force=frame==0)
 
@@ -386,78 +424,83 @@ class AnimationExporter:
                 location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
 
                 self.exported_channels.append(location_channel)
-                rotation_channel = _s4animtools.channels.quaternion_channel.QuaternionChannel("loco", F4_QuaternionIdentity, 2)
+                rotation_channel = s4animtools.channels.quaternion_channel.QuaternionChannel("loco", F4_QuaternionIdentity, 2)
                 rotation_channel.set_channel_data(0, 1, {}, self.snap_frames)
                 rotation_channel._target = UInt32(720414894)
                 self.exported_channels.append(rotation_channel)
 
         if bone.name != "b__ROOT__" and bone.name != "loco":
             animation_data = self.animated_frame_data[bone.name]
-
-            if len(animation_data.get_translation_channel().items()) > 0:
-                if self.use_full_precision:
-                    location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
-                    translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3)
-                    location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
-                else:
-                    location_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                          TRANSLATION_SUBTARGET_IDX)
-                    location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
-
-                self.exported_channels.append(location_channel)
-
-            if len(animation_data.get_rotation_channel().items()) > 0:
-                if self.use_full_precision:
-                    rotation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_rotation_channel(), axis_count=4)
-
-                    rotation_channel = PaletteQuaternionChannel(bone.name, F4, ROTATION_SUBTARGET_IDX)
-                    rotation_channel.palette_setup(channel_data=rotation_channel_data,snap_frames=self.snap_frames, values=original_values)
-                else:
-                    rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
-                    rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
-                self.exported_channels.append(rotation_channel)
-
-#
-            if ENABLE_SCALE:
-                if len(animation_data.get_scale_channel().items()) > 0:
+            print(f"{bone.name} animated: {animation_data.animated}")
+            # Only export animation data for bone if the animated property is true
+            # Useful for overlay animations
+            if animation_data.animated:
+                if len(animation_data.get_translation_channel().items()) > 0:
                     if self.use_full_precision:
-                        scale_channel = PaletteTranslationChannel(bone.name, F3, SCALE_SUBTARGET_IDX)
-                        scale_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_scale_channel(), axis_count=3)
-                        scale_channel.palette_setup(channel_data=scale_channel_data,
-                                                          snap_frames=self.snap_frames,
-                                                          values=original_values)
+                        location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
+                        translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3)
+                        location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
                     else:
-                        scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
-                        scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
-        #
-                    self.exported_channels.append(scale_channel)
+                        location_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                              TRANSLATION_SUBTARGET_IDX)
+                        location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
 
-            for ik_target_idx in range(IK_TARGET_COUNT):
-                animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
-                animation_rotation_channel = animation_data.get_rotation_channel(ik_target_idx)
-                if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
+                    self.exported_channels.append(location_channel)
+
+                if len(animation_data.get_rotation_channel().items()) > 0:
                     if self.use_full_precision:
-                        translation_channel = PaletteTranslationChannel(bone.name, F3, IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
-                        translation_channel_data,original_values = self.get_f1_palette_for_channel(animation_translation_channel, axis_count=3)
-                        translation_channel.palette_setup(channel_data=translation_channel_data,
-                                                          snap_frames=self.snap_frames,
-                                                          values=original_values)
-                        rotation_channel = PaletteQuaternionChannel(bone.name, F4, IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
-                        rotation_channel_data,original_values = self.get_f1_palette_for_channel(animation_rotation_channel, axis_count=4)
-                        rotation_channel.palette_setup(channel_data=rotation_channel_data, snap_frames=self.snap_frames,
-                                                       values=original_values)
+                        rotation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_rotation_channel(), axis_count=4)
+
+                        rotation_channel = PaletteQuaternionChannel(bone.name, F4, ROTATION_SUBTARGET_IDX)
+                        rotation_channel.palette_setup(channel_data=rotation_channel_data,snap_frames=self.snap_frames, values=original_values)
                     else:
-                        translation_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                                 IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
-                        rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
-                                                   IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
-                        translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)
-                        rotation_channel.setup(animation_rotation_channel, snap_frames=self.snap_frames)
-                    self.exported_channels.append(translation_channel)
+                        rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
+                        rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
                     self.exported_channels.append(rotation_channel)
 
+#
+            if animation_data.animated:
+
+                if ENABLE_SCALE:
+                    if len(animation_data.get_scale_channel().items()) > 0:
+                        if self.use_full_precision:
+                            scale_channel = PaletteTranslationChannel(bone.name, F3, SCALE_SUBTARGET_IDX)
+                            scale_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_scale_channel(), axis_count=3)
+                            scale_channel.palette_setup(channel_data=scale_channel_data,
+                                                              snap_frames=self.snap_frames,
+                                                              values=original_values)
+                        else:
+                            scale_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX, SCALE_SUBTARGET_IDX)
+                            scale_channel.setup(animation_data.get_scale_channel(), snap_frames=self.snap_frames)
+            #
+                        self.exported_channels.append(scale_channel)
+
+                for ik_target_idx in range(IK_TARGET_COUNT):
+                    animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
+                    animation_rotation_channel = animation_data.get_rotation_channel(ik_target_idx)
+                    if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
+                        if self.use_full_precision:
+                            translation_channel = PaletteTranslationChannel(bone.name, F3, IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+                            translation_channel_data,original_values = self.get_f1_palette_for_channel(animation_translation_channel, axis_count=3)
+                            translation_channel.palette_setup(channel_data=translation_channel_data,
+                                                              snap_frames=self.snap_frames,
+                                                              values=original_values)
+                            rotation_channel = PaletteQuaternionChannel(bone.name, F4, IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
+                            rotation_channel_data,original_values = self.get_f1_palette_for_channel(animation_rotation_channel, axis_count=4)
+                            rotation_channel.palette_setup(channel_data=rotation_channel_data, snap_frames=self.snap_frames,
+                                                           values=original_values)
+                        else:
+                            translation_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                                     IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+                            rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
+                                                       IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
+                            translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)
+                            rotation_channel.setup(animation_rotation_channel, snap_frames=self.snap_frames)
+                        self.exported_channels.append(translation_channel)
+                        self.exported_channels.append(rotation_channel)
+
         for child in bone.children:
-            if slot in child.name:
+            if slot in child.name and not self.allow_slots:
                 continue
             self.recursively_export_bone_animation_to_channels(child)
 
@@ -538,6 +581,6 @@ class AdditiveAnimationExporter(AnimationExporter):
 
 
         for child in source_bone.children:
-            if slot in child.name:
+            if slot in child.name and not self.allow_slots:
                 continue
             self.animate_frame(child, frame_idx, start_frame, force)

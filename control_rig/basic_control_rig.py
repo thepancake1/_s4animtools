@@ -193,6 +193,19 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
                         keyframe.co[1] = current_value * multiplier
 
                             #print(current_value)
+                # This needs to be before the continue statement because the root bind needs to be mirrored as well
+                if "location" in fcurve.data_path:
+                    multiplier = 1
+                    if "Foot" in fcurve.data_path or "LegExport" in fcurve.data_path:
+                        multiplier = -1
+                    if "b__ROOT_bind__" in fcurve.data_path:
+                        multiplier = -1
+                    if fcurve.array_index == 2:
+                        print(fcurve.data_path, multiplier)
+
+                        for keyframe in fcurve.keyframe_points:
+                            current_value = keyframe.co[1]
+                            keyframe.co[1] = current_value * multiplier
 
                 if "_L_" in group.name or "_R_" in group.name:
                     pass
@@ -209,18 +222,11 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
 
                         keyframe.co[1] = current_value * multiplier
 
-                if "location" in fcurve.data_path:
-                    multiplier = 1
-                    if "Foot" in fcurve.data_path or "LegExport" in fcurve.data_path:
-                        multiplier = -1
-                    if fcurve.array_index == 2:
-                        for keyframe in fcurve.keyframe_points:
-                            current_value = keyframe.co[1]
-                            keyframe.co[1] = current_value * multiplier
+
         fcurves = obj.animation_data.action.fcurves
         for fcurve in fcurves:
             for kf in fcurve.keyframe_points:
-                kf.interpolation = 'LINEAR'
+                kf.interpolation = 'CONSTANT'
         return {"FINISHED"}
 
 

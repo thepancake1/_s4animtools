@@ -1,9 +1,9 @@
 import os
 
-from _s4animtools.serialization.fnv import get_32bit_hash
-from _s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Int32
+from s4animtools.serialization.fnv import get_32bit_hash
+from s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Int32
 import bpy
-from _s4animtools.stream import StreamReader
+from s4animtools.stream import StreamReader
 
 class Bone:
     def __init__(self):
@@ -16,6 +16,7 @@ class Bone:
         self.parent_idx = 0
         self.bone_hash = 0
         self.flags = 0
+
     def read(self, reader):
         self.position = [reader.float32(), reader.float32(), reader.float32()]
         self.rotation = [reader.float32(), reader.float32(), reader.float32(), reader.float32()]

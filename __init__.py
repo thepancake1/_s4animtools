@@ -1,73 +1,142 @@
+import json
+
 import bpy
 import os
 import time
 import math
-import importlib
 
-import _s4animtools.bone_names
-from _s4animtools.serialization.fnv import get_64bithash
-from _s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
+import s4animtools.bone_names
+from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
+from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
-from _s4animtools.rig.create_rig import Trackmask
-from _s4animtools.rig_tools import ExportRig, SyncRigToMesh
-from _s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
-    PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent
-from _s4animtools.serialization.types.basic import Float32, UInt32
-from _s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
-from _s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
-from _s4animtools.asm.state_machine import ActorPanel, ActorProperties, LIST_OT_MoveActor, LIST_OT_NewActor, \
-    LIST_OT_DeleteActor
-from _s4animtools.asm.states import StateProperties, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, \
-    StatePanel, ControllerProperties, LIST_OT_NewController, LIST_OT_RemoveController, LIST_OT_MoveControllerState, \
-    PostureProperties, PosturePanel, LIST_OT_NewPosture, LIST_OT_DeletePosture, LIST_OT_MovePosture, StateConnections, \
-    LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection, LIST_OT_MoveStateConnection
+from s4animtools.rig.create_rig import Trackmask
+from s4animtools.rig_tools import ExportRig, SyncRigToMesh
+from s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
+    PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent, GeometryStateChangeEvent
+from s4animtools.serialization.types.basic import Float32, UInt32
+from s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
+from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
 
-from _s4animtools.rig.create_rig import create_rig_with_context
-import _s4animtools.clip_processing.clip_header
-import _s4animtools.rig
-import _s4animtools.channels.f1_normalized_channel
-import _s4animtools.channels.translation_channel
-import _s4animtools.channels.loco_channel
-import _s4animtools.channels.palette_channel
-import _s4animtools.channels.quaternion_channel
-import _s4animtools.control_rig.basic_control_rig
-import _s4animtools.frames.frame
-from _s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
+from s4animtools.rig.create_rig import create_rig_with_context
+import s4animtools.clip_processing.clip_header
+import s4animtools.rig
+import s4animtools.channels.f1_normalized_channel
+import s4animtools.channels.translation_channel
+import s4animtools.channels.loco_channel
+import s4animtools.channels.palette_channel
+import s4animtools.channels.quaternion_channel
+import s4animtools.control_rig.basic_control_rig
+import s4animtools.frames.frame
+from s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig, FlipLeftSideAnimationToRightSideSim
-from _s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
+from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
     LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget
-import _s4animtools.animation_exporter.animation
-from _s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
-import _s4animtools.rig.create_rig
-from _s4animtools.serialization.types.transforms import Vector3, Quaternion4
-import _s4animtools.clip_processing.clip_body
-import _s4animtools.clip_processing.f1_palette
+import s4animtools.animation_exporter.animation
+from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
+import s4animtools.rig.create_rig
+from s4animtools.serialization.types.transforms import Vector3, Quaternion4
+from s4animtools.clip_operators import OT_S4ANIMTOOLS_CreateClipData, get_formatted_clip_name, \
+    OT_S4ANIMTOOLS_InitializeThumbnails
+import s4animtools.clip_processing.clip_body
+import s4animtools.clip_processing.f1_palette
 from bpy_extras.io_utils import ImportHelper
-from mathutils import Vector, Quaternion, Matrix
+from mathutils import Vector, Matrix
 from bpy.props import IntProperty, CollectionProperty, FloatProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
+
+CURRENT_S4ANIMTOOLS_VERSION = 1
 JAW_ANIMATE_DURATION = 100000
 
+
 CHAIN_STR_IDX = 2
-bl_info = {"name": "_s4animtools", "category": "Object", "blender": (2, 80, 0)}
-importlib.reload(_s4animtools.animation_exporter.animation)
-importlib.reload(_s4animtools.clip_processing.f1_palette)
-importlib.reload(_s4animtools.frames.frame)
-importlib.reload(_s4animtools.clip_processing.clip_body)
-importlib.reload(_s4animtools.channels.palette_channel)
+bl_info = {"name": "s4animtools", "category": "Object", "blender": (2, 80, 0)}
 
-# importlib.reload(_s4animtools.asm.state_machine)
-# importlib.reload(_s4animtools.translation_channel)
-# importlib.reload(_s4animtools.f1_normalized_channel)
-# importlib.reload(_s4animtools.rig.create_rig)
 
-importlib.reload(_s4animtools.clip_processing.clip_header)
-importlib.reload(_s4animtools.control_rig.basic_control_rig)
-importlib.reload(_s4animtools.ik_manager)
-importlib.reload(_s4animtools.clip_processing.clip_body)
-importlib.reload(_s4animtools.rcol.rcol_wrapper)
+def update_valid_skins(scene, context):
+
+    items = []
+
+    for ob in context.scene.objects:
+        if ob.is_sim_skin:
+            items.append((ob.name, ob.name, ""))
+
+    return items
+def update_active_sim_skin(self, context):
+    """
+    Function for updating the active sim skin.
+    This function copies over the rig from the active sim skin to the current rig.
+    Note! Exported rigs do not have bones in our control rig, so for example the
+    Left Hand IK and Right Hand IK need to be copied over from the hands default position.
+    The feet need to be recreated as well.
+    """
+    rig_obj = context.object
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    bpy.ops.object.select_all(action='DESELECT')
+
+    if rig_obj.is_s4_actor:
+        for child in bpy.data.objects[rig_obj.name].children:
+            #print(rig_obj.name, child.name)
+            child.select_set(True)
+        bpy.ops.object.delete()
+
+        new_skin = rig_obj.active_sim_skin
+        bpy.ops.object.select_all(action='DESELECT')
+
+        new_skin_rig = bpy.data.objects[new_skin]
+        new_skin_rig.users_collection[0].hide_viewport = False
+        new_skin_rig.select_set(True)
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        bone_data = {}
+        for bone in new_skin_rig.data.bones:
+            print(bone.name)
+            bone_data[bone.name] = (bone.head_local.copy(), bone.tail_local.copy())
+            if bone.name == "b__L_Hand__":
+                bone_data["Left Hand IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Hand Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+            elif bone.name == "b__R_Hand__":
+                bone_data["Right Hand IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Hand Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+            elif bone.name == "b__L_Foot__":
+                bone_data["Left Foot IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Main Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Pivot"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Left Foot Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
+            elif bone.name == "b__R_Foot__":
+                bone_data["Right Foot IK"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Target"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Main Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Pivot"] = (bone.head_local.copy(), bone.tail_local.copy())
+                bone_data["Right Foot Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
+        bpy.ops.object.mode_set(mode='OBJECT')
+        rig_obj.select_set(True)
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        for bone in rig_obj.data.edit_bones:
+            #print(bone.name)
+            if bone.name in bone_data:
+                bone.head = bone_data[bone.name][0]
+                bone.tail = bone_data[bone.name][1]
+                print(bone.name, bone_data[bone.name][0], bone_data[bone.name][1])
+
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        for child in new_skin_rig.children:
+            new_ob = child.copy()
+            bpy.context.scene.collection.objects.link(new_ob)
+            print(rig_obj.name)
+            new_ob.parent = bpy.data.objects[rig_obj.name]
+            for modifier in new_ob.modifiers:
+                print(modifier)
+                if modifier.type == "ARMATURE":
+                    modifier.object = bpy.data.objects[rig_obj.name]
+        rig_obj.select_set(True)
+
+        new_skin_rig.users_collection[0].hide_viewport = True
 
 def determine_ik_slot_targets(rig):
     all_constraints = defaultdict(list)
@@ -100,11 +169,11 @@ def determine_ik_slot_targets(rig):
 
 
 def create_ik_weight_channels(bone_name, influences, sequence_count):
-    f1normalized_channel = _s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14 + sequence_count)
+    f1normalized_channel = s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14 + sequence_count)
     min_value, max_value = min(influences.values()), max(influences.values())
     offset = (min_value + max_value) / 2
     scale = -((min_value - max_value) / 2)
-    if scale == 0:
+    if round(scale, 4) == 0:
         scale = 1
     f1normalized_channel.set_channel_data(offset=offset, scale=scale, individual_frames=influences)
     return f1normalized_channel
@@ -122,7 +191,7 @@ def gather_ik_weights(obj, influences, bone_name, ik_weight_idx, start_frame, cu
 
 def set_loco_world_ik(bone_name, clip_start, clip_end):
     """Record the IK weight of each IK constraint from the actual constraint in Blender."""
-    f1normalized_channel = _s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14)
+    f1normalized_channel = s4animtools.channels.f1_normalized_channel.F1Normalized(bone_name, 5, 14)
     influences = {}
     min_value, max_value = 1, 1
     influences[0] = 1
@@ -193,455 +262,10 @@ class Snapper(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class ClipExporter(bpy.types.Operator):
-    bl_idname = "s4animtools.export_clip"
-    bl_label = "Export Clip"
-    bl_options = {"REGISTER", "UNDO"}
-
-    def convert_into_value(self, value):
-        return str(value)
-
-    def get_distance(self, posA, posB):
-        distance = math.sqrt((posA.x - posB.x) ** 2 + (posA.y - posB.y) ** 2 + (posA.z - posB.z) ** 2)
-        # print(distance)
-        return distance
-
-    def get_keyframes(self, obj):
-        keyframes = []
-        anim = obj.animation_data
-        if anim is not None and anim.action is not None:
-            for fcu in anim.action.fcurves:
-                for keyframe in fcu.keyframe_points:
-                    x, y = keyframe.co
-                    if x not in keyframes:
-                        keyframes.append((math.ceil(x)))
-        return keyframes
-
-    def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames):
-        """
-        Shifts the timestamps of the clip events depending on the split.
-        So you can time it relative to the start of the blend file in blender,
-        and have it reflect relative to the clip file in the export.
-        """
-        start_time = start_frame * (1 / 30)
-        frame_time = frame_count * (1 / 30)
-
-        variable_to_event = {context.object.parent_events_list: ParentEvent,
-                             context.object.sound_events_list: SoundEvent,
-                             context.object.snap_events_list: SnapEvent,
-                             context.object.visibility_events_list: VisibilityEvent,
-                             context.object.script_events_list: ScriptEvent,
-                             context.object.reaction_events_list: ReactionEvent,
-                             context.object.play_effect_events_list: PlayEffectEvent,
-                             context.object.focus_compatibility_events_list: FocusCompatibilityEvent,
-                             context.object.disable_lipsync_events_list: SuppressLipsyncEvent,
-                             context.object.stop_effect_events_list: StopEffectEvent}
-        snap_frames = []
-
-        for parameter_fields, event in variable_to_event.items():
-            for event_instance in parameter_fields:
-                parameters = event_instance.info.split(",")
-                parameter_length = len(parameters)
-                if parameter_length == 1:
-                    continue
-                if parameter_length < event.arg_count:
-                    raise Exception(
-                        f"Your event has incomplete parameters. Expected {event.arg_count} parameters. Got {parameter_length}")
-                try:
-                    original_timestamp = parameters[0].strip()
-                    original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
-                                                                                                  start_time)
-                    if event == SnapEvent:
-                        snap_frames.append(timeshifted_timestamp)
-                    if event == FocusCompatibilityEvent:
-                        if frame_time >= timeshifted_timestamp >= 0:
-                            _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
-                                                                                             start_time)
-                            current_clip.add_event(
-                                event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
-
-                    else:
-                        if frame_time >= timeshifted_timestamp >= 0:
-                            current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
-                except Exception as e:
-                    print(e)
-                    #raise Exception("You're missing parameters for your event..")
-
-        if additional_snap_frames != "":
-            additional_snap_frames = additional_snap_frames.split(",")
-            for frame in additional_snap_frames:
-                original_frame = int(frame)
-                timeshifted_frame = original_frame - start_frame
-                if frame_count > timeshifted_frame >= 0:
-                    snap_frames.append(timeshifted_frame)
-        return snap_frames
-
-    def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
-        if original_timestamp_str.endswith("f") or original_timestamp_str.endswith("fr"):
-            original_timestamp = float(original_timestamp_str[:-1]) / 30
-        elif original_timestamp_str.endswith("e"):
-            original_timestamp = eval(original_timestamp_str[:-1])
-        else:
-            original_timestamp = float(original_timestamp_str)
-
-        # IF it ends with r (relative), then we don't need to shift from absolute to relative,
-        # because we're already in relative
-        if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
-            timeshifted_timestamp = original_timestamp
-        else:
-            timeshifted_timestamp = original_timestamp - start_time
-
-        return original_timestamp, timeshifted_timestamp
-
-    def execute(self, context):
-        t1 = time.time()
-
-        root_bone = list(bpy.context.active_object.pose.bones)[0]
-        world_root_bone, world_rig = self.determine_world_ik(context, root_bone)
-
-        ik_targets = determine_ik_slot_targets(bpy.context.active_object)
-        weight_channels = []
-        slot_assignments = defaultdict(list)
-        # add rigs namespaces
-        rigs_used = []
-        ik_bones = []
-        animated_bones = dict()
-        previous_recorded_frame = dict()
-
-        def setup_channel_data(bone):
-
-            default_bone_channels = {"Main Channel": {"TRANSLATION": {}, "ORIENTATION": {}, "SCALE": {}},
-                                     "IK World Channel": {"TRANSLATION": {}, "ORIENTATION": {}}}
-            animated_bones[bone.name] = default_bone_channels.copy()
-            default_previous_frame = {
-                "Main Channel": {"TRANSLATION": Vector((0, 0, 0)), "ORIENTATION": Quaternion((1, 0, 0, 0)),
-                                 "SCALE": Vector((1, 1, 1))},
-                "IK World Channel": {"TRANSLATION": Vector((0, 0, 0)), "ORIENTATION": Quaternion((1, 0, 0, 0))}}
-            previous_recorded_frame[bone.name] = default_previous_frame.copy()
-
-            for ik_chain in slot_assignments:
-                if ik_chain == bone.name:
-                    for idx in range(len(slot_assignments[ik_chain])):
-                        channel_name = "IK Target {} Channel".format(1 + idx)
-                        animated_bones[bone.name][channel_name] = {"TRANSLATION": {}, "ORIENTATION": {}}
-                        previous_recorded_frame[bone.name][channel_name] = {"TRANSLATION": Vector((0, 0, 0)),
-                                                                            "ORIENTATION": Quaternion((1, 0, 0, 0))}
-
-            for child in bone.children:
-                setup_channel_data(child)
-
-        snap_frames = None
-        # Todo why doesn't this use the Slot Assignment class?
-        for bone in constraints:
-            for idx, target in enumerate(constraints[bone]):
-                slot_assignments[bone].append(
-                    (bone, target[0], target[1], idx, int(target[2].target.name.split(" ")[2])))
-                if bone not in ik_bones:
-                    ik_bones.append(bone)
-        # Ik bones list
-        # Get blend name for source file name in clip file.
-        filepath = bpy.data.filepath
-        blend_name = filepath.split(os.sep)[-1]
-
-        clip_indices = [0, ]
-        clip_splits = context.scene.clip_splits.split(",")
-        if len(clip_splits) > 0:
-            for idx in range(len(clip_splits)):
-                clip_indices.append(int(clip_splits[idx]))
-
-        # clip_indices.append(bpy.context.scene.frame_end)
-
-        def finalize_channels(all_frame_data, channel_data, current_channel):
-            min, max = 9999, -9999
-            for idx, frame_data in channel_data.items():
-                all_frame_data[idx] = frame_data.copy()
-                for value in frame_data:
-                    # print(value, max)
-                    if max < value:
-                        max = value
-                    if min > value:
-                        min = value
-                # TODO Uhhh does the below code even do what it's supposed to do?
-            # printfor ax_idx in range(len(frame_data)):
-            #     frame_data[ax_idx] = number_format(frame_data[ax_idx])
-            offset = (min + max) / 2
-            scale = -((min - max) / 2)
-            current_channel.set_channel_data(offset=offset, scale=scale, individual_frames=all_frame_data,
-                                             snap_frames=snap_frames)
-            current_clip.clip_body.add_channel(current_channel)
-
-        def recursive_bone_animate(bone, idx, is_snap_frame):
-            if bone.parent and keyframed_bones[
-                bone.name] and bpy.context.scene.is_overlay or not bpy.context.scene.is_overlay and bone.parent:
-                # Animate relative to the world rig if the current bone is the b__ROOT_bind__ bone.
-                if bone.parent.name == "b__ROOT__":
-                    animate_relative_to_bone(bone, world_root_bone, bpy.context.active_object, world_rig, idx,
-                                             "Main Channel", is_snap_frame)
-                else:
-                    animate_relative_to_bone(bone, bone.parent, bpy.context.active_object, bpy.context.active_object,
-                                             idx, "Main Channel", is_snap_frame)
-
-                use_IK = True
-                if bone.name in ik_bones and use_IK:
-                    current_ik_target = 0
-                    animate_relative_to_bone(bone, world_root_bone, bpy.context.active_object, world_rig, idx,
-                                             "IK World Channel", is_snap_frame)
-                    current_ik_target += 1
-
-                    for bone_constraint_name in slot_assignments.keys():
-                        if bone.name == bone_constraint_name:
-                            for bone_constraint in slot_assignments[bone_constraint_name]:
-                                channel_name = "IK Target {} Channel".format(current_ik_target)
-                                current_ik_target += 1
-                                animate_relative_to_bone(bone, bone_constraint[1].pose.bones[bone_constraint[2]],
-                                                         bpy.context.active_object, bone_constraint[1], idx,
-                                                         channel_name, is_snap_frame)
-            for child in bone.children:
-                # Don't animate slots.
-                if "slot" not in child.name:
-                    recursive_bone_animate(child, idx, is_snap_frame)
-
-        def recursive_bone_finalize(bone):
-            current_sequence_count = 1  # This affects the actual IK translation and rotation offset data
-            for channel_name, channel_bundle in animated_bones[bone.name].items():
-                for channel_type, channel_data in channel_bundle.items():
-                    # Don't need to save channel if nothing is in it
-                    if len(channel_data) == 0:
-                        continue
-
-                    all_frame_data = {}
-                    current_channel = None
-                    if channel_type == "TRANSLATION":
-                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 1)
-                    elif channel_type == "ORIENTATION":
-                        current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20, 2)
-                    elif channel_type == "SCALE":
-                        current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name, 18, 3)
-                    if "IK" in channel_name:
-                        if channel_type == "TRANSLATION":
-                            current_channel = _s4animtools.channels.translation_channel.Vector3Channel(bone.name,
-                                                                                                       18, 23 + (
-                                                                                                                   current_sequence_count * 2))
-                        elif channel_type == "ORIENTATION":
-                            current_channel = _s4animtools.channels.channel.QuaternionChannel(bone.name, 20,
-                                                                                              (24 + current_sequence_count * 2))
-                    finalize_channels(all_frame_data, channel_data, current_channel)
-                if "IK" in channel_name:
-                    current_sequence_count += 1
-
-            for bone in bone.children:
-                recursive_bone_finalize(bone)
-
-        def animate_relative_to_bone(bone, parent_bone, source_rig, target_rig, idx, channel_name, is_snap_frame,
-                                     allow_fail_on_scale=True):
-            bp1 = source_rig.matrix_world @ bone.matrix
-            bp2 = target_rig.matrix_world @ parent_bone.matrix
-            matrix_data = bp2.inverted() @ bp1
-            rotation_data = matrix_data.to_quaternion()
-            translation_data = matrix_data.to_translation()
-            last_rotation_data = previous_recorded_frame[bone.name][channel_name]["ORIENTATION"]
-            last_translation_data = previous_recorded_frame[bone.name][channel_name]["TRANSLATION"]
-            # TODO quick hack for scale
-            try:
-                scale_data = bone.scale
-
-                last_scale_data = previous_recorded_frame[bone.name][channel_name]["SCALE"]
-                if abs(self.get_distance(last_scale_data, scale_data)) < 0.00001 and len(
-                        animated_bones[bone.name][channel_name]["SCALE"].keys()) >= 1 and not is_snap_frame:
-                    pass
-                else:
-                    animated_bones[bone.name][channel_name]["SCALE"][idx] = [scale_data.x, scale_data.y,
-                                                                             scale_data.z]
-                    previous_recorded_frame[bone.name][channel_name]["SCALE"] = scale_data.copy()
-
-
-            except Exception as e:
-                if allow_fail_on_scale:
-                    pass
-                else:
-                    raise e
-            if abs((last_rotation_data - rotation_data).magnitude) < 0.00001 and len(
-                    animated_bones[bone.name][channel_name]["ORIENTATION"].keys()) >= 1 and not is_snap_frame:
-                pass
-            else:
-                animated_bones[bone.name][channel_name]["ORIENTATION"][idx] = [rotation_data.x, rotation_data.y,
-                                                                               rotation_data.z,
-                                                                               rotation_data.w]
-                previous_recorded_frame[bone.name][channel_name]["ORIENTATION"] = rotation_data
-            if abs(self.get_distance(last_translation_data, translation_data)) < 0.00001 and len(
-                    animated_bones[bone.name][channel_name]["TRANSLATION"].keys()) >= 1 and not is_snap_frame:
-                pass
-            else:
-                animated_bones[bone.name][channel_name]["TRANSLATION"][idx] = [translation_data.x, translation_data.y,
-                                                                               translation_data.z]
-                previous_recorded_frame[bone.name][channel_name]["TRANSLATION"] = translation_data
-
-        def save_locomotion_data(clip_start, clip_end):
-            next_initial_translation_offset = ""
-            if "loco" in bpy.context.active_object.pose.bones:
-                loco_bone = bpy.context.active_object.pose.bones["loco"]
-                # current_clip.clip_body._f1PaletteData.append(float32(0))
-
-                for idx in range(clip_start, clip_end):
-                    bpy.context.scene.frame_set(idx)
-                    bp1 = bpy.context.active_object.matrix_world @ loco_bone.matrix
-
-                    current_clip.clip_body._f1PaletteData.append(Float32(round(abs(bp1.to_translation().y), 6)))
-                    if idx == clip_start:
-                        next_initial_translation_offset = "0,0,{}".format(abs(bp1.to_translation().y))
-                current_clip.clip_body._f1PaletteSize = len(current_clip.clip_body._f1PaletteData)
-                loco_channel_pos = _s4animtools.channels.palette_channel.PaletteTranslationChannel("loco", 3, 1)
-                channel_frame_data = {}
-                for idx in range(clip_start, clip_end):
-                    channel_frame_data[idx - clip_start] = (0, 0, idx - clip_start)
-                loco_channel_pos.set_channel_data(0, 1, channel_frame_data, snap_frames)
-                loco_channel_rot = _s4animtools.channels.channel.QuaternionChannel("loco", 17, 2)
-                loco_channel_rot.set_channel_data(0, 1, {}, snap_frames)
-
-                loco_channel_pos._target = UInt32(720414894)
-                loco_channel_rot._target = UInt32(720414894)
-                loco_channel_pos._frame_count = current_clip.clip_body._f1PaletteSize
-                current_clip.clip_body.add_channel(loco_channel_pos)
-
-                current_clip.clip_body.add_channel(loco_channel_rot)
-            return next_initial_translation_offset
-
-        def get_animated_bones():
-            rig = bpy.context.active_object.pose
-            keyframed_bones = defaultdict(bool)
-            for b in rig.bones:
-                for fcu in bpy.context.active_object.animation_data.action.fcurves:
-                    if fcu.data_path.startswith('pose.bones["{}"]'.format(b.name)):
-                        keyframed_bones[b.name] = True
-                        break
-            return keyframed_bones
-
-        keyframed_bones = get_animated_bones()
-
-        clip_names = []
-        clip_input_names = context.scene.clip_name.split(",")
-        if len(clip_input_names) > 0:
-            for idx in range(len(clip_input_names)):
-                clip_names.append(clip_input_names[idx].strip())
-
-        reset_offset = []
-        if context.object.reset_initial_offset_t != "":
-            reset_initial_offset_t = context.object.reset_initial_offset_t.split(",")
-            if len(reset_initial_offset_t) > 0:
-                for idx in range(len(reset_initial_offset_t)):
-                    reset_offset.append(reset_initial_offset_t[idx].strip() == "+")
-        else:
-            for clip_idx in range(len(clip_indices) - 1):
-                reset_offset.append(False)
-
-        initial_offset_t = context.object.initial_offset_t
-        initial_offset_q = context.object.initial_offset_q
-        # Set the initial offsets to the default if the user doesn't enter anything.
-        if initial_offset_t == "":
-            initial_offset_t = "0,0,0"
-        if initial_offset_q == "":
-            initial_offset_q = "0,0,0,1"
-        rig_name = context.object.rig_name
-        if rig_name == "":
-            context.object.rig_name = "x"
-            rig_name = context.object.rig_name
-
-        reference_namespace_hash = context.object.reference_namespace_hash
-        if reference_namespace_hash == "":
-            reference_namespace_hash = 0
-        else:
-            reference_namespace_hash = int(reference_namespace_hash, 16)
-
-        for clip_idx in range(len(clip_indices) - 1):
-            clip_frame_idx = clip_indices[clip_idx]
-            if context.scene.clip_name_prefix == "":
-                combined_clip_name = "{}".format(clip_names[clip_idx])
-            else:
-                combined_clip_name = "{}_{}".format(context.scene.clip_name_prefix, clip_names[clip_idx])
-            has_loco_bone = "loco" in context.object.pose.bones
-            current_clip = ClipResource(combined_clip_name, rig_name, slot_assignments,
-                                        context.object.explicit_namespaces,
-                                        reference_namespace_hash, Quaternion.from_str(initial_offset_q),
-                                        Vector3.from_str(initial_offset_t), blend_name, has_loco_bone,
-                                        context.object.disable_rig_suffix)
-            setup_channel_data(root_bone)
-
-            clip_start, clip_end = clip_frame_idx, clip_indices[clip_idx + 1]
-
-            snap_frames = self.setup_events(context, current_clip, clip_start, clip_end - clip_start,
-                                            context.object.additional_snap_frames)
-
-            for channel in weight_channels:
-                current_clip.clip_body.add_channel(channel)
-            last_frame_influences = defaultdict(int)
-            ik_weight_animation_data = defaultdict(dict)
-
-            for current_frame in range(clip_start, clip_end):
-                bpy.context.scene.frame_set(current_frame)
-                bpy.context.view_layer.update()
-
-                # Clip data needs to be offset when the clip actually starts is at zero.
-                recursive_bone_animate(root_bone, current_frame - clip_start, current_frame - clip_start in snap_frames)
-                for bone in constraints:
-                    for idx, target in enumerate(constraints[bone]):
-                        ik_weight = gather_ik_weights(ik_weight_animation_data, target[2], clip_start, current_frame,
-                                                      last_frame_influences[target[2]])
-                        last_frame_influences[target[2]] = ik_weight
-            for bone in constraints:
-                for idx, target in enumerate(constraints[bone]):
-                    current_clip.clip_body.add_channel(
-                        (create_ik_weight_channels(bone, ik_weight_animation_data[target[2]], idx + 1)))
-
-            next_initial_translation_offset = save_locomotion_data(clip_start, clip_end)
-            if next_initial_translation_offset != "":
-                # TODO Hack!! Fix this
-                current_clip._initialOffsetT = list(map(float, next_initial_translation_offset.split(",")))
-
-            if len(reset_offset) > clip_idx:
-                if reset_offset[clip_idx]:
-                    initial_offset_t = "0,0,0"
-                    initial_offset_q = "0,0,0,1"
-
-            loco_animation = False
-            root_bone = bpy.context.active_object.pose.bones["b__ROOT__"]
-
-            if loco_animation:
-                try:
-                    for bone in self.IK_bones:
-                        # todo don't play the animation each time for a bone!!
-                        current_clip.clip_body.add_channel(set_loco_world_ik(bone, clip_start, clip_end))
-                except:
-                    print("wtf")
-
-            recursive_bone_finalize(root_bone)
-
-            current_clip.clip_body.set_clip_length(clip_end - clip_start)
-
-            current_clip.update_duration(clip_end - clip_start)
-            current_clip.serialize()
-            current_clip = None
-        t2 = time.time()
-        print(f"Took {t2 - t1} seconds for clip export")
-
-    def determine_world_ik(self, context, root_bone):
-        if context.object.world_rig == "":
-            world_rig = bpy.context.active_object
-            world_root_bone = root_bone
-        else:
-            world_rig = bpy.data.objects[context.object.world_rig]
-            world_root_bone = world_rig.pose.bones[context.object.world_bone]
-        return world_root_bone, world_rig
-
-    def invoke(self, context, event):
-
-        self.execute(context)
-
-        return {'FINISHED'}
-
 
 class ClipInfo:
     def __init__(self, start_frame, end_frame, name, reference_namespace_hash, explicit_namespaces, initial_offset_q,
-                 initial_offset_t, rig_name):
+                 initial_offset_t, rig_name, loco):
         self.start_frame = start_frame
         self.end_frame = end_frame
         self.name = name
@@ -654,8 +278,17 @@ class ClipInfo:
         self.initial_offset_q = initial_offset_q
         self.initial_offset_t = initial_offset_t
         self.rig_name = rig_name
+        self.loco = loco
 
-
+    def __str__(self):
+        return (f"\nName: {self.name}\n"
+            f"Start Frame: {self.start_frame} End Frame: {self.end_frame}, \n"
+                f"Reference Namespace Hash: {hex(self.reference_namespace_hash)}\n"
+                f"Explicit Namespaces: {self.explicit_namespaces}\n"
+                f"Initial Offset Q: {self.initial_offset_q}\n"
+                f"Initial Offset T: {self.initial_offset_t}")
+    def __repr__(self):
+        return self.__str__()
 class SlotAssignmentBlender:
     def __init__(self, source_rig, source_bone, target_rig, target_bone, slot_assignment_idx, chain_idx):
         self.source_rig = source_rig
@@ -665,23 +298,22 @@ class SlotAssignmentBlender:
         self.slot_assignment_idx = slot_assignment_idx
         self.chain_idx = chain_idx
 
-class NewClipExporter(bpy.types.Operator):
-    bl_idname = "s4animtools.new_export_clip"
-    bl_label = "New Export Clip"
-    bl_options = {"REGISTER", "UNDO"}
+class NewClipExporter:
 
-    additive: bpy.props.BoolProperty(default=False)
     def __init__(self):
         self.context = None
+        self.additive = False
         self.clip_infos = []
 
-    def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames):
+    def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames, sampling_rate):
         """Shifts the timestamps of the clip events depending on the split.
         So you can time it relative to the start of the blend file in blender,
         and have it reflect relative to the clip file in the export.
         """
         start_time = start_frame * (1 / 30)
         frame_time = frame_count * (1 / 30)
+        if sampling_rate == 2:
+            frame_time /= 2
         variable_to_event = {context.object.parent_events_list: ParentEvent,
                              context.object.sound_events_list: SoundEvent,
                              context.object.snap_events_list: SnapEvent,
@@ -691,38 +323,93 @@ class NewClipExporter(bpy.types.Operator):
                              context.object.play_effect_events_list: PlayEffectEvent,
                              context.object.focus_compatibility_events_list: FocusCompatibilityEvent,
                              context.object.disable_lipsync_events_list: SuppressLipsyncEvent,
-                             context.object.stop_effect_events_list: StopEffectEvent}
+                             context.object.stop_effect_events_list: StopEffectEvent,
+                             context.object.geometry_state_change_events_list: GeometryStateChangeEvent,}
+
+
         snap_frames = []
+
+        # New UI Sound events widget
+        # These ones have separate parameter fields
+        for event in context.object.sound_events_list_UI:
+            original_timestamp = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(SoundEvent(timeshifted_timestamp, event.sound_name))
+
+        for event in context.object.snap_events_list_UI:
+            original_timestamp_frame = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp_frame,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+            snap_frames.append(math.floor(timeshifted_timestamp * 30))
+            print("Snap frames: {}".format(snap_frames))
+            target_rig_object = context.scene.objects[event.target_actor]
+            if target_rig_object.rig_name.strip() == "":
+                raise Exception(f"Targeting {target_rig_object}, but it has no rig name. This will not work so fix this and try again")
+
+
+            # For snap events, the event must start on the first frame the sim is snapped on. NOT the frame where before they snap
+            context.scene.frame_set(original_timestamp_frame)
+            active_rig = context.object
+            active_rig_root = context.object.pose.bones['b__ROOT__Adjust']
+            target_rig = target_rig_object
+            target_rig_root = target_rig.pose.bones[event.target_bone]
+
+            translation, rotation = get_offset(active_rig, active_rig_root, target_rig, target_rig_root)
+
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(SnapEvent(timeshifted_timestamp,  target_rig_object.rig_name.strip(),
+                                                 str(round(translation[0], 4)), str(round(translation[1], 4)), str(round(translation[2], 4)),
+                                                 str(round(rotation[1], 4)), str(round(rotation[2], 4)), str(round(rotation[3], 4)), str(round(rotation[0], 4))))
 
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
                 parameters = event_instance.info.split(",")
                 parameter_length = len(parameters)
+                # If parameter length is not filled out, there are no parameters at all
                 if parameter_length == 1:
                     continue
+                # If there are less parameters than the event needs, raise an exception
                 if parameter_length < event.arg_count:
                     raise Exception(
                         f"Your event has incomplete parameters. Expected {event.arg_count} parameters. Got {parameter_length}")
                 original_timestamp = parameters[0].strip()
+                # If the first parameter, the timestamp, starts with //, this event has been disabled and ignore it.
                 if original_timestamp.startswith("//"):
                     continue
-                original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
-                                                                                              start_time)
+
+                # Original timestamp is the time in seconds the event has been to occur on.
+                # If there is only one clip in this sequence, it doesn't matter, these are the same.
+                # if there are multiple clips, timeshifted timestamp is the time within the clip itself.
+
+                # Say yopu have two clips, clip1, and clip2. Clip1 takes 10 frames, while Clip2 takes 25 frames.
+                # If your clip event is at frame 10, or timestamp 0.333333. It will be considered as part of the next animation
+                # at timeshifted timestamp 0.0 and frame 0.
+
+                # I should probably clean up the distinction between frames and timestamps, but it works, and only one
+                # frame rate is supported by the game, so it's not *THAT* confusing.
+
+                original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp, start_time, sampling_rate=sampling_rate)
                 if event == SnapEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
-                        snap_frames.append(timeshifted_timestamp)
+
+                        snap_frames.append(math.floor(timeshifted_timestamp * 30))
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
 
+                # if event type is Focus Compatibility or Suppress Lipsync, create timeshifted timestamps for both start and end.
                 elif event == FocusCompatibilityEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
                         _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
-                                                                                         start_time)
+                                                                                         start_time, sampling_rate=sampling_rate)
                         current_clip.add_event(
                             event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
                 elif event == SuppressLipsyncEvent:
                     if frame_time >= timeshifted_timestamp >= 0:
                         _, timeshifted_end_timestamp = self.create_timeshifted_timestamp(parameters[1].strip(),
-                                                                                         start_time)
+                                                                                         start_time, sampling_rate=sampling_rate)
                         current_clip.add_event(
                             event(timeshifted_timestamp, timeshifted_end_timestamp, *parameters[2:]))
                 else:
@@ -730,8 +417,8 @@ class NewClipExporter(bpy.types.Operator):
                         current_clip.add_event(event(timeshifted_timestamp, *parameters[1:]))
         if context.object.allow_jaw_animation_for_entire_animation:
             current_clip.add_event(SuppressLipsyncEvent(0, JAW_ANIMATE_DURATION))
-#                    raise Exception("You're missing parameters for your event..")
-
+        # Additional snap frames, handy for weird blending between different frames.
+        # Originally used for snap events, but this flag gets set automatically on snap events now.
         if additional_snap_frames != "":
             additional_snap_frames = additional_snap_frames.split(",")
             for frame in additional_snap_frames:
@@ -741,24 +428,40 @@ class NewClipExporter(bpy.types.Operator):
                     snap_frames.append(timeshifted_frame)
         return snap_frames
 
-    def create_timeshifted_timestamp(self, original_timestamp_str, start_time):
-        if original_timestamp_str.endswith("f") or original_timestamp_str.endswith("fr"):
-            original_timestamp = float(original_timestamp_str[:-1]) / 30
-        elif original_timestamp_str.endswith("e"):
-            original_timestamp = eval(original_timestamp_str[:-1])
-        else:
-            original_timestamp = float(original_timestamp_str)
+    def create_timeshifted_timestamp(self, original_timestamp_str, start_time, sampling_rate):
+        # This returns the frame count in 30 fps
+        # For the new events widgets that are ui based instead of being a sad csv
+        if isinstance(original_timestamp_str, int):
+            # / 30 for frame to second, then sampling rate for 60 to 30 downsample
+            original_timestamp = original_timestamp_str / 30
 
-        # IF it ends with r (relative), then we don't need to shift from absolute to relative,
-        # because we're already in relative
-        if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
-            timeshifted_timestamp = original_timestamp
         else:
-            timeshifted_timestamp = original_timestamp - start_time
+            if original_timestamp_str.endswith("s"):
+                original_timestamp = float(original_timestamp_str[:-1])
+            elif original_timestamp_str.endswith("e"):
+                original_timestamp = float(eval(original_timestamp_str[:-1]))
+            elif original_timestamp_str.endswith("f"):
+                original_timestamp = float(original_timestamp_str[:-1]) / 30
+            else:
+                original_timestamp = float(original_timestamp_str) / 30
 
+        # What is relative mode???
+       # # IF it ends with r (relative), then we don't need to shift from absolute to relative,
+       # # because we're already in relative
+       # if original_timestamp_str.endswith("r") and original_timestamp_str.endswith("rf"):
+       #     timeshifted_timestamp = original_timestamp
+       # else:
+        timeshifted_timestamp = original_timestamp - start_time
+
+
+        if sampling_rate == 2:
+            original_timestamp = original_timestamp / 2
+            timeshifted_timestamp = timeshifted_timestamp / 2
         return original_timestamp, timeshifted_timestamp
     def get_clip_names(self):
         clip_names = []
+        if self.context.scene.clip_name == "":
+            raise Exception("You need to specify a clip name")
         clip_input_names = self.context.scene.clip_name.split(",")
         if len(clip_input_names) > 0:
             for clip_input_name in clip_input_names:
@@ -767,14 +470,41 @@ class NewClipExporter(bpy.types.Operator):
                 else:
                     clip_names.append(f"{self.context.scene.clip_name_prefix}_{clip_input_name}")
         return clip_names
+    def get_clip_names_with_actor_suffix(self):
+        clip_names = self.get_clip_names()
+       # This object supports rig suffixes, will stick them on to the end.
+
+        if not self.context.object.disable_rig_suffix:
+            for idx in range(clip_names):
+                clip_names[idx] += "_" + self.context.opbject.rig_name
+
+        return clip_names
 
     def get_clip_splits(self):
         clip_indices = [0, ]
         clip_splits = self.context.scene.clip_splits.split(",")
-        if len(clip_splits) > 0:
+        # If the clip splits string is of zero length, then the user hasn't entered anything and needs to enter it.
+        if len(self.context.scene.clip_splits) == 0:
+            raise Exception("You need to specify clip splits")
+
+        elif len(clip_splits) > 0:
             for split in clip_splits:
                 clip_indices.append(int(split))
         return clip_indices
+
+    def get_clip_locos(self):
+        clip_locos_bool = []
+        clip_locos = self.context.scene.clip_locos.split(",")
+        # If the clip locos string is of zero length, then the user hasn't entered anything and needs to enter it.
+        if len(self.context.scene.clip_locos) == 0:
+            for split in self.get_clip_splits():
+                clip_locos_bool.append(False)
+        elif len(self.get_clip_splits()) - 1 != len(clip_locos):
+            raise Exception("Clip splits does not match clip locos")
+        elif len(clip_locos) > 0:
+            for split in clip_locos:
+                clip_locos_bool.append(split=="+")
+        return clip_locos_bool
 
     def get_explicit_namespaces(self):
         return self.context.object.explicit_namespaces
@@ -786,49 +516,62 @@ class NewClipExporter(bpy.types.Operator):
         rig_name = self.context.object.rig_name
         if rig_name == "":
             raise Exception("You need to specify a rig name")
-            return
         initial_offset_t = self.context.object.initial_offset_t
         initial_offset_q = self.context.object.initial_offset_q
         # Set the initial offsets to the default if the user doesn't enter anything.
+        # Should this be a string?
         if initial_offset_t == "":
             initial_offset_t = "0,0,0"
         if initial_offset_q == "":
             initial_offset_q = "0,0,0,1"
-        if len(self.clip_infos) == 0:
-            clip_infos = []
-            clip_names = self.get_clip_names()
-            clip_indices = self.get_clip_splits()
-            if len(clip_names) != len(clip_indices) - 1:
-                raise ValueError(
-                    "Clip names doesn't match clip indices. Please check your splits and names are the same length.")
-            for clip_idx in range(len(clip_names)):
-                clip_infos.append(
-                    ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
-                             explicit_namespaces=self.get_explicit_namespaces(),
-                             reference_namespace_hash=self.get_reference_namespace_hash(),
-                             initial_offset_q=Quaternion4.from_str(initial_offset_q),
-                             initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name))
-            self.clip_infos = clip_infos
-        return self.clip_infos
+        clip_infos = []
+        clip_names = self.get_clip_names()
+        clip_indices = self.get_clip_splits()
+        clip_locos = self.get_clip_locos()
 
+        if len(clip_names) != len(clip_indices) - 1:
+            raise ValueError(
+                "Clip names doesn't match clip indices. Please check your splits and names are the same length.")
+        for clip_idx in range(len(clip_names)):
+            clip_infos.append(
+                ClipInfo(start_frame=clip_indices[clip_idx], end_frame=clip_indices[clip_idx + 1], name=clip_names[clip_idx],
+                         explicit_namespaces=self.get_explicit_namespaces(),
+                         reference_namespace_hash=self.get_reference_namespace_hash(),
+                         initial_offset_q=Quaternion4.from_str(initial_offset_q),
+                         initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name, loco=clip_locos[clip_idx]))
+        return clip_infos
+
+    def get_downsampled_frame_idx(self, frame, sampling_rate):
+        if sampling_rate == 1:
+            return frame
+        return frame // sampling_rate
     def execute(self, context):
         t1 = time.time()
         self.context = context
-        self.clip_infos = []
 
+        export_as_loose_files = self.context.scene.export_as_loose_files
+
+        # Check if the user has toggled 60 fps downsampling to 30 fps
+        if self.context.scene.downsample_60_to_30:
+            if bpy.context.scene.render.fps != 60:
+                raise ValueError("You need to set your render settings to 60 fps to downsample to 30.")
+
+        # Set the source filename in the exported clip to be this blend's filename.
         source_filename = bpy.data.filepath.split(os.sep)[-1]
         ik_targets_to_bone = determine_ik_slot_targets(self.context.active_object)
 
-        self.clip_infos = self.get_clip_infos()
+        clip_infos = self.get_clip_infos()
 
         world_rig = self.context.object.world_rig
         world_root = self.context.object.world_bone
 
+        # World Rig is a string here.
         if len(world_rig) == 0:
             world_rig = self.context.object
         else:
             world_rig = bpy.data.objects[world_rig]
 
+        # World Root is a string here.
         if len(world_root) == 0:
             world_root = world_rig.pose.bones["b__ROOT__"]
         else:
@@ -836,20 +579,26 @@ class NewClipExporter(bpy.types.Operator):
 
         base_rig = self.context.object.base_rig
 
-
-        for idx, clip_info in enumerate(self.clip_infos):
+        for idx, clip_info in enumerate(clip_infos):
             current_clip = ClipResource(clip_info.name, clip_info.rig_name, ik_targets_to_bone,
                                         clip_info.explicit_namespaces,
                                         clip_info.reference_namespace_hash, clip_info.initial_offset_q,
-                                        clip_info.initial_offset_t, source_filename, False, context.object.disable_rig_suffix)
+                                        clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
             rig = self.context.object
+
+            # sampling rate. 1 for every frame, 2 for every other frame, etc.
+            # Currently used for halving the animation data for 60 fps to 30 fps.
+            sampling_rate = 1
+            if self.context.scene.downsample_60_to_30:
+                sampling_rate = 2
+
             snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
-                                            self.context.object.additional_snap_frames)
+                                            self.context.object.additional_snap_frames, sampling_rate=sampling_rate)
 
             if self.additive:
-                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig])
+                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             else:
-                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision)
+                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             exporter.create_animation_data()
             exporter.paletteHolder.try_add_palette_to_palette_values(0)
             exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
@@ -859,41 +608,71 @@ class NewClipExporter(bpy.types.Operator):
 
             slot_assignment_source_bones = ik_targets_to_bone.keys()
 
-            for frame_idx in range(clip_info.start_frame, clip_info.end_frame):
+
+
+            # The +1 is for ensuring the last frame is included in the downsampled animation data.
+            # Selectively add + 1 to the end frame if the sampling rate is 2, and don't add anything if the sampling rate is 1.
+            # Previous versions would *always* add +1, which would cause walkstyles to absolutely break
+            # Need to clean this up one of these days
+            end_frame_offset = 0
+            if sampling_rate == 2:
+                end_frame_offset = 1
+            for frame_idx in range(clip_info.start_frame, clip_info.end_frame+end_frame_offset, sampling_rate):
                 bpy.context.scene.frame_set(frame_idx)
                 bpy.context.view_layer.update()
-                exporter.animate_recursively(frame_idx, start_frame=clip_info.start_frame, force=frame_idx == clip_info.start_frame
+                exporter.animate_recursively(self.get_downsampled_frame_idx(frame_idx, sampling_rate), start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate), force=frame_idx == clip_info.start_frame
                                                               or frame_idx == clip_info.end_frame)
 
                 for source_bone_ik in slot_assignment_source_bones:
                     for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
 
-                        ik_weight = gather_ik_weights(rig, ik_weight_animation_data, slot_assignment_info.source_bone, ik_idx, clip_info.start_frame,
-                                                      frame_idx, last_frame_influences[(slot_assignment_info.source_bone, ik_idx)])
+                        ik_weight = gather_ik_weights(rig, ik_weight_animation_data, slot_assignment_info.source_bone, ik_idx, self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
+                                                      self.get_downsampled_frame_idx(frame_idx, sampling_rate), last_frame_influences[(slot_assignment_info.source_bone, ik_idx)])
                         last_frame_influences[(slot_assignment_info.source_bone, ik_idx)] = ik_weight
 
             for source_bone_ik in slot_assignment_source_bones:
                 for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
                     exporter.add_baked_animation_data_to_frame(slot_assignment_info.source_bone,
-                                                               start_frame=clip_info.start_frame,
-                                                               end_frame=clip_info.end_frame, ik_idx=ik_idx)
-                    current_clip.clip_body.add_channel(
-                        (create_ik_weight_channels(slot_assignment_info.source_bone,
-                                                   ik_weight_animation_data[(slot_assignment_info.source_bone, ik_idx)],
-                                                   ik_idx)))
+                                                               start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
+                                                               end_frame=self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate), ik_idx=ik_idx, sampling_rate=sampling_rate)
+                    current_clip.clip_body.add_channel((create_ik_weight_channels(slot_assignment_info.source_bone, ik_weight_animation_data[(slot_assignment_info.source_bone, ik_idx)], ik_idx)))
 
             for channel in exporter.export_to_channels():
                 current_clip.clip_body.add_channel(new_channel=channel)
             current_clip.clip_body.set_palette_values(exporter.paletteHolder.palette_values)
-            current_clip.clip_body.set_clip_length(clip_info.end_frame - clip_info.start_frame)
-            current_clip.update_duration(clip_info.end_frame - clip_info.start_frame)
+            current_clip.update_duration(self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate)- self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate))
 
-            current_clip.serialize()
+            current_clip.export(export_path=self.context.scene.s4animtools_export_path, alternative_export_path=self.context.scene.s4animtools_export_path2, export_as_loose_filenames=export_as_loose_files)
         t2 = time.time()
         print(f"Took {t2 - t1} seconds for clip export")
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_NewExportClip(bpy.types.Operator):
+    bl_idname = "s4animtools.new_export_clip"
+    bl_label = "New Export Clip"
+    bl_options = {"REGISTER", "UNDO"}
 
+    additive: bpy.props.BoolProperty(default=False)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.anim_exporter = NewClipExporter()
+        self.anim_exporter.additive = self.additive
+    def execute(self, context):
+        self.anim_exporter.execute(context)
+        return {"FINISHED"}
+class S4ANIMTOOL_OT_ExportAllClips(bpy.types.Operator):
+    bl_idname = "s4animtools.export_all_clips"
+    bl_label = "Export All Clips"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        for obj in bpy.data.objects:
+            if obj.is_s4_actor and obj.is_enabled_for_animation:
+                with bpy.context.temp_override(object=obj):
+                    bpy.context.view_layer.objects.active = obj
+                    bpy.ops.s4animtools.new_export_clip("INVOKE_DEFAULT")
+
+        return {"FINISHED"}
 class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
     bl_idname = "S4ANIMTOOLS_PT_MainPanel"
     bl_label = "S4AnimTools"
@@ -906,23 +685,26 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         if getattr(obj, property_name, "") != "":
             layout.prop(obj, property_name)
 
-    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None):
+    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None, editable=True):
+        # Editable parameter was added so I can disable the old sound effects event list from being used
         events_list = getattr(obj, events_list_name)
+        #print(f"{obj} - {len(events_list)} - {events_list_name}")
         layout.label(
             text=f"{event_name}: {len(events_list)} - {description}")
         for idx, item in enumerate(events_list):
             row = layout.row()
             if item.info != "":
                 if parameters is not None:
-                    concat_string = ""
                     parameter_list = list(zip(parameters, item.info.split(",")))
                     for key, value in parameter_list:
                         layout.row().label(text=f"{key}: {value}")
+
+                    for key in parameters[len(item.info.split(",") ):]:
+                        layout.row().label(text=f"{key}: ?")
                     if len(parameters) > len(item.info.split(",")):
                         layout.row().label(text="Not enough parameters.")
                     if len(parameters) < len(item.info.split(",")):
                         layout.row().label(text="Too many parameters.")
-                   # layout.row().label(text=concat_string[:-2])
             row2 = row.row()
             row.scale_x = x_scale
 
@@ -932,422 +714,438 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             row.operator('s4animtools.move_new_element', text='↑').args = f"{events_list_name},{idx},up"
             row.operator('s4animtools.move_new_element', text='↓').args = f"{events_list_name},{idx},down"
             row.operator('s4animtools.move_new_element', text='✖').args = f"{events_list_name},{idx},delete"
-            row.operator('s4animtools.move_new_element', text='+').args = f"{events_list_name},{idx},create"
-
+            if editable:
+                row.operator('s4animtools.move_new_element', text='+').args = f"{events_list_name},{idx},create"
+        #layout.label(text="")
 
     def draw(self, context):
         obj = context.object
 
+        layout = self.layout
+        old_version = False
 
-        #self.layout.operator("s4animtools.export_clip", icon='MESH_CUBE', text="Export Clip")
+        # There used to be a bug here where this used to be called obj and was causing it to replace the original obj defined just before.
+        for obj_maybe_needs_update in context.scene.objects:
+            if len(obj_maybe_needs_update.sound_events_list) > 0:
+                old_version = True
+                break
 
-        # self.layout.operator("s4animtools.sync_rig_to_mesh", icon='MESH_CUBE', text="Sync Rig To Mesh")
-        # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
-        row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Left Hand").command = "LEFT,HAND,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Left Hand").command = "LEFT,HAND,END"
-        #
-        # row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Right Hand").command = "RIGHT,HAND,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Right Hand").command = "RIGHT,HAND,END"
-        # row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Left Foot").command = "LEFT,FOOT,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Left Foot").command = "LEFT,FOOT,END"
-        # row = self.layout.row()
-        # row.operator("s4animtools.beginikmarker", text="Add Right Foot").command = "RIGHT,FOOT,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Right Foot").command = "RIGHT,FOOT,END"
-        # row = self.layout.row()
-        #
-        # row.operator("s4animtools.beginikmarker", text="Add Root Bind").command = "SINGLE,BIND,BEGIN"
-        # row.operator("s4animtools.beginikmarker", text="Remove Root Bind").command = "SINGLE,BIND,END"
-        #
-        self.layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
-        self.layout.operator("s4animtools.export_footprint", icon="MESH_CUBE", text="Export Footprint")
+        if old_version:
+            layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
+        layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
+        layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
+        layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
 
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Terrain Footprints").command="terrain"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Floor Footprints").command="floor"
-        self.layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pool Footprints").command="pool"
-        self.layout.prop(context.scene, "footprint_name", text="Footprint Name Or Hash")
+        layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
+                                                                 "2 as regular files")
+        layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
-            layout = self.layout
 
-            layout.prop(obj, "is_footprint", text = "Is Footprint Object")
-            if obj.is_footprint:
+            layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
+            #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
+            layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
+            if obj.is_s4_actor:
+                layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
+                layout.prop(obj, "actor_type", text="Actor Type")
+                layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
+
+            layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
+            if obj.show_footprint_options:
+                layout.prop(obj, "is_footprint", text="Is Footprint Object")
+
+                layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
+                layout.operator("s4animtools.export_footprint", icon="MESH_CUBE", text="Export Footprint")
+
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Terrain Footprints").command="terrain"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Floor Footprints").command="floor"
+                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pool Footprints").command="pool"
+                layout.prop(context.object, "footprint_name", text="Footprint Name Or Hash")
+
+                if obj.is_footprint:
+                    layout.prop(obj, "footprint_resource_variant", text="Variant")
+
+                    layout.prop(obj, "is_routing_footprint", text="Is World Pathing Footprint")
+
+                    layout = self.layout.row()
+                    self.layout.label(text="Footprint is in: ")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "slope", text="Slope")
+                    layout.prop(obj, "outside", text="Outside")
+                    layout.prop(obj, "inside", text="Inside")
+
+                    self.layout.label(text="Footprint is of Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "for_placement", text="For Placement")
+                    layout.prop(obj, "for_pathing", text="For Pathing")
+                    layout.prop(obj, "is_enabled", text="Is Enabled")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "discouraged", text="Discouraged")
+                    layout.prop(obj, "landing_strip", text="Landing Strip")
+                    layout.prop(obj, "no_raycast", text="No Raycast")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "placement_slotted", text="Placement Slotted")
+                    layout.prop(obj, "encouraged", text="Encouraged")
+                    layout.prop(obj, "terrain_cutout", text="Terrain Cutout")
+
+                    self.layout.label(text="Footprint is of Surface Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "terrain", text="Terrain")
+                    layout.prop(obj, "floor", text="Floor")
+                    layout.prop(obj, "pool", text="Pool")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "pond", text="Pond")
+                    layout.prop(obj, "fence_post", text="Fence Post")
+                    layout.prop(obj, "any_surface", text="Any Surface")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "air", text="Air")
+                    layout.prop(obj, "roof", text="Roof")
+
+                    self.layout.label(text="Footprint Is Of Object Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "is_none", text="None")
+                    layout.prop(obj, "is_walls", text="Walls")
+                    layout.prop(obj, "is_objects", text="Objects")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "is_sims", text="Sims")
+                    layout.prop(obj, "is_roofs", text="Roof")
+                    layout.prop(obj, "is_fences", text="Fence")
+                    layout = self.layout.row()
+
+                    layout.prop(obj, "is_modular_stairs", text="Modular Stairs")
+                    layout.prop(obj, "is_objects_of_same_type", text="Objects of Same Type")
+                    layout.prop(obj, "is_columns", text="Columns")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "is_reserved_space", text="Reserved Space")
+
+                    layout.prop(obj, "is_foundations", text="Foundations")
+                    layout.prop(obj, "is_fenestration_node", text="Fenestration Node")
+                    layout.prop(obj, "is_trim", text="Trim")
+
+                    self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_none", text="None")
+                    layout.prop(obj, "ignores_walls", text="Walls")
+                    layout.prop(obj, "ignores_objects", text="Objects")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_sims", text="Sims")
+
+                    layout.prop(obj, "ignores_roofs", text="Roof")
+                    layout.prop(obj, "ignores_fences", text="Fence")
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_modular_stairs", text="Modular Stairs")
+                    layout.prop(obj, "ignores_objects_of_same_type", text="Objects of Same Type")
+                    layout.prop(obj, "ignores_columns", text="Columns")
+
+                    layout = self.layout.row()
+                    layout.prop(obj, "ignores_reserved_space", text="Reserved Space")
+
+                    layout.prop(obj, "ignores_foundations", text="Foundations")
+
+                    layout.prop(obj, "ignores_fenestration_node", text="Fenestration Node")
+                    layout.prop(obj, "ignores_trim", text="Trim")
+            layout.prop(obj, "show_mirror_and_masking_options", text="Show Mirror/Maintain/Bake Options")
+
+            if obj.show_mirror_and_masking_options:
+
+                # Trackmasks are not working yet
+                #layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
+                # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
+                layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
+                layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
+                layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
+                # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
+                layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                                     text="Maintain Keyframe").direction = "FORWARDS"
+                layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                                     text="Maintain Keyframe Backward").direction = "BACK"
+
+                layout = self.layout
+                layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
+
+                layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
+
+
+            layout.prop(obj, "show_ik_options", text="Show Slot Assignments")
+            if obj.show_ik_options:
+
+                self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
+
+                layout = self.layout
+                box = layout.row()
+                row = box
+
+                if obj.ik_idx >= 0 and obj.ik_targets:
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Hand__")
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Hand__")
+                    box = layout.row()
+
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Foot__")
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Foot__")
+                    box = layout.row()
+
+                    row = box.column()
+                    self.draw_all_ik_targets_of_type(context, obj, row, "b__ROOT_bind__")
+                    row = box.column()
+
+                    self.draw_all_ik_targets_of_type(context, obj, row, "")
+
+                row = layout.row()
+                # row.scale_x = 0.2
+                #  row.operator('iktarget.move', text='Down').direction = 'DOWN'
+                #  row.operator('iktarget.move', text='Up').direction = 'UP'
+                row.operator('iktarget.new', text='New InGame IK Target').command = ""
                 layout = self.layout.row()
-                self.layout.label(text="Footprint is in: ")
-                layout = self.layout.row()
 
-                layout.prop(obj, "slope", text = "Slope")
-                layout.prop(obj, "outside", text = "Outside")
-                layout.prop(obj, "inside", text = "Inside")
+                layout.operator("s4animtools.bakeik", text="Bake InGame IK Animation Data")
+                #layout.operator("s4animtools.muteik", text="Mute IK")
+                #layout.operator("s4animtools.unmuteik", text="Unmute IK")
 
-                self.layout.label(text="Footprint is of Type: ")
+                #layout.operator("s4animtools.removeik", text="Remove IK")
 
-                layout = self.layout.row()
-                layout.prop(obj, "for_placement", text = "For Placement")
-                layout.prop(obj, "for_pathing", text = "For Pathing")
-                layout.prop(obj, "is_enabled", text = "Is Enabled")
-                layout = self.layout.row()
-
-                layout.prop(obj, "discouraged", text = "Discouraged")
-                layout.prop(obj, "landing_strip", text = "Landing Strip")
-                layout.prop(obj, "no_raycast", text = "No Raycast")
-                layout = self.layout.row()
-
-                layout.prop(obj, "placement_slotted", text = "Placement Slotted")
-                layout.prop(obj, "encouraged", text = "Encouraged")
-                layout.prop(obj, "terrain_cutout", text = "Terrain Cutout")
-
-
-                self.layout.label(text="Footprint is of Surface Type: ")
+                #layout.operator("s4animtools.preview_ik", text="Preview IK")
+                #layout.operator("s4animtools.update_ik_empties", text="Update IK Empties")
+                layout.scale_x = 1
 
                 layout = self.layout.row()
-                layout.prop(obj, "terrain", text = "Terrain")
-                layout.prop(obj, "floor", text = "Floor")
-                layout.prop(obj, "pool", text = "Pool")
+                try:
+                    if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (L Arm)").command = "LEFT,HAND"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (L Arm)").command = "LEFT,HAND"
+                    if context.object.pose.bones["b__R_Hand__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (R Arm)").command = "RIGHT,HAND"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (R Arm)").command = "RIGHT,HAND"
+
+                    if context.object.pose.bones["b__L_Foot__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (L Leg)").command = "LEFT,FOOT"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (L Leg)").command = "LEFT,FOOT"
+                    if context.object.pose.bones["b__R_Foot__"].constraints["Copy Rotation"].enabled:
+                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
+                                        text="IK To FK (R Leg)").command = "RIGHT,FOOT"
+                    else:
+                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
+                                        text="FK To IK (R Leg)").command = "RIGHT,FOOT"
+                    #         layout.prop(obj, "select_slots", text = "Slots")
+                except KeyError:
+                    pass
+
+            layout.prop(obj, "show_initial_offset_options", text="Show Initial Offset Options")
+            if obj.show_initial_offset_options:
                 layout = self.layout.row()
 
-                layout.prop(obj, "pond", text = "Pond")
-                layout.prop(obj, "fence_post", text = "Fence Post")
-                layout.prop(obj, "any_surface", text = "Any Surface")
+                layout.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
+                if len(context.object.relative_rig) > 0:
+                    if context.object.relative_rig in bpy.data.objects:
+                        relative_rig_obj = bpy.data.objects[context.object.relative_rig]
+                        layout.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones",
+                                           text="Initial Offsets Bone")
                 layout = self.layout.row()
+                layout.scale_x = 0.4
+                layout.label(text="Initial Offset Q")
+                layout.scale_x = 0.5
 
-                layout.prop(obj, "air", text = "Air")
-                layout.prop(obj, "roof", text = "Roof")
+                layout.prop(obj, "initial_offset_q", text="")
+                layout.scale_x = 0.4
+                layout.label(text="Initial Offset T")
 
-                self.layout.label(text="Footprint Is Of Object Type: ")
+                layout.prop(obj, "initial_offset_t", text="")
 
-                layout = self.layout.row()
-                layout.prop(obj, "is_none", text = "None")
-                layout.prop(obj, "is_walls", text = "Walls")
-                layout.prop(obj, "is_objects", text = "Objects")
+            self.layout.prop(obj, "show_events", text="Show Events")
+            if obj.show_events:
+                self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
+                self.draw_events(obj, "parent_events_list", 0.1,
+                                 "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
+                                 "Parent Events", self.layout,
+                                 parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
 
-                layout = self.layout.row()
-                layout.prop(obj, "is_sims", text = "Sims")
-                layout.prop(obj, "is_roofs", text = "Roof")
-                layout.prop(obj, "is_fences", text = "Fence")
-                layout = self.layout.row()
+                self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
+                                 "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"], editable=False)
 
-                layout.prop(obj, "is_modular_stairs", text = "Modular Stairs")
-                layout.prop(obj, "is_objects_of_same_type", text = "Objects of Same Type")
-                layout.prop(obj, "is_columns", text = "Columns")
+                for idx, item in enumerate(obj.sound_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    self.layout.row().prop(item, "sound_name", text="Sound")
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"sound_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"sound_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"sound_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"sound_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+
+                if len(obj.sound_events_list_UI) == 0:
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"sound_events_list_UI,{0},create"
+
+                self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
+                                 "Script Events",
+                                 self.layout, parameters=["Frame", "Script Xevt"])
+                self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
+                                 "Snap Events", self.layout,
+                                 parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ])
+
+                for idx, item in enumerate(obj.snap_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    self.layout.row().prop_search(item, "target_actor", context.scene, "objects", text="Target Actor")
+                    if item.target_actor != "":
+                        self.layout.row().prop_search(item, "target_bone", context.scene.objects[item.target_actor].pose, "bones",
+                                               text="Target Bone")
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"snap_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"snap_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"snap_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"snap_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+
+                if len(obj.snap_events_list_UI) == 0:
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"snap_events_list_UI,{0},create"
 
 
-                layout = self.layout.row()
-                layout.prop(obj, "is_reserved_space", text = "Reserved Space")
+                self.draw_events(obj, "reaction_events_list", 0.1,
+                                 "Parameters (Frame Number/Reaction ASM/Reaction State)",
+                                 "Reaction Events", self.layout,
+                                 parameters=["Frame", "Reaction ASM Name", "Reaction State Name"])
+                self.draw_events(obj, "play_effect_events_list", 0.1,
+                                 "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/Target Actor Name/Target Bone Name/Unique VFX Name)",
+                                 "Play Effect Events", self.layout,
+                                 parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)",
+                                             "Target Actor Name", "Target Bone Name", "Unique VFX Name"])
+                self.draw_events(obj, "stop_effect_events_list", 0.1,
+                                 "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
+                                 "Stop Effect Events", self.layout,
+                                 parameters=["Frame", "Unique VFX Name", "(always 0)", "(unknown bool)"])
+                self.draw_events(obj, "disable_lipsync_events_list", 0.1, "Parameters (Frame Number/Duration)",
+                                 "Suppress Lipsync Events", self.layout, parameters=["Frame", "End Frame"])
+                self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
+                                 "Visibility Events", self.layout,
+                                 parameters=["Frame", "Actor Name", "Visibility (0 or 1)"])
+                self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
+                                 "Focus Compatibility Events", self.layout)
+                self.draw_events(obj, "geometry_state_change_events_list", 0.1, "Parameters (Frame/Actor Name/Geometry State Name)",
+                                 "Geometry State Change Events", self.layout)
+            self.layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
+            if obj.show_experimental_options:
+                self.layout.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
 
-                layout.prop(obj, "is_foundations", text = "Foundations")
-                layout.prop(obj, "is_fenestration_node", text = "Fenestration Node")
-                layout.prop(obj, "is_trim", text = "Trim")
-
-                self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
-
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_none", text = "None")
-                layout.prop(obj, "ignores_walls", text = "Walls")
-                layout.prop(obj, "ignores_objects", text = "Objects")
-
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_sims", text = "Sims")
-
-                layout.prop(obj, "ignores_roofs", text = "Roof")
-                layout.prop(obj, "ignores_fences", text = "Fence")
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_modular_stairs", text = "Modular Stairs")
-                layout.prop(obj, "ignores_objects_of_same_type", text = "Objects of Same Type")
-                layout.prop(obj, "ignores_columns", text = "Columns")
-
-                layout = self.layout.row()
-                layout.prop(obj, "ignores_reserved_space", text = "Reserved Space")
-
-                layout.prop(obj, "ignores_foundations", text = "Foundations")
-
-                layout.prop(obj, "ignores_fenestration_node", text = "Fenestration Node")
-                layout.prop(obj, "ignores_trim", text = "Trim")
-
-       #     layout.operator("s4animtools.create_bone_selectors", icon='MESH_CUBE', text="Create Bone Selectors")
-            layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
-            layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
-
-            layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
-            layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
-            layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
-            layout.prop(obj, "balance", text = "Balance")
-            try:
-                if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Arm)").command = "LEFT,HAND"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Arm)").command = "LEFT,HAND"
-                if context.object.pose.bones["b__R_Hand__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Arm)").command = "RIGHT,HAND"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Arm)").command = "RIGHT,HAND"
-
-                if context.object.pose.bones["b__L_Foot__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (L Leg)").command = "LEFT,FOOT"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (L Leg)").command = "LEFT,FOOT"
-                if context.object.pose.bones["b__R_Foot__"].constraints["Copy Rotation"].enabled:
-                    layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE', text="IK To FK (R Leg)").command = "RIGHT,FOOT"
-                else:
-                    layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE', text="FK To IK (R Leg)").command = "RIGHT,FOOT"
-                #         layout.prop(obj, "select_slots", text = "Slots")
-            except KeyError:
-                pass
-  #         layout.prop(obj, "select_cas", text = "CAS")
-  #         layout.prop(obj, "select_left", text = "Left Side")
-  #         layout.prop(obj, "select_middle", text = "Middle")
-
-  #         layout.prop(obj, "select_right", text = "Right Side")
-  #         layout.prop(obj, "select_mouth", text = "Mouth")
-
-  #         layout.prop(obj, "select_left_pinky", text = "Left Pinky")
-  #         layout.prop(obj, "select_left_ring", text = "Left Ring")
-  #         layout.prop(obj, "select_left_middle", text = "Left Middle")
-  #         layout.prop(obj, "select_left_index", text = "Left Index")
-  #         layout.prop(obj, "select_left_thumb", text = "Left Thumb")
-  #         layout.prop(obj, "select_left_fingers", text = "Left Fingers")
-
-  #         layout.prop(obj, "select_left_first_fingers", text = "Left First Fingers")
-  #         layout.prop(obj, "select_left_second_fingers", text = "Left Second Fingers")
-  #         layout.prop(obj, "select_left_third_fingers", text = "Left Third Fingers")
-
-  #         layout.prop(obj, "select_right_pinky", text = "Right Pinky")
-  #         layout.prop(obj, "select_right_ring", text = "Right Ring")
-  #         layout.prop(obj, "select_right_middle", text = "Right Middle")
-  #         layout.prop(obj, "select_right_index", text = "Right Index")
-  #         layout.prop(obj, "select_right_thumb", text = "Right Thumb")
-  #         layout.prop(obj, "select_right_fingers", text = "Right Fingers")
-
-  #         layout.prop(obj, "select_right_first_fingers", text = "Right First Fingers")
-  #         layout.prop(obj, "select_right_second_fingers", text = "Right Second Fingers")
-  #         layout.prop(obj, "select_right_third_fingers", text = "Right Third Fingers")
-
+                self.layout.label(text="Use Full Precision means using full precision for all animation data.")
+                self.layout.label(text="Don't enable if you don't know what that means! ")
+                self.layout.label(text="This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
+                self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+                self.layout.prop(obj, "use_world_bone_as_root",
+                                text="Use World Rig and Bone as Root for IK Targets on Object")
+                self.layout.label(text="The base rig is only used for additive animations such as the infant carrier from Growing Together.")
+                self.layout.label(text="The base rig setting is not used for normal animations.")
+                self.layout.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
+                self.layout.label(text="Export an Additive Clip. Do not use for normal animations")
+                self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
+                self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
+                self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
+                self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
+                self.layout.prop(obj, "is_overlay", text="Is Overlay")
+                if obj.is_s4_actor:
+                    if obj.actor_type == "sim":
+                        # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
+                        layout.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
+                layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
+                layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
+                layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
+                layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
             layout = self.layout.row()
-            layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
-            # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
-            layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-                                 text="Maintain Keyframe").direction = "FORWARDS"
-            layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
-                                 text="Maintain Keyframe Backward").direction = "BACK"
-            # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-            self.layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
-            self.layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
 
-
-
-            self.layout.label(text="Use Full Precision means using full precision for all animation data.")
-            self.layout.label(text="Don't enable if you don't know what that means!")
-
-            self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
-            self.layout.prop(obj, "use_world_bone_as_root", text="Use World Rig and Bone as Root for IK Targets on Object")
-            self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
-                             text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
-            layout = self.layout.row()
-
-            layout.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
-            if len(context.object.relative_rig) > 0:
-                if context.object.relative_rig in bpy.data.objects:
-                    relative_rig_obj = bpy.data.objects[context.object.relative_rig]
-                    layout.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones", text="Initial Offsets Bone")
-            layout = self.layout.row()
-            layout.scale_x= 0.4
-            layout.label(text="Initial Offset Q")
-            layout.scale_x= 0.5
-
-            layout.prop(obj, "initial_offset_q" ,text="")
-            layout.scale_x= 0.4
-            layout.label(text="Initial Offset T")
-
-            layout.prop(obj, "initial_offset_t", text="")
-
-            self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
-            self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
-
-            layout = self.layout.row()
-            layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
-
-            layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
 
             try:
                 selected_bone = bpy.context.selected_pose_bones[0]
 
                 self.layout.label(text=selected_bone.name)
-                for ik_idx in range(-1,11):
-                    row = self.layout.row()
-                    row.scale_x = 1
-                    if ik_idx == -1:
-                        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"Pos")
-                        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"Rot")
-
-                    else:
-                        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"IK Pos {ik_idx}")
-                        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"IK Rot {ik_idx}")
-                    row.scale_x = 2.5
-                    row.prop(selected_bone, f"ik_weight_{ik_idx}", text=f"IK Weight {ik_idx}")
-
-                # if selected_bone.name == "b__L_Hand__IK" or selected_bone.name == "b__L_Hand__":
-                #    self.layout.prop(obj, "l_hand_fist", text="Left Hand Fist")
-            # self.layout.prop(selected_bone, "mirrored_bone")
-            # self.layout.prop(selected_bone, "bone_flags")
-            # isnt_mirrored = selected_bone.bone_flags[-3] == "1" and selected_bone.bone_flags[-4] == "1" and selected_bone.bone_flags[-5] == "1"
-            # if not isnt_mirrored:
-            #    mirrored_status = "-Is Not A Mirrored Bone"
-            # else:
-            #    mirrored_status = "-Is Mirrored Bone or Single Bone"
-            # self.layout.label(text=mirrored_status)
-
-            # movable_status = "-Editable by Sliders"
-            # if not  selected_bone.bone_flags[7] == "1":
-            #    movable_status = "-Not Editable by Sliders"
-            # self.layout.label(text=movable_status)
-
-            # slot_status = "-Not Slot"
-            # if  selected_bone.bone_flags[17] == "1":
-            #    slot_status = "-Slot"
-            # self.layout.label(text=slot_status)
-
-            # animatable_status = "-Not Animatable"
-            # if selected_bone.bone_flags[18] == "1":
-            #    animatable_status = "-Animatable"
-            # self.layout.label(text=animatable_status)
-
+                #for ik_idx in range(-1,11):
+                #    row = self.layout.row()
+                #    row.scale_x = 1
+                #    if ik_idx == -1:
+                #        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"Pos")
+                #        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"Rot")
+#
+                #    else:
+                #        row.prop(selected_bone, f"ik_pos_{ik_idx}", text=f"IK Pos {ik_idx}")
+                #        row.prop(selected_bone, f"ik_rot_{ik_idx}", text=f"IK Rot {ik_idx}")
+                #    row.scale_x = 2.5
+                #    row.prop(selected_bone, f"ik_weight_{ik_idx}", text=f"IK Weight {ik_idx}")
+#
             except Exception as e:
                 pass
-            layout = self.layout.row()
-            layout.prop(obj, "l_hand_fk_ik", text="Left Hand FK/IK")
-
-            layout.prop(obj, "r_hand_fk_ik", text="Right Hand FK/IK")
-            layout.prop(obj, "l_foot_fk_ik", text="Left Foot FK/IK")
-            layout.prop(obj, "r_foot_fk_ik", text="Right Foot FK/IK")
-
-            self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
-            layout = self.layout.row()
-
-            layout.prop_search(context.object, "base_rig", context.scene, "objects", text="Base Rig")
-
-            layout.prop_search(context.object, "world_rig", context.scene, "objects", text="World Rig")
-            if len(context.object.world_rig) > 0:
-                if context.object.world_rig in bpy.data.objects:
-                    target_bone_obj = bpy.data.objects[obj.world_rig]
-                    layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="World Bone")
-
-            self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
-
-            self.draw_property_if_not_empty(obj, "parent_events", self.layout)
-            self.draw_property_if_not_empty(obj, "sound_events", self.layout)
-            self.draw_property_if_not_empty(obj, "script_events", self.layout)
-            self.draw_property_if_not_empty(obj, "snap_events", self.layout)
-            self.draw_property_if_not_empty(obj, "reaction_events", self.layout)
-            self.draw_property_if_not_empty(obj, "play_effect_events", self.layout)
-            self.draw_property_if_not_empty(obj, "stop_effect_events", self.layout)
-            self.draw_property_if_not_empty(obj, "disable_lipsync_events", self.layout)
-            self.draw_events(obj, "parent_events_list", 0.1,
-                             "Parameters (Frame Number (f) or Seconds/Object To Be Parented/Object To Be Parented To/Bone)",
-                             "Parent Events", self.layout, parameters=["Frame Number (f) or Seconds", "Object to Be Parented", "Object to be Parented To", "Bone"])
-
-            self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
-                             "Sound Events", self.layout,  parameters=["Frame Number (f) or Seconds", "Sound Effect Name"])
-            self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)", "Script Events",
-                             self.layout,  parameters=["Frame Number (f) or Seconds", "Script Xevt"])
-            self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
-                             "Snap Events", self.layout,  parameters=["Frame Number (f) or Seconds", "Actor", "X", "Y", "Z",  "QX", "QY", "QZ", "QW",])
-            self.draw_events(obj, "reaction_events_list", 0.1, "Parameters (Frame Number/Reaction ASM)",
-                             "Reaction Events", self.layout, parameters=["Frame Number (f) or Seconds", "Reaction ASM Name"])
-            self.draw_events(obj, "play_effect_events_list", 0.1,
-                             "Parameters (Frame Number/VFX Name/Actor Hash/Bone Name Hash/(always 0)/(almost always 0)/Unique VFX Name)",
-                             "Play Effect Events", self.layout, parameters=["Frame Number (f) or Seconds", "VFX Name", "Actor Hash", "Bone Name Hash", "(always 0)", "(almost always 0)", "Unique VFX Name"])
-            self.draw_events(obj, "stop_effect_events_list", 0.1,
-                             "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
-                             "Stop Effect Events", self.layout, parameters=["Frame Number (f) or Seconds", "Unique VFX Name", "(always 0)", "(unknown bool)"])
-            self.draw_events(obj, "disable_lipsync_events_list", 0.1, "Parameters (Frame Number/Duration)",
-                             "Suppress Lipsync Events", self.layout, parameters=["Frame Number (f) or Seconds", "Duration (seconds)"])
-            self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
-                             "Visibility Events", self.layout, parameters=["Frame Number (f) or Seconds", "Actor Name", "Visibility (0 or 1)"])
-            self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
-                             "Focus Compatibility Events", self.layout)
-
-            self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-            self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
 
 
-            self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
-            self.layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
-            self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
 
-            layout = self.layout
-            box = layout.row()
-            row = box
+            if obj.is_enabled_for_animation:
 
+                self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
+                                 text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
 
-            if obj.ik_idx >= 0 and obj.ik_targets:
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Hand__")
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Hand__")
-                box = layout.row()
-
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Foot__")
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__R_Foot__")
-                box = layout.row()
-
-                row = box.column()
-                self.draw_all_ik_targets_of_type(context, obj, row, "b__ROOT_bind__")
-                row = box.column()
-
-                self.draw_all_ik_targets_of_type(context, obj, row, "")
-
-            row = layout.row()
-            # row.scale_x = 0.2
-            #  row.operator('iktarget.move', text='Down').direction = 'DOWN'
-            #  row.operator('iktarget.move', text='Up').direction = 'UP'
-            row.operator('iktarget.new', text='New').command = ""
-            layout = self.layout.row()
-
-            layout.operator("s4animtools.bakeik", text="Bake IK")
-            layout.operator("s4animtools.muteik", text="Mute IK")
-            layout.operator("s4animtools.unmuteik", text="Unmute IK")
-
-            layout.operator("s4animtools.removeik", text="Remove IK")
+                self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
+                self.layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
+                self.layout.prop(context.scene, "clip_locos", text="Clip Loco(s)")
+                self.layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
+                self.layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
+                self.layout.label(text="The center rig is where the root of your exported animation will be located.")
+                self.layout.label(text="Useful for poses with multiple sims.")
+                self.layout.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
+                if len(context.object.world_rig) > 0:
+                    if context.object.world_rig in bpy.data.objects:
+                        target_bone_obj = bpy.data.objects[obj.world_rig]
+                        self.layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
 
 
-            layout.scale_x= 1
+                self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
+                self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
+            layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
+            self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+            self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
 
-            layout = self.layout.row()
+            for item in context.scene.clips:
+                if context.scene.pose_pack_mode_enabled:
+                    self.layout.prop(item, "clip_name", text="Clip Name")
 
-        # self.layout.prop(context.scene, "IK_bone_target")  # String for displaying current IK bone
-        self.layout.prop(context.scene, "clip_splits")
-        self.layout.prop(context.scene, "clip_name_prefix")  # clip_name_prefix
-        self.layout.prop(context.scene, "clip_name")
 
-        self.layout.prop(context.scene, "is_overlay")
-        self.layout.prop(obj, "disable_rig_suffix")
-        # TODO remove this at some point when compatibility with older files isn't an issue. This used to be
-        # when each file could only contain one actor.
-       # if context.scene.rig_name != "":
-       #     self.layout.prop(context.scene, "reset_initial_offset_t")
-       #     self.layout.prop(context.scene, "world_rig")
-       #     self.layout.prop(context.scene, "world_bone")
-       #     self.layout.prop(context.scene, "parent_events")
-       #     self.layout.prop(context.scene, "sound_events")
-       #     self.layout.prop(context.scene, "explicit_namespaces")
-       #     self.layout.prop(context.scene, "reference_namespace_hash")
-       #     self.layout.prop(context.scene, "initial_offset_q")
-       #     self.layout.prop(context.scene, "initial_offset_t")
-       #     self.layout.prop(context.scene, "snap_events")
-       #     self.layout.prop(context.scene, "additional_snap_frames")
-       #     self.layout.prop(context.scene, "visibility_events")
-       #     self.layout.prop(context.scene, "rig_name")  # String for current clip actor
+                else:
+                    formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
+                    if formatted_clip_name in bpy.data.textures:
+                        tex = bpy.data.textures[formatted_clip_name]
+                        col = self.layout.box().column()
+                        col.template_preview(tex)
+                    self.layout.prop(item, "clip_display_name", text="Clip Display Name")
+                    self.layout.prop(item, "clip_description", text="Clip Description")
+                self.layout.prop(item, "start_frame", text="Start Frame")
+                self.layout.prop(item, "end_frame", text="End Frame")
 
     def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
@@ -1507,16 +1305,54 @@ class IKTarget(PropertyGroup):
 class AnimationEvent(PropertyGroup):
     info: bpy.props.StringProperty()
 
+class SoundEventInfo(PropertyGroup):
+    @property
+    def info(self):
+        return json.dumps({"frame_number" : self.frame_number, "sound_name" : self.sound_name})
+
+    @info.setter
+    def info(self, value):
+        try:
+            value = json.loads(value)
+
+            self.frame_number = value["frame_number"]
+            self.sound_name = value["sound_name"]
+        except json.decoder.JSONDecodeError:
+            pass
+    frame_number : bpy.props.IntProperty()
+    sound_name : bpy.props.StringProperty()
+
+
+
+class SnapEventInfo(PropertyGroup):
+    @property
+    def info(self):
+        return json.dumps({"frame_number" : self.frame_number, "target_actor" : self.target_actor, "target_bone" : self.target_bone})
+
+    @info.setter
+    def info(self, value):
+        try:
+            value = json.loads(value)
+
+            self.frame_number = value["frame_number"]
+            self.target_actor = value["target_actor"]
+            self.target_bone = value["target_bone"]
+        except json.decoder.JSONDecodeError:
+            pass
+    frame_number : bpy.props.IntProperty()
+    target_actor : bpy.props.StringProperty()
+    target_bone : bpy.props.StringProperty()
 
 class ClipData(PropertyGroup):
     clip_name: bpy.props.StringProperty()
-    clip_uses_prefix: bpy.props.BoolProperty()
-    actor_1: bpy.props.StringProperty()
-    actor_2: bpy.props.StringProperty()
-    actor_3: bpy.props.StringProperty()
+    referenced_actors: bpy.props.StringProperty()
+    clip_display_name: bpy.props.StringProperty()
 
-    ranges: CollectionProperty(type=TimeRange)
-
+    clip_description: bpy.props.StringProperty()
+    start_frame: IntProperty(name="Start", description="Start Frame",
+                            default=0, min=0, soft_max=360)
+    end_frame: IntProperty(name="End", description="End Frame",
+                          default=0, min=0, soft_max=360)
 
 class s4animtool_PT_IKTargetPanel(bpy.types.Panel):
     """Create the IK Event Panel"""
@@ -1573,7 +1409,7 @@ class OT_S4ANIMTOOLS_ApplyTrackmask(bpy.types.Operator, ImportHelper):
         trackmask = Trackmask().read(self.properties.filepath)
         arm = context.object
         base_arm = bpy.data.objects[context.object.name.replace("_blended", "_base")]
-        human_bones = _s4animtools.bone_names.human_bones
+        human_bones = s4animtools.bone_names.human_bones
         for bone in arm.pose.bones:
             if bone.name in human_bones:
                 for c in bone.constraints:
@@ -1609,28 +1445,64 @@ class InitializeEvents(bpy.types.Operator):
             context.object.visibility_events_list.add()
         if len(context.object.focus_compatibility_events_list) == 0:
             context.object.focus_compatibility_events_list.add()
+        if len(context.object.geometry_state_change_events_list) == 0:
+            context.object.geometry_state_change_events_list.add()
         return {"FINISHED"}
 
+
+class OT_S4ANIMTOOLS_AddSoundEventsListUI(bpy.types.Operator):
+    bl_idname = "s4animtools.add_sound_events_list_ui"
+    bl_label = "Add Events"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        if len(context.object.sound_events_list_UI) == 0:
+            context.object.sound_events_list_UI.add()
+        return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_UpgradeData(bpy.types.Operator):
+    bl_idname = "s4animtools.upgrade_data"
+    bl_label = "upgrade_data"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        handle_version_upgrade(context)
+        return {"FINISHED"}
+def get_offset(source_obj, source_root, target_obj, target_bone):
+    object_matrix = target_obj.matrix_world @ target_bone.matrix
+    actor_matrix = source_obj.matrix_world @ source_root.matrix
+    offset = object_matrix.inverted() @ actor_matrix
+
+    rotation = offset.to_quaternion()
+    translation = offset.to_translation()
+
+    return translation, rotation
+def format_offset_to_list(translation, rotation):
+    translation_list = [translation[0],translation[1],translation[2]]
+    rotation_list = [rotation[1], rotation[2], rotation[3] ,rotation[0]]
+    return translation_list, rotation_list
 
 def update_initial_offsets(self, context):
     active_object_root = context.active_object.pose.bones["b__ROOT__"]
     if context.object.relative_rig == "":
         relative_rig = context.active_object
-        relative_bone = root_bone
+        relative_bone = None
     else:
         relative_rig = bpy.data.objects[context.object.relative_rig]
         relative_bone = relative_rig.pose.bones[context.object.relative_bone]
-    object_matrix = relative_rig.matrix_world @ relative_bone.matrix
-    x_matrix = context.active_object.matrix_world @ active_object_root.matrix
-    offset = object_matrix.inverted() @ x_matrix
 
-    rotation = offset.to_quaternion()
-    translation = offset.to_translation()
+    translation, rotation = get_offset(context.active_object, active_object_root, relative_rig, relative_bone)
+    # It bothered me far too much to have the height sticking out of the ground or under the ground.
+    # This shouldn't actually do anything in game, just for my own sanity.
+
+    initial_offset_height = round(translation[1], 4)
+    if abs(round(translation[1], 4)) < 0.01:
+        initial_offset_height = 0
     context.active_object.initial_offset_q = ",".join(
         [str(round(rotation[1], 4)), str(round(rotation[2], 4)), str(round(rotation[3], 4)),
          str(round(rotation[0], 4))])
     context.active_object.initial_offset_t = ",".join(
-        [str(round(translation[0], 4)), str(round(translation[1], 4)), str(round(translation[2], 4))])
+        [str(round(translation[0], 4)), str(initial_offset_height), str(round(translation[2], 4))])
 
     return  None
 
@@ -2055,6 +1927,23 @@ class OT_S4ANIMTOOLS_CreateIKRig(bpy.types.Operator):
 
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_SelectExportDirectory(bpy.types.Operator):
+    bl_idname = "s4animtools.select_export_path"
+    bl_label = "Select Export Path"
+    bl_options = {'REGISTER'}
+
+    directory: bpy.props.StringProperty(
+        name="Outdir Path")
+
+    def execute(self, context):
+        bpy.context.scene.s4animtools_export_path = self.directory
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
 class OT_S4ANIMTOOLS_DetermineBalance(bpy.types.Operator):
     bl_idname = "s4animtools.determine_balance"
     bl_label = "determine_balance"
@@ -2422,63 +2311,213 @@ class OT_S4ANIMTOOLS_MaskOutChildren(bpy.types.Operator):
                             fcurve.mute = bone not in bones_to_enable
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
+    bl_idname = "s4animtools.preview_ik"
+    bl_label = "Preview IK"
+    bl_options = {"REGISTER", "UNDO"}
 
-# unused = (ScriptItem, SoundItem, LIST_OT_NewScriptEvent, LIST_OT_MoveScriptEvent, LIST_OT_DeleteScriptEvent,
-#          LIST_OT_NewSoundEvent, LIST_OT_MoveSoundEvent, LIST_OT_DeleteSoundEvent,
-#          ScriptEventsPanel, SoundEventsPanel, ActorProperties, LIST_OT_NewActor, LIST_OT_DeleteActor,
-#          LIST_OT_MoveActor, ActorPanel, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, StatePanel,
-#          ControllerProperties, StateProperties, LIST_OT_NewController, s4animtool_OT_IKEmptyCreator, s4animtool_OT_IKEmptyUpdate, s4animtool_PT_IKProperties,)
+
+    def cleanup_stale_empties(self):
+        for obj in bpy.data.objects:
+            if obj.name.startswith("IKEmpty_"):
+                bpy.data.objects.remove(obj)
+
+    def execute(self, context):
+        obj = context.object
+        # Note: this assumes there is only one possible actor to go into Slot selection mode at a time
+        self.cleanup_stale_empties()
+        ik_target_per_bone = defaultdict(int)
+        for idx, target in enumerate(get_ik_targets(obj)):
+            bone_id = hex(get_32bit_hash(
+                "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
+                    "utf-8")))
+            hashed_id = "IKEmpty_{}_UserAdjust".format(bone_id)
+            o = bpy.data.objects.new(hashed_id, None)
+            o.rotation_mode = 'QUATERNION'
+            bpy.context.scene.collection.objects.link(o)
+            o.empty_display_size = 0.01
+            o.empty_display_type = 'PLAIN_AXES'
+            # Create a child of constraint on the new empty.
+            c = o.constraints.new('CHILD_OF')
+            c.target = bpy.data.objects[target.target_obj]
+            c.subtarget = target.target_bone
+            bpy.context.view_layer.objects.active = o
+            o.select_set(True)
+            context_py = bpy.context.copy()
+            context_py["constraint"] = c
+            bpy.ops.constraint.childof_clear_inverse(context_py, constraint="Child Of", owner='OBJECT')
+
+
+            # Create animated slot offset driven by drivers
+            # This needs to be separated from UserAdjust so the user can adjust the slot offset
+            # and then the driver applies it relative to the UserAdjust
+            hashed_id = "IKEmpty_{}_DriverAdjust".format(bone_id)
+            o2 = bpy.data.objects.new(hashed_id, None)
+            o2.rotation_mode = 'QUATERNION'
+            bpy.context.scene.collection.objects.link(o2)
+            o2.empty_display_size = 0.1
+            o2.empty_display_type = 'PLAIN_AXES'
+            o2.parent = o
+            bpy.context.view_layer.objects.active = o2
+            o2.select_set(True)
+
+
+            for j in range(3):
+                location = o2.driver_add("location", j)
+                v = location.driver.variables.new()
+                driver_target = v.targets[0]
+                driver_target.id = obj
+                driver_target.data_path = 'pose.bones["{}"].ik_pos_{}[{}]'.format(target.chain_bone, ik_target_per_bone[target.chain_bone], j)
+                location.driver.expression = v.name
+
+            for k in range(4):
+                location = o2.driver_add("rotation_quaternion", k)
+                v = location.driver.variables.new()
+                driver_target = v.targets[0]
+                driver_target.id = obj
+                driver_target.data_path = 'pose.bones["{}"].ik_rot_{}[{}]'.format(target.chain_bone, ik_target_per_bone[target.chain_bone], k)
+                location.driver.expression = v.name
+            ik_target_per_bone[target.chain_bone] += 1
+        return {"FINISHED"}
+
+
+class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
+    bl_idname = "s4animtools.update_ik_empties"
+    bl_label = "Update IK Empties"
+    bl_options = {"REGISTER", "UNDO"}
+
+    LEFT_HAND = "b__L_Hand__"
+    RIGHT_HAND = "b__R_Hand__"
+    LEFT_FOOT = "b__L_Foot__"
+    RIGHT_FOOT = "b__R_Foot__"
+
+    ik_bones = [LEFT_HAND, RIGHT_HAND, LEFT_FOOT, RIGHT_FOOT]
+
+
+    def get_matching_bone_name(self, target):
+        target_bone = None
+
+        if target == "b__L_Hand__":
+            target_bone = "Left Hand Target"
+        elif target == "b__R_Hand__":
+            target_bone = "Right Hand Target"
+        elif target == "b__L_Foot__":
+            target_bone = "Left Foot Target"
+        elif target == "b__R_Foot__":
+            target_bone = "Right Foot Target"
+        return target_bone
+    def cleanup_stale_constraints(self, context):
+        # NOTE! This assumes your IK bones are the target bones. Not the bone where the ik constraint lives on.
+        for bone_name in self.ik_bones:
+            target_bone = self.get_matching_bone_name(bone_name)
+            if target_bone in context.object.pose.bones:
+                for constraint in context.object.pose.bones[target_bone].constraints[:]:
+                    print(constraint)
+                    if constraint.type == 'COPY_TRANSFORMS':
+                        context.object.pose.bones[target_bone].constraints.remove(constraint)
+
+
+    def execute(self, context):
+        obj = context.object
+        # Note: this assumes there is only one possible actor to go into Slot selection mode at a time
+        self.cleanup_stale_constraints(context)
+        ik_target_per_bone = defaultdict(int)
+        for idx, target in enumerate(get_ik_targets(obj)):
+            bone_id = hex(get_32bit_hash(
+                "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
+                    "utf-8")))
+            driver_adjust_obj = "IKEmpty_{}_DriverAdjust".format(bone_id)
+            if "b__ROOT_bind__" == target.chain_bone:
+                continue
+            target_bone = self.get_matching_bone_name(target.chain_bone)
+            if target_bone is None:
+                continue
+            c = obj.pose.bones[target_bone].constraints.new('COPY_TRANSFORMS')
+            c.target = bpy.data.objects[driver_adjust_obj]
+            if ik_target_per_bone[target.chain_bone] >= 1:
+                location = c.driver_add("influence")
+                for v in location.driver.variables[:]:
+                    location.driver.variables.remove(v)
+                v = location.driver.variables.new()
+                driver_target = v.targets[0]
+                driver_target.id = obj
+                driver_target.data_path = 'pose.bones["{}"].ik_weight_{}'.format(target.chain_bone, ik_target_per_bone[target.chain_bone])
+                location.driver.expression = v.name
+            ik_target_per_bone[target.chain_bone] += 1
+
+        return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_ToggleSlots(bpy.types.Operator):
+    bl_idname = "s4animtools.toggle_slots"
+    bl_label = "Toggle Slots"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        if hasattr(context.object, "pose") is None:
+            return {"FINISHED"}
+
+        # The current count of slot bones that are enabled
+        visible_slot_bones = 0
+        # The current count of slot bones that are hidden
+        invisible_slot_bones = 0
+        for bone in context.object.pose.bones:
+            if bone.name.endswith("_slot"):
+                if not bone.bone.hide:
+                    visible_slot_bones += 1
+                else:
+                    invisible_slot_bones += 1
+        # If most bones are visible, assume that the user wants to hide them,
+        # otherwise, show all of them
+        if visible_slot_bones > invisible_slot_bones:
+            for bone in context.object.pose.bones:
+                if bone.name.endswith("_slot"):
+                    bone.bone.hide = True
+        else:
+            for bone in context.object.pose.bones:
+                if bone.name.endswith("_slot"):
+                    bone.bone.hide = False
+
+        return {"FINISHED"}
+
 classes = (
-    Snapper, ExportRig, SyncRigToMesh, ClipExporter,
+    Snapper, ExportRig, SyncRigToMesh,
     S4ANIMTOOLS_PT_MainPanel,
     TimeRange,
     IKTarget, s4animtool_PT_IKTargetPanel, LIST_OT_NewIKTarget, LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget,
-    s4animtool_OT_bakeik, s4animtool_OT_removeIK,s4animtools_OT_guessTarget,
+    s4animtool_OT_bakeik, s4animtool_OT_removeIK, s4animtools_OT_guessTarget,
     BeginIKMarker, s4animtool_OT_unmute_ik, s4animtool_OT_mute_ik, NewClipExporter, PositionConfig, QuaternionConfig,
     ActorSettings, ClipData, ImportRig, CopyLeftSideAnimationToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig,
-    CopySelectedLeftSideToRightSide,
-    LIST_OT_MoveActor, ActorPanel, LIST_OT_NewState, LIST_OT_DeleteState, LIST_OT_MoveState, StatePanel,
-    ActorProperties, ControllerProperties, StateProperties,
-    LIST_OT_NewActor, LIST_OT_DeleteActor, LIST_OT_NewController, LIST_OT_RemoveController, LIST_OT_MoveControllerState,
-    PosturePanel, PostureProperties,
-    LIST_OT_NewPosture, LIST_OT_DeletePosture, LIST_OT_MovePosture, StateConnections,
-    LIST_OT_NewStateConnection, LIST_OT_DeleteStateConnection,
-    LIST_OT_MoveStateConnection, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
+    CopySelectedLeftSideToRightSide, ExportAnimationStateMachine, MaintainKeyframe, AnimationEvent, InitializeEvents,
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
-    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint,OT_S4ANIMTOOLS_ExportFootprint,
+    LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
-    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren)
+    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
+    OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, OT_S4ANIMTOOLS_NewExportClip,
+    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
 def update_selected_bones(self, context):
     pass
-   #ui_toggle_to_bone_attribute = {"select_slots" : "is_slot", "select_cas" : "is_cas", "select_left" : "is_left",
-   #                           "select_right" : "is_right", "select_middle" : "is_middle", "select_mouth" : "is_mouth",
-   #                               "select_left_pinky" : "is_left_pinky",
-   #                           "select_left_ring" : "is_left_ring","select_left_middle" : "is_left_middle",
-   #                           "select_left_index" : "is_left_index","select_left_thumb" : "is_left_thumb",
-   #                           "select_left_first_fingers" : "is_left_first_finger",
-   #                               "select_left_second_fingers" : "is_left_second_finger",
-   #                               "select_left_third_fingers" : "is_left_third_finger",
-   #                               "select_left_fingers" : "is_left_finger",
-   #                               "select_right_pinky": "is_right_pinky",
-   #                               "select_right_ring": "is_right_ring", "select_right_middle": "is_right_middle",
-   #                               "select_right_index": "is_right_index", "select_right_thumb": "is_right_thumb",
-   #                               "select_right_first_fingers": "is_right_first_finger",
-   #                               "select_right_second_fingers": "is_right_second_finger",
-   #                               "select_right_third_fingers": "is_right_third_finger",
-   #                               "select_right_fingers": "is_right_finger"
-   #                               }
-   #bpy.ops.object.mode_set(mode='POSE')
-   #for bone in context.object.pose.bones:
-   #    bone.bone.hide = False
-   #bpy.ops.pose.select_all(action='DESELECT')
-   #for ui_toggle, bone_attrib in ui_toggle_to_bone_attribute.items():
-   #    if getattr(context.object, ui_toggle):
-   #        for bone in context.object.pose.bones:
-   #            if getattr(bone, bone_attrib):
-   #                print(getattr(bone, bone_attrib))
-   #                bone.bone.hide = True
 
+
+def handle_version_upgrade(context):
+    old_version = context.scene.s4animtools_version
+    # This code handles upgrading the addon from an older version.
+
+    # This portion handles updating from older versions of the code before the version var was added.
+    # This always runs.
+
+    for obj in context.scene.objects:
+        if len(obj.sound_events_list) > 0:
+            # Iterate through all sound events and upgrade them to the new format.
+            for event in obj.sound_events_list:
+                if event.info != "":
+                    frame_number, sound_name = event.info.split(",")
+                    obj.sound_events_list_UI.add()
+                    obj.sound_events_list_UI[-1].frame_number = int(frame_number)
+                    obj.sound_events_list_UI[-1].sound_name = sound_name
+            obj.sound_events_list.clear()
+    context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register():
     """Register classes for the things."""
@@ -2488,16 +2527,10 @@ def register():
             register_class(cls)
         except Exception as e:
             print(e)
-    # bpy.types.Object.script_events = CollectionProperty(type=ScriptItem)
-    # bpy.types.Object.sound_events = CollectionProperty(type=SoundItem)
-    bpy.types.Object.actors = CollectionProperty(type=ActorProperties)
-    bpy.types.Object.states = CollectionProperty(type=StateProperties)
-    bpy.types.Object.postures = CollectionProperty(type=PostureProperties)
-    bpy.types.Object.state_connections = CollectionProperty(type=StateConnections)
-
     bpy.types.PoseBone.mirrored_bone = bpy.props.StringProperty()
     bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
-    bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
+
+    # This is for the baked IK data
     for ik_idx in range(-1,11):
         setattr(bpy.types.PoseBone, f"ik_pos_{ik_idx}", bpy.props.FloatVectorProperty(size=3))
         setattr(bpy.types.PoseBone, f"ik_rot_{ik_idx}", bpy.props.FloatVectorProperty(default=(0,0,0,1), size=4, min=-1, max=1))
@@ -2516,6 +2549,7 @@ def register():
     bpy.types.Object.terrain_cutout = bpy.props.BoolProperty(default=False)
 
 
+    bpy.types.Object.is_routing_footprint = bpy.props.BoolProperty(default=False)
 
 
     bpy.types.Object.slope = bpy.props.BoolProperty(default=False)
@@ -2574,6 +2608,10 @@ def register():
 
     bpy.types.Object.parent_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.sound_events_list = CollectionProperty(type=AnimationEvent)
+    # New version where each events list get their own unique "bespoke" UI.
+    bpy.types.Object.sound_events_list_UI = CollectionProperty(type=SoundEventInfo)
+    bpy.types.Object.snap_events_list_UI = CollectionProperty(type=SnapEventInfo)
+
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.play_effect_events_list = CollectionProperty(type=AnimationEvent)
@@ -2582,18 +2620,12 @@ def register():
     bpy.types.Object.snap_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.visibility_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.focus_compatibility_events_list = CollectionProperty(type=AnimationEvent)
+    bpy.types.Object.geometry_state_change_events_list = CollectionProperty(type=AnimationEvent)
 
     bpy.types.Object.ik_targets = CollectionProperty(type=IKTarget)
     bpy.types.Object.ik_idx = IntProperty(default=0)
     bpy.types.Object.rig_name = bpy.props.StringProperty()
     bpy.types.Object.reset_initial_offset_t = bpy.props.StringProperty()
-    bpy.types.Object.parent_events = bpy.props.StringProperty()
-    bpy.types.Object.sound_events = bpy.props.StringProperty()
-    bpy.types.Object.script_events = bpy.props.StringProperty()
-    bpy.types.Object.reaction_events = bpy.props.StringProperty()
-    bpy.types.Object.play_effect_events = bpy.props.StringProperty()
-    bpy.types.Object.stop_effect_events = bpy.props.StringProperty()
-    bpy.types.Object.disable_lipsync_events = bpy.props.StringProperty()
     bpy.types.Object.allow_jaw_animation_for_entire_animation = bpy.props.BoolProperty(default=False)
     bpy.types.Object.explicit_namespaces = bpy.props.StringProperty()
     bpy.types.Object.reference_namespace_hash = bpy.props.StringProperty()
@@ -2611,21 +2643,6 @@ def register():
     bpy.types.Object.relative_bone = bpy.props.StringProperty(update=update_initial_offsets)
     bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)
 
-    # OLD STUFF
-    bpy.types.Scene.rig_name = bpy.props.StringProperty()
-    bpy.types.Scene.reset_initial_offset_t = bpy.props.StringProperty()
-    bpy.types.Scene.parent_events = bpy.props.StringProperty()
-    bpy.types.Scene.sound_events = bpy.props.StringProperty()
-    bpy.types.Scene.explicit_namespaces = bpy.props.StringProperty()
-    bpy.types.Scene.reference_namespace_hash = bpy.props.StringProperty()
-    bpy.types.Scene.initial_offset_q = bpy.props.StringProperty()
-    bpy.types.Scene.initial_offset_t = bpy.props.StringProperty()
-    bpy.types.Scene.snap_events = bpy.props.StringProperty()
-    bpy.types.Scene.additional_snap_frames = bpy.props.StringProperty()
-    bpy.types.Scene.visibility_events = bpy.props.StringProperty()
-    bpy.types.Scene.world_rig = bpy.props.StringProperty()
-    bpy.types.Scene.world_bone = bpy.props.StringProperty()
-
     # bpy.types.Object.script_idx = IntProperty(name="Index for my_list", default=0)
     # bpy.types.Object.sound_idx = IntProperty(name="Index for sound_idx", default=0)
     bpy.types.Object.actor_idx = IntProperty(name="Index for actors", default=0)
@@ -2635,69 +2652,57 @@ def register():
     bpy.types.Object.state_connection_idx = IntProperty(name="Index for state", default=0)
 
     #  bpy.types.Object.clip_idx = IntProperty(name="Index for clip", default=0)
-    bpy.types.Scene.is_overlay = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_overlay = bpy.props.BoolProperty(default=False)
 
     bpy.types.Scene.watcher_running = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.clip_name = bpy.props.StringProperty()
     bpy.types.Scene.clip_name_prefix = bpy.props.StringProperty()
     bpy.types.Scene.clip_splits = bpy.props.StringProperty()
+    bpy.types.Scene.clip_locos = bpy.props.StringProperty()
 
-    bpy.types.Scene.footprint_name = bpy.props.StringProperty()
+    bpy.types.Object.footprint_name = bpy.props.StringProperty()
 
-   # bpy.types.Object.select_slots = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_cas = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_mouth = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_left_pinky = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_ring = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_index = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_thumb = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_left_first_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_second_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_third_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_left_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_right_pinky = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_ring = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_middle = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_index = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_thumb = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.Object.select_right_first_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_second_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_third_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-   # bpy.types.Object.select_right_fingers = bpy.props.BoolProperty(default=False, update=update_selected_bones)
-#
-   # bpy.types.PoseBone.is_slot = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_cas = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_middle = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_mouth = bpy.props.BoolProperty(default=False)
-#
-   # bpy.types.PoseBone.is_left_pinky = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_ring = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_middle = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_index = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_thumb = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_first_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_second_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_left_third_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_pinky = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_ring = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_middle = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_index = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_thumb = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_first_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_second_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_third_finger = bpy.props.BoolProperty(default=False)
-   # bpy.types.PoseBone.is_right_finger = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.footprint_resource_variant = bpy.props.EnumProperty(
+        # (identifier, name, description, icon, number)
+        items=[('Regular Object', 'Regular Object', '', '', 0),
+               ('World Camera Bounds', 'World Camera Bounds', '', '', 1),
+               ('World Allowed Routing', 'World Allowed Routing', '', '', 2)],
+        name="Footprint Type Variant",
+        default='Regular Object')
 
+    bpy.types.Scene.s4animtools_export_path = bpy.props.StringProperty()
+    bpy.types.Scene.s4animtools_export_path2 = bpy.props.StringProperty()
+
+    bpy.types.Scene.export_as_loose_files = bpy.props.BoolProperty()
+
+    actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
+
+
+    bpy.types.Object.is_s4_actor = bpy.props.BoolProperty(default=False)
+    # Actor type can be sim, object, or prop
+    bpy.types.Object.actor_type = bpy.props.EnumProperty(items = actor_types)
+    bpy.types.Object.is_enabled_for_animation = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_footprint_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_mirror_and_masking_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_ik_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_events = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_clip_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_initial_offset_options = bpy.props.BoolProperty(default=False)
+
+    bpy.types.Object.show_experimental_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_sim_skin = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.active_sim_skin = bpy.props.EnumProperty(items=update_valid_skins, update=update_active_sim_skin)
+
+    bpy.types.Object.allow_slots = bpy.props.BoolProperty(default=False)
+
+    # 60 FPS downsample to 30
+    bpy.types.Scene.downsample_60_to_30 = bpy.props.BoolProperty(default=False)
+
+    bpy.types.Scene.s4animtools_version = IntProperty(default=CURRENT_S4ANIMTOOLS_VERSION)
+
+    bpy.types.Scene.clips = CollectionProperty(type=ClipData)
+
+    bpy.types.Scene.pose_pack_mode_enabled = bpy.props.BoolProperty(default=False)
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2719,45 +2724,34 @@ def unregister():
     del bpy.types.Object.ik_idx
     del bpy.types.Object.rig_name
     del bpy.types.Object.reset_initial_offset_t
-    del bpy.types.Object.parent_events
-    del bpy.types.Object.sound_events
     del bpy.types.Object.explicit_namespaces
     del bpy.types.Object.reference_namespace_hash
     del bpy.types.Object.initial_offset_q
     del bpy.types.Object.initial_offset_t
     del bpy.types.Object.snap_events
     del bpy.types.Object.additional_snap_frames
-    del bpy.types.Object.visibility_events
     del bpy.types.Object.base_rig
     del bpy.types.Object.world_rig
     del bpy.types.Object.world_bone
-    del bpy.types.Object.reaction_events
-    del bpy.types.Object.play_effect_events
-    del bpy.types.Object.stop_effect_events
-    del bpy.types.Object.disable_lipsync_events
-    # OLD STUFF
-    del bpy.types.Scene.rig_name
-    del bpy.types.Scene.reset_initial_offset_t
-    del bpy.types.Scene.parent_events
-    del bpy.types.Scene.sound_events
-    del bpy.types.Scene.explicit_namespaces
-    del bpy.types.Scene.reference_namespace_hash
-    del bpy.types.Scene.initial_offset_q
-    del bpy.types.Scene.initial_offset_t
-    del bpy.types.Scene.snap_events
-    del bpy.types.Scene.additional_snap_frames
-    del bpy.types.Scene.visibility_events
-    del bpy.types.Scene.world_rig
-    del bpy.types.Scene.world_bone
+
 
     # bpy.types.Object.script_idx = IntProperty(name="Index for my_list", default=0)
     # bpy.types.Object.sound_idx = IntProperty(name="Index for sound_idx", default=0)
     # bpy.types.Object.actor_idx = IntProperty(name="Index for actors", default=0)
     # bpy.types.Object.state_idx = IntProperty(name="Index for state", default=0)
     #  bpy.types.Object.clip_idx = IntProperty(name="Index for clip", default=0)
-    del bpy.types.Scene.is_overlay
 
     del bpy.types.Scene.watcher_running
     del bpy.types.Scene.clip_name
     del bpy.types.Scene.clip_name_prefix
     del bpy.types.Scene.clip_splits
+
+    del bpy.types.Object.is_s4_actor
+    del bpy.types.Object.actor_type
+    del bpy.types.Object.is_enabled_for_animation
+    del bpy.types.Object.show_footprint_options
+    del bpy.types.Object.show_mirror_and_masking_options
+    del bpy.types.Object.show_ik_options
+    del bpy.types.Object.show_experimental_options
+    del bpy.types.Object.is_sim_skin
+    del bpy.types.Object.allow_slots

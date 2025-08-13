@@ -1,4 +1,4 @@
-from _s4animtools.game_types import uint8, uint16, uint32, uint64, float32, int32
+from s4animtools.game_types import uint8, uint16, uint32, uint64, float32, int32
 
 
 class StreamReader:

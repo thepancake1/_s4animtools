@@ -1,5 +1,5 @@
 import bpy
-from _s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
+from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
 MAX_SUBROOTS = 180
 
 class BeginIKMarker(bpy.types.Operator):

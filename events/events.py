@@ -1,6 +1,6 @@
-from _s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Byte, UInt64
+from s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Byte, UInt64
 
-from _s4animtools.serialization.fnv import hash_name_or_get_hash
+from s4animtools.serialization.fnv import hash_name_or_get_hash
 
 
 def get_null_terminated_string(string):
@@ -108,23 +108,30 @@ class SuppressLipsyncEvent:
 
 
 class ReactionEvent:
-    arg_count = 2
+    arg_count = 3
 
-    def __init__(self, timecode, reaction_name):
+    def __init__(self, timecode, reaction_asm, reaction_state):
         self.event_type = UInt32(13)
         self.length = UInt32(268)
         self.header1 = UInt32(1)
         self.header2 = UInt32(4)
         self.timecode = Float32(float(timecode))
-        reaction_name = reaction_name.lstrip().encode("ascii")
-        self.reaction_name = reaction_name
-        for padding in range(256 - len(reaction_name)):
-            self.reaction_name += bytes([0])
+        reaction_asm = reaction_asm.lstrip().encode("ascii")
+        self.reaction_asm = reaction_asm
+        for padding in range(128 - len(reaction_asm)):
+            self.reaction_asm += bytes([0])
 
-        self.reaction_name = Bytes(self.reaction_name)
+        self.reaction_asm = Bytes(self.reaction_asm)
+        reaction_state = reaction_state.lstrip().encode("ascii")
+
+        self.reaction_state = reaction_state
+        for padding in range(128 - len(reaction_state)):
+            self.reaction_state += bytes([0])
+
+        self.reaction_state = Bytes(self.reaction_state)
     def serialize(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
-                      self.reaction_name]
+                      self.reaction_asm, self.reaction_state]
 
         serialized_stuff = []
         for value in serialized:
@@ -214,9 +221,9 @@ class SoundEvent:
 
 
 class PlayEffectEvent:
-    arg_count = 6
+    arg_count = 7
 
-    def __init__(self, timecode, effect_name, actor_name_or_hash, bone_name_hash, u1, u2, slot_name):
+    def __init__(self, timecode, effect_name, actor_name_or_hash, bone_name_hash, u1, actor_name_or_hash_2, bone_name_hash_2, slot_name):
         self.event_type = UInt32(5)
         self.length = UInt32(292)
         self.header1 = UInt32(2)
@@ -226,12 +233,19 @@ class PlayEffectEvent:
         self.actor_hash = hash_name_or_get_hash(actor_name_or_hash)
         self.bone_name_hash = hash_name_or_get_hash(bone_name_hash, lowercase=True)
         self.u1 = get_int64_from_hex_string_or_int(u1)
-        self.u2 = get_int64_from_hex_string_or_int(u2)
+        if actor_name_or_hash_2.lstrip() == "0":
+            self.actor_hash_2 = UInt32(0)
+        else:
+            self.actor_hash_2 = hash_name_or_get_hash(actor_name_or_hash_2)
+        if bone_name_hash_2.lstrip() == "0":
+            self.bone_name_hash_2 = UInt32(0)
+        else:
+            self.bone_name_hash_2 = hash_name_or_get_hash(bone_name_hash_2, lowercase=True)
         self.slot_name = get_bytes_from_string(slot_name)
 
     def serialize(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
-                      self.effect_name, self.actor_hash, self.bone_name_hash, self.u1, self.u2, self.slot_name]
+                      self.effect_name, self.actor_hash, self.bone_name_hash, self.u1, self.actor_hash_2, self.bone_name_hash_2, self.slot_name]
 
         serialized_stuff = []
         for value in serialized:
@@ -250,7 +264,10 @@ class StopEffectEvent:
         self.header2 = UInt32(0)
         self.timecode = Float32(float(timecode))
         self.slot_name = hash_name_or_get_hash(slot_name)
-        self.u2 = hash_name_or_get_hash(u2)
+        if u2.lstrip() != "0":
+            self.u2 = hash_name_or_get_hash(u2)
+        else:
+            self.u2 = UInt32(0)
         self.b1 = Byte(int(b1))
 
     def serialize(self):
@@ -279,6 +296,30 @@ class FocusCompatibilityEvent:
     def serialize(self):
         serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
                       self.end_timecode, self.level]
+
+        serialized_stuff = []
+        for value in serialized:
+            serialized_stuff.append(value.serialize())
+
+        return serialized_stuff
+
+
+class GeometryStateChangeEvent:
+    arg_count = 3
+
+    def __init__(self, timecode, actor_name, geometry_state_name):
+        self.event_type = UInt32(17)
+        self.length = UInt32(144)
+        self.header1 = UInt32(1)
+        self.header2 = UInt32(86)
+        self.timecode = Float32(float(timecode))
+        self.actor_hash = hash_name_or_get_hash(actor_name)
+        geometry_state_name = geometry_state_name.lstrip().encode("ascii")
+        self.geometry_state_name = Bytes(get_null_terminated_string(geometry_state_name))
+
+    def serialize(self):
+        serialized = [self.event_type, self.length, self.header1, self.header2, self.timecode,
+                      self.actor_hash, self.geometry_state_name]
 
         serialized_stuff = []
         for value in serialized:
