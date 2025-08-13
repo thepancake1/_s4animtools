@@ -369,6 +369,15 @@ class NewClipExporter:
                                                  str(round(translation[0], 4)), str(round(translation[1], 4)), str(round(translation[2], 4)),
                                                  str(round(rotation[1], 4)), str(round(rotation[2], 4)), str(round(rotation[3], 4)), str(round(rotation[0], 4))))
 
+        for event in context.object.script_events_list_UI:
+            event : ScriptEventInfo
+            original_timestamp = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(ScriptEvent(timeshifted_timestamp, event.event_id))
+
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
                 parameters = event_instance.info.split(",")
@@ -1033,6 +1042,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
                                  "Script Events",
                                  self.layout, parameters=["Frame", "Script Xevt"])
+                for idx, item in enumerate(obj.script_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    self.layout.row().prop(item, "event_id", text="Xevt ID")
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"script_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"script_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"script_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"script_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+
+                if len(obj.script_events_list_UI) == 0:
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"script_events_list_UI,{0},create"
+
+
+
                 self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
                                  "Snap Events", self.layout,
                                  parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ])
@@ -1370,6 +1395,25 @@ class SnapEventInfo(PropertyGroup):
     target_actor : bpy.props.StringProperty()
     target_bone : bpy.props.StringProperty()
 
+
+
+class ScriptEventInfo(PropertyGroup):
+    @property
+    def info(self):
+        return json.dumps({"frame_number" : self.frame_number, "event_id" : self.event_id})
+
+    @info.setter
+    def info(self, value):
+        try:
+            value = json.loads(value)
+
+            self.frame_number = value["frame_number"]
+            self.event_id = value["event_id"]
+        except json.decoder.JSONDecodeError:
+            pass
+    frame_number : bpy.props.IntProperty()
+    event_id : bpy.props.IntProperty()
+
 class ClipData(PropertyGroup):
     clip_name: bpy.props.StringProperty()
     referenced_actors: bpy.props.StringProperty()
@@ -1485,6 +1529,16 @@ class OT_S4ANIMTOOLS_AddSoundEventsListUI(bpy.types.Operator):
     def execute(self, context):
         if len(context.object.sound_events_list_UI) == 0:
             context.object.sound_events_list_UI.add()
+        return {"FINISHED"}
+
+class OT_S4ANIMTOOLS_AddScriptEventsListUI(bpy.types.Operator):
+    bl_idname = "s4animtools.add_sound_events_list_ui"
+    bl_label = "Add Events"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        if len(context.object.script_events_list_UI) == 0:
+            context.object.script_events_list_UI.add()
         return {"FINISHED"}
 
 class OT_S4ANIMTOOLS_UpgradeData(bpy.types.Operator):
@@ -2520,7 +2574,8 @@ classes = (
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
-    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, OT_S4ANIMTOOLS_NewExportClip,
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_AddScriptEventsListUI, ScriptEventInfo,
+    OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
 def update_selected_bones(self, context):
@@ -2691,6 +2746,7 @@ def register():
     # New version where each events list get their own unique "bespoke" UI.
     bpy.types.Object.sound_events_list_UI = CollectionProperty(type=SoundEventInfo)
     bpy.types.Object.snap_events_list_UI = CollectionProperty(type=SnapEventInfo)
+    bpy.types.Object.script_events_list_UI = CollectionProperty(type=ScriptEventInfo)
 
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
@@ -2812,6 +2868,8 @@ def unregister():
     del bpy.types.Object.sound_events_list
     del bpy.types.Object.sound_events_list_UI
     del bpy.types.Object.snap_events_list_UI
+    del bpy.types.Object.script_events_list_UI
+
     del bpy.types.Object.script_events_list
     del bpy.types.Object.reaction_events_list
     del bpy.types.Object.play_effect_events_list
