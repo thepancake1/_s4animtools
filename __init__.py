@@ -49,7 +49,7 @@ from s4animtools.slot_assignments import SlotAssignment
 from s4animtools.walkstyles.blender import LocomotionBuilderVariantData, draw_locomotion_builder_data, locomotion_register, \
     locomotion_unregister
 
-CURRENT_S4ANIMTOOLS_VERSION = 1
+CURRENT_S4ANIMTOOLS_VERSION = 2
 JAW_ANIMATE_DURATION = 100000
 
 
@@ -395,7 +395,7 @@ class NewClipExporter:
             if frame_time >= timeshifted_timestamp >= 0:
 
                 # If event.visibility is false, then set it to 0, otherwise set it to 1.
-                current_clip.add_event(VisibilityEvent(timeshifted_timestamp, event.target_actor, 1 if event.visibility else 0 ))
+                current_clip.add_event(VisibilityEvent(timeshifted_timestamp, event.actor, 1 if event.visibility else 0 ))
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
                 parameters = event_instance.info.split(",")
@@ -775,6 +775,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         layout = self.layout
         old_version = False
 
+        if context.scene.s4animtools_version != CURRENT_S4ANIMTOOLS_VERSION:
+            old_version = True
+
         # There used to be a bug here where this used to be called obj and was causing it to replace the original obj defined just before.
         for obj_maybe_needs_update in context.scene.objects:
             if len(obj_maybe_needs_update.sound_events_list) > 0:
@@ -795,10 +798,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
             #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
-            layout.prop(obj, "is_actor", text="Is Sims 4 Actor")
+            layout.prop(obj, "is_actor", text="Is Actor")
             if obj.is_actor:
                 layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
                 layout.prop(obj, "actor_type", text="Actor Type")
+                layout.prop(obj, "game_type", text="Game Type")
+
                 layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
 
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
@@ -1038,7 +1043,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.draw_events(obj, "parent_events_list", 0.1,
                                  "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
                                  "Parent Events", self.layout,
-                                 parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
+                                 parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"],
+                                 corresponding_widget_list_count=len(obj.parent_events_list_UI))
                 for idx, item in enumerate(obj.parent_events_list_UI):
                     self.layout.row().prop(item, "frame_number", text="Frame")
                     self.layout.row().prop_search(item, "child_actor", context.scene, "objects", text="Child Actor")
@@ -2581,6 +2587,9 @@ def handle_version_upgrade(context):
     # This always runs.
 
     for obj in context.scene.objects:
+        if obj.is_s4_actor:
+            if old_version < 2:
+                obj.is_actor = obj.is_s4_actor
         if len(obj.sound_events_list) > 0:
             # Iterate through all sound events and upgrade them to the new format.
             for event in obj.sound_events_list:
@@ -2590,6 +2599,16 @@ def handle_version_upgrade(context):
                     obj.sound_events_list_UI[-1].frame_number = int(frame_number)
                     obj.sound_events_list_UI[-1].sound_name = sound_name
             obj.sound_events_list.clear()
+        if len(obj.parent_events_list) > 0:
+            for event in obj.parent_events_list:
+                if event.info != "":
+                    frame_number, child_actor, parent_actor, parent_bone = event.info.split(",")
+                    obj.parent_events_list_UI.add()
+                    obj.parent_events_list_UI[-1].frame_number = int(frame_number)
+                    obj.parent_events_list_UI[-1].child_actor = child_actor
+                    obj.parent_events_list_UI[-1].parent_actor = parent_actor
+                    obj.parent_events_list_UI[-1].parent_bone = parent_bone
+            obj.parent_events_list.clear()
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register_footprint_properties():
@@ -2808,11 +2827,16 @@ def register():
     bpy.types.Scene.export_as_loose_files = bpy.props.BoolProperty()
 
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
+    game_types = (("TS4", "TS4", "The Sims 4"), ("TS3", "TS3", "The Sims 3"))
 
+    # Deprecated, use is_actor instead.
+    bpy.types.Object.is_s4_actor = bpy.props.BoolProperty(default=False)
 
     bpy.types.Object.is_actor = bpy.props.BoolProperty(default=False)
     # Actor type can be sim, object, or prop
     bpy.types.Object.actor_type = bpy.props.EnumProperty(items = actor_types)
+    bpy.types.Object.game_type = bpy.props.EnumProperty(items = game_types)
+
     bpy.types.Object.is_enabled_for_animation = bpy.props.BoolProperty(default=False)
     bpy.types.Object.show_footprint_options = bpy.props.BoolProperty(default=False)
     bpy.types.Object.show_mirror_and_masking_options = bpy.props.BoolProperty(default=False)
