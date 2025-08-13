@@ -718,12 +718,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         if getattr(obj, property_name, "") != "":
             layout.prop(obj, property_name)
 
-    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None, editable=True):
+    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None, editable=True, corresponding_widget_list_count=0):
         # Editable parameter was added so I can disable the old sound effects event list from being used
         events_list = getattr(obj, events_list_name)
         #print(f"{obj} - {len(events_list)} - {events_list_name}")
         layout.label(
-            text=f"{event_name}: {len(events_list)} - {description}")
+            text=f"{event_name}: {len(events_list) + corresponding_widget_list_count} - {description}")
         for idx, item in enumerate(events_list):
             row = layout.row()
             if item.info != "":
@@ -1023,7 +1023,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
 
                 self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
-                                 "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"], editable=False)
+                                 "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"], editable=False,
+                                 corresponding_widget_list_count=len(obj.sound_events_list_UI))
 
                 for idx, item in enumerate(obj.sound_events_list_UI):
                     self.layout.row().prop(item, "frame_number", text="Frame")
@@ -1041,7 +1042,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
                                  "Script Events",
-                                 self.layout, parameters=["Frame", "Script Xevt"])
+                                 self.layout, parameters=["Frame", "Script Xevt"], corresponding_widget_list_count=len(obj.script_events_list_UI))
                 for idx, item in enumerate(obj.script_events_list_UI):
                     self.layout.row().prop(item, "frame_number", text="Frame")
                     self.layout.row().prop(item, "event_id", text="Xevt ID")
@@ -1060,7 +1061,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
                                  "Snap Events", self.layout,
-                                 parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ])
+                                 parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ],
+                                 corresponding_widget_list_count=len(obj.snap_events_list_UI))
 
                 for idx, item in enumerate(obj.snap_events_list_UI):
                     self.layout.row().prop(item, "frame_number", text="Frame")
