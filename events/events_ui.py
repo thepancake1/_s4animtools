@@ -85,3 +85,23 @@ class ParentEventInfo(PropertyGroup):
     child_actor : bpy.props.StringProperty()
     parent_actor : bpy.props.StringProperty()
     parent_bone : bpy.props.StringProperty()
+
+
+class VisibilityEventInfo(PropertyGroup):
+    @property
+    def info(self):
+        return json.dumps({"frame_number" : self.frame_number, "actor" : self.actor, "visibility" : self.visibility})
+
+    @info.setter
+    def info(self, value):
+        try:
+            value = json.loads(value)
+
+            self.frame_number = value["frame_number"]
+            self.actor = value["actor"]
+            self.visibility = value["visibility"]
+        except json.decoder.JSONDecodeError:
+            pass
+    frame_number : bpy.props.IntProperty()
+    actor : bpy.props.StringProperty()
+    visibility : bpy.props.BoolProperty()

@@ -4,7 +4,7 @@ import time
 import math
 
 import s4animtools.bone_names
-from s4animtools.events.events_ui import AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo, ParentEventInfo
+from s4animtools.events.events_ui import AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo, ParentEventInfo, VisibilityEventInfo
 from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
@@ -79,7 +79,7 @@ def update_active_sim_skin(self, context):
 
     bpy.ops.object.select_all(action='DESELECT')
 
-    if rig_obj.is_s4_actor:
+    if rig_obj.is_actor:
         for child in bpy.data.objects[rig_obj.name].children:
             #print(rig_obj.name, child.name)
             child.select_set(True)
@@ -386,6 +386,16 @@ class NewClipExporter:
                 current_clip.add_event(ParentEvent(timeshifted_timestamp, event.child_actor, event.parent_actor,
                                                    event.parent_bone))
 
+        for event in context.object.visibility_events_list_UI:
+            event : VisibilityEventInfo
+            original_timestamp = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+            if frame_time >= timeshifted_timestamp >= 0:
+
+                # If event.visibility is false, then set it to 0, otherwise set it to 1.
+                current_clip.add_event(VisibilityEvent(timeshifted_timestamp, event.target_actor, 1 if event.visibility else 0 ))
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
                 parameters = event_instance.info.split(",")
@@ -708,7 +718,7 @@ class S4ANIMTOOL_OT_ExportAllClips(bpy.types.Operator):
 
     def execute(self, context):
         for obj in bpy.data.objects:
-            if obj.is_s4_actor and obj.is_enabled_for_animation:
+            if obj.is_actor and obj.is_enabled_for_animation:
                 with bpy.context.temp_override(object=obj):
                     bpy.context.view_layer.objects.active = obj
                     bpy.ops.s4animtools.new_export_clip("INVOKE_DEFAULT")
@@ -785,8 +795,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
             #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
-            layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
-            if obj.is_s4_actor:
+            layout.prop(obj, "is_actor", text="Is Sims 4 Actor")
+            if obj.is_actor:
                 layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
                 layout.prop(obj, "actor_type", text="Actor Type")
                 layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
@@ -1034,7 +1044,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     self.layout.row().prop_search(item, "child_actor", context.scene, "objects", text="Child Actor")
                     self.layout.row().prop_search(item, "parent_actor", context.scene, "objects", text="Parent Actor")
                     if item.parent_actor != "":
-                        self.layout.row().prop_search(item, "parent_actor_bone", context.scene.objects[item.parent_actor].pose, "bones",
+                        self.layout.row().prop_search(item, "parent_bone", context.scene.objects[item.parent_actor].pose, "bones",
                                                text="Parent Bone")
                     right_row = self.layout.row()
                     right_row.operator('s4animtools.move_new_element', text='↑').args = f"parent_events_list_UI,{idx},up"
@@ -1124,7 +1134,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  "Suppress Lipsync Events", self.layout, parameters=["Frame", "End Frame"])
                 self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
                                  "Visibility Events", self.layout,
-                                 parameters=["Frame", "Actor Name", "Visibility (0 or 1)"])
+                                 parameters=["Frame", "Actor Name", "Visibility (0 or 1)"], corresponding_widget_list_count=len(obj.visibility_events_list_UI))
+                for idx, item in enumerate(obj.visibility_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    row = self.layout.row()
+                    row.prop_search(item, "actor", context.scene, "objects", text="Actor")
+                    row.prop(item, "visibility", text="Visibility")
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"visibility_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"visibility_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"visibility_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"visibility_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+                if len(obj.visibility_events_list_UI) == 0:
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"visibility_events_list_UI,{0},create"
+
                 self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
                                  "Focus Compatibility Events", self.layout)
                 self.draw_events(obj, "geometry_state_change_events_list", 0.1, "Parameters (Frame/Actor Name/Geometry State Name)",
@@ -1148,7 +1173,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
                 self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
                 self.layout.prop(obj, "is_overlay", text="Is Overlay")
-                if obj.is_s4_actor:
+                if obj.is_actor:
                     if obj.actor_type == "sim":
                         # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
                         layout.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
@@ -2541,7 +2566,7 @@ classes = (
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
     OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_AddScriptEventsListUI, ScriptEventInfo, ParentEventInfo,
-    OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, OT_S4ANIMTOOLS_NewExportClip,
+    OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, VisibilityEventInfo, OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
 def update_selected_bones(self, context):
@@ -2714,6 +2739,7 @@ def register():
     bpy.types.Object.snap_events_list_UI = CollectionProperty(type=SnapEventInfo)
     bpy.types.Object.script_events_list_UI = CollectionProperty(type=ScriptEventInfo)
     bpy.types.Object.parent_events_list_UI = CollectionProperty(type=ParentEventInfo)
+    bpy.types.Object.visibility_events_list_UI = CollectionProperty(type=VisibilityEventInfo)
 
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
@@ -2784,7 +2810,7 @@ def register():
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
 
 
-    bpy.types.Object.is_s4_actor = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_actor = bpy.props.BoolProperty(default=False)
     # Actor type can be sim, object, or prop
     bpy.types.Object.actor_type = bpy.props.EnumProperty(items = actor_types)
     bpy.types.Object.is_enabled_for_animation = bpy.props.BoolProperty(default=False)
@@ -2837,6 +2863,7 @@ def unregister():
     del bpy.types.Object.snap_events_list_UI
     del bpy.types.Object.script_events_list_UI
     del bpy.types.Object.parent_events_list_UI
+    del bpy.types.Object.visibiltiy_events_list_UI
 
     del bpy.types.Object.script_events_list
     del bpy.types.Object.reaction_events_list
@@ -2894,7 +2921,7 @@ def unregister():
 
     del bpy.types.Scene.export_as_loose_files
 
-    del bpy.types.Object.is_s4_actor
+    del bpy.types.Object.is_actor
     del bpy.types.Object.actor_type
     del bpy.types.Object.is_enabled_for_animation
     del bpy.types.Object.show_footprint_options

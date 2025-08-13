@@ -26,7 +26,7 @@ class OT_S4ANIMTOOLS_InitializeThumbnails(bpy.types.Operator):
             if clip.clip_name == "":
                 clip.clip_name = str(idx + 1)
         for potential_actor in context.scene.objects:
-            if potential_actor.is_s4_actor and potential_actor.is_enabled_for_animation:
+            if potential_actor.is_actor and potential_actor.is_enabled_for_animation:
                 actors.append(potential_actor)
         for actor in actors:
             for clip in context.scene.clips:
