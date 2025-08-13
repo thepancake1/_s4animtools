@@ -783,7 +783,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             if len(obj_maybe_needs_update.sound_events_list) > 0:
                 old_version = True
                 break
-
+            if len(obj_maybe_needs_update.script_events_list) > 0:
+                old_version = True
+                break
+            if len(obj_maybe_needs_update.parent_events_list) > 0:
+                old_version = True
+                break
         if old_version:
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
@@ -2609,6 +2614,14 @@ def handle_version_upgrade(context):
                     obj.parent_events_list_UI[-1].parent_actor = parent_actor
                     obj.parent_events_list_UI[-1].parent_bone = parent_bone
             obj.parent_events_list.clear()
+        if len(obj.script_events_list):
+            for event in obj.script_events_list:
+                if event.info != "":
+                    frame_number, event_id = event.info.split(",")
+                    obj.script_events_list_UI.add()
+                    obj.script_events_list_UI[-1].frame_number = int(frame_number)
+                    obj.script_events_list_UI[-1].event_id = int(event_id)
+            obj.script_events_list.clear()
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register_footprint_properties():
