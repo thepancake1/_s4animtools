@@ -1,11 +1,10 @@
-import json
-
 import bpy
 import os
 import time
 import math
 
 import s4animtools.bone_names
+from s4animtools.events.events_ui import AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo, ParentEventInfo
 from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
@@ -377,6 +376,15 @@ class NewClipExporter:
                                                                                           sampling_rate=sampling_rate)
             if frame_time >= timeshifted_timestamp >= 0:
                 current_clip.add_event(ScriptEvent(timeshifted_timestamp, event.event_id))
+        for event in context.object.parent_events_list_UI:
+            event : ParentEventInfo
+            original_timestamp = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
+                                                                                          start_time,
+                                                                                          sampling_rate=sampling_rate)
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(ParentEvent(timeshifted_timestamp, event.child_actor, event.parent_actor,
+                                                   event.parent_bone))
 
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
@@ -767,11 +775,11 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
-        layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
+     #   layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
 
-        layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
-                                                                 "2 as regular files")
-        layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
+   #     layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
+     #                                                            "2 as regular files")
+     #   layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
 
@@ -1021,6 +1029,23 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
                                  "Parent Events", self.layout,
                                  parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"])
+                for idx, item in enumerate(obj.parent_events_list_UI):
+                    self.layout.row().prop(item, "frame_number", text="Frame")
+                    self.layout.row().prop_search(item, "child_actor", context.scene, "objects", text="Child Actor")
+                    self.layout.row().prop_search(item, "parent_actor", context.scene, "objects", text="Parent Actor")
+                    if item.parent_actor != "":
+                        self.layout.row().prop_search(item, "parent_actor_bone", context.scene.objects[item.parent_actor].pose, "bones",
+                                               text="Parent Bone")
+                    right_row = self.layout.row()
+                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"parent_events_list_UI,{idx},up"
+                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"parent_events_list_UI,{idx},down"
+                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"parent_events_list_UI,{idx},delete"
+                    right_row.operator('s4animtools.move_new_element', text='+').args = f"parent_events_list_UI,{idx},create"
+                    right_row.scale_x = 0.3
+                    self.layout.row().label(text="")
+
+                if len(obj.parent_events_list_UI) == 0:
+                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"parent_events_list_UI,{0},create"
 
                 self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
                                  "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"], editable=False,
@@ -1132,9 +1157,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
                 layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
             layout = self.layout.row()
-
-
-
             try:
                 selected_bone = bpy.context.selected_pose_bones[0]
 
@@ -1357,66 +1379,6 @@ class IKTarget(PropertyGroup):
                           default=0, min=0, soft_max=360, options={'HIDDEN'})
     ranges: CollectionProperty(type=TimeRange)
 
-
-class AnimationEvent(PropertyGroup):
-    info: bpy.props.StringProperty()
-
-class SoundEventInfo(PropertyGroup):
-    @property
-    def info(self):
-        return json.dumps({"frame_number" : self.frame_number, "sound_name" : self.sound_name})
-
-    @info.setter
-    def info(self, value):
-        try:
-            value = json.loads(value)
-
-            self.frame_number = value["frame_number"]
-            self.sound_name = value["sound_name"]
-        except json.decoder.JSONDecodeError:
-            pass
-    frame_number : bpy.props.IntProperty()
-    sound_name : bpy.props.StringProperty()
-
-
-
-class SnapEventInfo(PropertyGroup):
-    @property
-    def info(self):
-        return json.dumps({"frame_number" : self.frame_number, "target_actor" : self.target_actor, "target_bone" : self.target_bone})
-
-    @info.setter
-    def info(self, value):
-        try:
-            value = json.loads(value)
-
-            self.frame_number = value["frame_number"]
-            self.target_actor = value["target_actor"]
-            self.target_bone = value["target_bone"]
-        except json.decoder.JSONDecodeError:
-            pass
-    frame_number : bpy.props.IntProperty()
-    target_actor : bpy.props.StringProperty()
-    target_bone : bpy.props.StringProperty()
-
-
-
-class ScriptEventInfo(PropertyGroup):
-    @property
-    def info(self):
-        return json.dumps({"frame_number" : self.frame_number, "event_id" : self.event_id})
-
-    @info.setter
-    def info(self, value):
-        try:
-            value = json.loads(value)
-
-            self.frame_number = value["frame_number"]
-            self.event_id = value["event_id"]
-        except json.decoder.JSONDecodeError:
-            pass
-    frame_number : bpy.props.IntProperty()
-    event_id : bpy.props.IntProperty()
 
 class ClipData(PropertyGroup):
     clip_name: bpy.props.StringProperty()
@@ -2578,7 +2540,7 @@ classes = (
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
-    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_AddScriptEventsListUI, ScriptEventInfo,
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_AddScriptEventsListUI, ScriptEventInfo, ParentEventInfo,
     OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
@@ -2751,6 +2713,7 @@ def register():
     bpy.types.Object.sound_events_list_UI = CollectionProperty(type=SoundEventInfo)
     bpy.types.Object.snap_events_list_UI = CollectionProperty(type=SnapEventInfo)
     bpy.types.Object.script_events_list_UI = CollectionProperty(type=ScriptEventInfo)
+    bpy.types.Object.parent_events_list_UI = CollectionProperty(type=ParentEventInfo)
 
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
@@ -2873,6 +2836,7 @@ def unregister():
     del bpy.types.Object.sound_events_list_UI
     del bpy.types.Object.snap_events_list_UI
     del bpy.types.Object.script_events_list_UI
+    del bpy.types.Object.parent_events_list_UI
 
     del bpy.types.Object.script_events_list
     del bpy.types.Object.reaction_events_list
