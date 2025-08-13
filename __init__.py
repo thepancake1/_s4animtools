@@ -1179,28 +1179,30 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
                 self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
             self.layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
-            self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
-            self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
-
-            for item in context.scene.clips:
-                if context.scene.pose_pack_mode_enabled:
-                    self.layout.prop(item, "clip_name", text="Clip Name")
-
-
-                else:
-                    formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
-                    if formatted_clip_name in bpy.data.textures:
-                        tex = bpy.data.textures[formatted_clip_name]
-                        col = self.layout.box().column()
-                        col.template_preview(tex)
-                    self.layout.prop(item, "clip_display_name", text="Clip Display Name")
-                    self.layout.prop(item, "clip_description", text="Clip Description")
-                self.layout.prop(item, "start_frame", text="Start Frame")
-                self.layout.prop(item, "end_frame", text="End Frame")
-        self.layout.operator("s4animtools.add_new_locomotion_builder", text="Add New Locomotion Builder")
-        self.layout.operator("s4animtools.read_locomotion_builder_from_folder", text="Read Locomotion Builder From Folder Extracted By S4S")
-
-        draw_locomotion_builder_data(self.layout, context)
+            # Draw animation notes string as multiline text
+            self.layout.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+      #      self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+      #      self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
+#
+      #      for item in context.scene.clips:
+      #          if context.scene.pose_pack_mode_enabled:
+      #              self.layout.prop(item, "clip_name", text="Clip Name")
+#
+#
+      #          else:
+      #              formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
+      #              if formatted_clip_name in bpy.data.textures:
+      #                  tex = bpy.data.textures[formatted_clip_name]
+      #                  col = self.layout.box().column()
+      #                  col.template_preview(tex)
+      #              self.layout.prop(item, "clip_display_name", text="Clip Display Name")
+      #              self.layout.prop(item, "clip_description", text="Clip Description")
+      #          self.layout.prop(item, "start_frame", text="Start Frame")
+      #          self.layout.prop(item, "end_frame", text="End Frame")
+      #  self.layout.operator("s4animtools.add_new_locomotion_builder", text="Add New Locomotion Builder")
+      #  self.layout.operator("s4animtools.read_locomotion_builder_from_folder", text="Read Locomotion Builder From Folder Extracted By S4S")
+      #
+      #  draw_locomotion_builder_data(self.layout, context)
     def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
         box = row.column()
@@ -2844,7 +2846,7 @@ def register():
     bpy.types.Scene.clips = CollectionProperty(type=ClipData)
 
     bpy.types.Scene.pose_pack_mode_enabled = bpy.props.BoolProperty(default=False)
-
+    bpy.types.Object.animation_notes = bpy.props.StringProperty()
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2948,4 +2950,5 @@ def unregister():
     del bpy.types.Scene.clips
     del bpy.types.Scene.pose_pack_mode_enabled
 
+    del bpy.types.Object.animation_notes
     locomotion_unregister()
