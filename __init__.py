@@ -379,7 +379,7 @@ class NewClipExporter:
                 # If there are less parameters than the event needs, raise an exception
                 if parameter_length < event.arg_count:
                     raise Exception(
-                        f"Your event has incomplete parameters. Expected {event.arg_count} parameters. Got {parameter_length}")
+                        f"Your event {event.__name__} has incomplete parameters. Expected {event.arg_count} parameters. Got {parameter_length}")
                 original_timestamp = parameters[0].strip()
                 # If the first parameter, the timestamp, starts with //, this event has been disabled and ignore it.
                 if original_timestamp.startswith("//"):
