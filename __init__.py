@@ -734,11 +734,11 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
-        layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
+       # layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
 
-        layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
-                                                                 "2 as regular files")
-        layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
+      #  layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
+      #                                                           "2 as regular files")
+       # layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
 
@@ -1128,8 +1128,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
                 self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
             layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
-            self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
-            self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
+           # self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+           # self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
 
             for item in context.scene.clips:
                 if context.scene.pose_pack_mode_enabled:
