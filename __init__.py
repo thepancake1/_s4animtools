@@ -825,6 +825,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             if len(obj_maybe_needs_update.parent_events_list) > 0:
                 old_version = True
                 break
+            if len(obj_maybe_needs_update.reaction_events_list) > 0:
+                old_version = True
+                break
+            if len(obj_maybe_needs_update.visibility_events_list) > 0:
+                old_version = True
+                break
+            if len(obj_maybe_needs_update.play_effect_events_list) > 0:
+                old_version = True
+                break
         if old_version:
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
@@ -1116,7 +1125,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  "Parameters (Frame Number/Reaction ASM/Reaction State)",
                                  "Reaction Events", self.layout,
                                  parameters=["Frame", "Reaction ASM Name", "Reaction State Name"],
-                                 corresponding_widget_list_count=len(obj.reaction_events_list_UI))
+                                 corresponding_widget_list_count=reaction_events_holder.get_corresponding_list_count(obj))
 
                 reaction_events_holder.draw_all_instances(context, obj, self.layout)
 
@@ -2562,6 +2571,8 @@ def update_selected_bones(self, context):
 
 
 def handle_version_upgrade(context):
+    
+
     old_version = context.scene.s4animtools_version
     # This code handles upgrading the addon from an older version.
 
@@ -2609,6 +2620,9 @@ def handle_version_upgrade(context):
                     obj.reaction_events_list_UI[-1].reaction_asm  = reaction_asm
                     obj.reaction_events_list_UI[-1].reaction_state = reaction_state
             obj.reaction_events_list.clear()
+        if len(obj.play_effect_events_list):
+            # TODO do this for the play effect, script, and reaction events
+            pass
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register_footprint_properties():
