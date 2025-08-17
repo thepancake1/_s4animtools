@@ -27,6 +27,9 @@ def get_int_from_hex_string_or_int(string):
 
 
 def get_int64_from_hex_string_or_int(string):
+    if isinstance(string, int):
+        return u64(string)
+
     if string.startswith("0x"):
         return u64(int(string.strip(), 16))
     else:
@@ -43,14 +46,21 @@ class ParentEvent:
         self.header2 = u32(0xc6)
         self.timecode = f32(float(timecode))
         self.child_actor = hash_name_or_get_hash(child_actor)
-        if parent_actor.lstrip() != "0":
-            self.parent_actor = hash_name_or_get_hash(parent_actor)
-        else:
+        if parent_actor.lstrip() == "0":
             self.parent_actor = u32(0)
-        if parent_actor_bone.lstrip() != "0":
-            self.parent_actor_bone = hash_name_or_get_hash(parent_actor_bone, lowercase=True)
+        elif parent_actor.lstrip() == "":
+            self.parent_actor = u32(0)
         else:
+            self.parent_actor = hash_name_or_get_hash(parent_actor)
+
+
+        if parent_actor_bone.lstrip() == "0":
             self.parent_actor_bone = u32(0)
+        elif parent_actor_bone.lstrip() == "":
+            self.parent_actor_bone = u32(0)
+        else:
+            self.parent_actor_bone = hash_name_or_get_hash(parent_actor_bone, lowercase=True)
+
         self.unused_entry = u32(0)
 
     def to_binary(self):
@@ -233,11 +243,12 @@ class PlayEffectEvent:
         self.actor_hash = hash_name_or_get_hash(actor_name_or_hash)
         self.bone_name_hash = hash_name_or_get_hash(bone_name_hash, lowercase=True)
         self.u1 = get_int64_from_hex_string_or_int(u1)
-        if actor_name_or_hash_2.lstrip() == "0":
+        # New thing to keep track of, if the actor or bone hash is empty, we set it to 0
+        if actor_name_or_hash_2.lstrip() == "0" or actor_name_or_hash_2 == "":
             self.actor_hash_2 = u32(0)
         else:
             self.actor_hash_2 = hash_name_or_get_hash(actor_name_or_hash_2)
-        if bone_name_hash_2.lstrip() == "0":
+        if bone_name_hash_2.lstrip() == "0" or bone_name_hash_2 == "":
             self.bone_name_hash_2 = u32(0)
         else:
             self.bone_name_hash_2 = hash_name_or_get_hash(bone_name_hash_2, lowercase=True)

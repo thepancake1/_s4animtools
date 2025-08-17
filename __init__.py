@@ -4,8 +4,12 @@ import time
 import math
 
 import s4animtools.bone_names
-from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo, ParentEventInfo,
-                                          VisibilityEventInfo, ReactionEventInfo)
+from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo,
+                                          ParentEventInfo,
+                                          VisibilityEventInfo, ReactionEventInfo, PlayEffectEventInfo,
+                                          ParentEventUI, SoundEventUI,
+                                          ReactionEventUI, SnapEventUI, ScriptEventUI, VisibilityEventUI,
+                                          PlayEffectEventUI)
 from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
@@ -57,6 +61,17 @@ JAW_ANIMATE_DURATION = 100000
 CHAIN_STR_IDX = 2
 bl_info = {"name": "s4animtools", "category": "Object", "blender": (2, 80, 0)}
 
+parent_events_holder = ParentEventUI()
+sound_events_holder = SoundEventUI()
+reaction_events_holder = ReactionEventUI()
+snap_events_holder = SnapEventUI()
+script_events_holder = ScriptEventUI()
+visibility_events_holder = VisibilityEventUI()
+play_effect_events_holder = PlayEffectEventUI()
+all_event_holders = [parent_events_holder, sound_events_holder,
+                     reaction_events_holder, snap_events_holder,
+                     script_events_holder, visibility_events_holder,
+                      play_effect_events_holder]
 
 def update_valid_skins(scene, context):
 
@@ -406,6 +421,17 @@ class NewClipExporter:
                                                                                           sampling_rate=sampling_rate)
             if frame_time >= timeshifted_timestamp >= 0:
                 current_clip.add_event(ReactionEvent(timeshifted_timestamp, event.reaction_asm, event.reaction_state))
+
+        for event in context.object.play_effect_events_list_UI:
+            event: PlayEffectEventInfo
+            original_timestamp = event.frame_number
+            original_timestamp, timeshifted_timestamp = self.create_timeshifted_timestamp(original_timestamp,
+                                                                                            start_time,
+                                                                                            sampling_rate=sampling_rate)
+            if frame_time >= timeshifted_timestamp >= 0:
+                current_clip.add_event(PlayEffectEvent(timeshifted_timestamp, event.vfx_name, event.actor,
+                                                       event.bone, event.unused_zero, event.target_actor,event.target_bone,
+                                                       event.unique_vfx_name))
         for parameter_fields, event in variable_to_event.items():
             for event_instance in parameter_fields:
                 parameters = event_instance.info.split(",")
@@ -1030,7 +1056,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     #         layout.prop(obj, "select_slots", text = "Slots")
                 except KeyError:
                     pass
-
+            layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
             layout.prop(obj, "show_initial_offset_options", text="Show Initial Offset Options")
             if obj.show_initial_offset_options:
                 layout = self.layout.row()
@@ -1055,88 +1081,36 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             self.layout.prop(obj, "show_events", text="Show Events")
             if obj.show_events:
                 self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
+
+
                 self.draw_events(obj, "parent_events_list", 0.1,
                                  "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
                                  "Parent Events", self.layout,
                                  parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"],
-                                 corresponding_widget_list_count=len(obj.parent_events_list_UI))
-                for idx, item in enumerate(obj.parent_events_list_UI):
-                    self.layout.row().prop(item, "frame_number", text="Frame")
-                    self.layout.row().prop_search(item, "child_actor", context.scene, "objects", text="Child Actor")
-                    self.layout.row().prop_search(item, "parent_actor", context.scene, "objects", text="Parent Actor")
-                    if item.parent_actor != "":
-                        self.layout.row().prop_search(item, "parent_bone", context.scene.objects[item.parent_actor].pose, "bones",
-                                               text="Parent Bone")
-                    right_row = self.layout.row()
-                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"parent_events_list_UI,{idx},up"
-                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"parent_events_list_UI,{idx},down"
-                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"parent_events_list_UI,{idx},delete"
-                    right_row.operator('s4animtools.move_new_element', text='+').args = f"parent_events_list_UI,{idx},create"
-                    right_row.scale_x = 0.3
-                    self.layout.row().label(text="")
+                                 corresponding_widget_list_count=parent_events_holder.get_corresponding_list_count(obj))
 
-                if len(obj.parent_events_list_UI) == 0:
-                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"parent_events_list_UI,{0},create"
+
+                parent_events_holder.draw_all_instances(context, obj, self.layout)
 
                 self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
                                  "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"], editable=False,
-                                 corresponding_widget_list_count=len(obj.sound_events_list_UI))
+                                 corresponding_widget_list_count=sound_events_holder.get_corresponding_list_count(obj))
 
-                for idx, item in enumerate(obj.sound_events_list_UI):
-                    self.layout.row().prop(item, "frame_number", text="Frame")
-                    self.layout.row().prop(item, "sound_name", text="Sound")
-                    right_row = self.layout.row()
-                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"sound_events_list_UI,{idx},up"
-                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"sound_events_list_UI,{idx},down"
-                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"sound_events_list_UI,{idx},delete"
-                    right_row.operator('s4animtools.move_new_element', text='+').args = f"sound_events_list_UI,{idx},create"
-                    right_row.scale_x = 0.3
-                    self.layout.row().label(text="")
-
-                if len(obj.sound_events_list_UI) == 0:
-                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"sound_events_list_UI,{0},create"
+                sound_events_holder.draw_all_instances(context, obj, self.layout)
 
                 self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
                                  "Script Events",
-                                 self.layout, parameters=["Frame", "Script Xevt"], corresponding_widget_list_count=len(obj.script_events_list_UI))
-                for idx, item in enumerate(obj.script_events_list_UI):
-                    self.layout.row().prop(item, "frame_number", text="Frame")
-                    self.layout.row().prop(item, "event_id", text="Xevt ID")
-                    right_row = self.layout.row()
-                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"script_events_list_UI,{idx},up"
-                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"script_events_list_UI,{idx},down"
-                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"script_events_list_UI,{idx},delete"
-                    right_row.operator('s4animtools.move_new_element', text='+').args = f"script_events_list_UI,{idx},create"
-                    right_row.scale_x = 0.3
-                    self.layout.row().label(text="")
-
-                if len(obj.script_events_list_UI) == 0:
-                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"script_events_list_UI,{0},create"
-
+                                 self.layout, parameters=["Frame", "Script Xevt"], corresponding_widget_list_count=
+                                 script_events_holder.get_corresponding_list_count(obj))
+                script_events_holder.draw_all_instances(context, obj, self.layout)
 
 
                 self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
                                  "Snap Events", self.layout,
                                  parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ],
-                                 corresponding_widget_list_count=len(obj.snap_events_list_UI))
+                                 corresponding_widget_list_count=snap_events_holder.get_corresponding_list_count(obj))
 
-                for idx, item in enumerate(obj.snap_events_list_UI):
-                    self.layout.row().prop(item, "frame_number", text="Frame")
-                    self.layout.row().prop_search(item, "target_actor", context.scene, "objects", text="Target Actor")
-                    if item.target_actor != "":
-                        self.layout.row().prop_search(item, "target_bone", context.scene.objects[item.target_actor].pose, "bones",
-                                               text="Target Bone")
-                    right_row = self.layout.row()
-                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"snap_events_list_UI,{idx},up"
-                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"snap_events_list_UI,{idx},down"
-                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"snap_events_list_UI,{idx},delete"
-                    right_row.operator('s4animtools.move_new_element', text='+').args = f"snap_events_list_UI,{idx},create"
-                    right_row.scale_x = 0.3
-                    self.layout.row().label(text="")
-
-                if len(obj.snap_events_list_UI) == 0:
-                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"snap_events_list_UI,{0},create"
-
+                snap_events_holder.draw_all_instances(context, obj, self.layout)
 
                 self.draw_events(obj, "reaction_events_list", 0.1,
                                  "Parameters (Frame Number/Reaction ASM/Reaction State)",
@@ -1144,27 +1118,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  parameters=["Frame", "Reaction ASM Name", "Reaction State Name"],
                                  corresponding_widget_list_count=len(obj.reaction_events_list_UI))
 
-                for idx, item in enumerate(obj.reaction_events_list_UI):
-                    self.layout.row().prop(item, "frame_number", text="Frame")
-                    self.layout.row().prop(item, "reaction_asm", text="Reaction ASM")
-                    self.layout.row().prop(item, "reaction_state", text="Reaction State")
-
-                    right_row = self.layout.row()
-                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"reaction_events_list_UI,{idx},up"
-                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"reaction_events_list_UI,{idx},down"
-                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"reaction_events_list_UI,{idx},delete"
-                    right_row.operator('s4animtools.move_new_element', text='+').args = f"reaction_events_list_UI,{idx},create"
-                    right_row.scale_x = 0.3
-                    self.layout.row().label(text="")
-                if len(obj.reaction_events_list_UI) == 0:
-                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"reaction_events_list_UI,{0},create"
-
+                reaction_events_holder.draw_all_instances(context, obj, self.layout)
 
                 self.draw_events(obj, "play_effect_events_list", 0.1,
                                  "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/Target Actor Name/Target Bone Name/Unique VFX Name)",
                                  "Play Effect Events", self.layout,
                                  parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)",
-                                             "Target Actor Name", "Target Bone Name", "Unique VFX Name"])
+                                             "Target Actor Name", "Target Bone Name", "Unique VFX Name"],
+                                 corresponding_widget_list_count=play_effect_events_holder.get_corresponding_list_count(obj))
+                play_effect_events_holder.draw_all_instances(context, obj, self.layout)
                 self.draw_events(obj, "stop_effect_events_list", 0.1,
                                  "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
                                  "Stop Effect Events", self.layout,
@@ -1174,21 +1136,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
                                  "Visibility Events", self.layout,
                                  parameters=["Frame", "Actor Name", "Visibility (0 or 1)"], corresponding_widget_list_count=len(obj.visibility_events_list_UI))
-                for idx, item in enumerate(obj.visibility_events_list_UI):
-                    self.layout.row().prop(item, "frame_number", text="Frame")
-                    row = self.layout.row()
-                    row.prop_search(item, "actor", context.scene, "objects", text="Actor")
-                    row.prop(item, "visibility", text="Visibility")
-                    right_row = self.layout.row()
-                    right_row.operator('s4animtools.move_new_element', text='↑').args = f"visibility_events_list_UI,{idx},up"
-                    right_row.operator('s4animtools.move_new_element', text='↓').args = f"visibility_events_list_UI,{idx},down"
-                    right_row.operator('s4animtools.move_new_element', text='✖').args = f"visibility_events_list_UI,{idx},delete"
-                    right_row.operator('s4animtools.move_new_element', text='+').args = f"visibility_events_list_UI,{idx},create"
-                    right_row.scale_x = 0.3
-                    self.layout.row().label(text="")
-                if len(obj.visibility_events_list_UI) == 0:
-                    self.layout.row().operator('s4animtools.move_new_element', text='+').args = f"visibility_events_list_UI,{0},create"
-
+                visibility_events_holder.draw_all_instances(context, obj, self.layout)
                 self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
                                  "Focus Compatibility Events", self.layout)
                 self.draw_events(obj, "geometry_state_change_events_list", 0.1, "Parameters (Frame/Actor Name/Geometry State Name)",
@@ -2604,8 +2552,8 @@ classes = (
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
     OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
     OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
-    OT_S4ANIMTOOLS_AddSoundEventsListUI, SoundEventInfo, OT_S4ANIMTOOLS_AddScriptEventsListUI, ScriptEventInfo, ParentEventInfo,
-    OT_S4ANIMTOOLS_UpgradeData, SnapEventInfo, VisibilityEventInfo, ReactionEventInfo,
+    OT_S4ANIMTOOLS_AddSoundEventsListUI, OT_S4ANIMTOOLS_AddScriptEventsListUI,
+    OT_S4ANIMTOOLS_UpgradeData,
     OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
 
@@ -2776,8 +2724,8 @@ def register():
     """Register classes for the things."""
     from bpy.utils import register_class
     locomotion_register()
-
-
+    for event_holder in all_event_holders:
+        event_holder.register_blender_class()
     for cls in classes:
         try:
             register_class(cls)
@@ -2805,14 +2753,6 @@ def register():
 
     bpy.types.Object.parent_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.sound_events_list = CollectionProperty(type=AnimationEvent)
-    # New version where each events list get their own unique "bespoke" UI.
-    bpy.types.Object.sound_events_list_UI = CollectionProperty(type=SoundEventInfo)
-    bpy.types.Object.snap_events_list_UI = CollectionProperty(type=SnapEventInfo)
-    bpy.types.Object.script_events_list_UI = CollectionProperty(type=ScriptEventInfo)
-    bpy.types.Object.parent_events_list_UI = CollectionProperty(type=ParentEventInfo)
-    bpy.types.Object.visibility_events_list_UI = CollectionProperty(type=VisibilityEventInfo)
-    bpy.types.Object.reaction_events_list_UI = CollectionProperty(type=ReactionEventInfo)
-
     bpy.types.Object.script_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.reaction_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.play_effect_events_list = CollectionProperty(type=AnimationEvent)
@@ -2913,6 +2853,8 @@ def register():
 
     bpy.types.Scene.pose_pack_mode_enabled = bpy.props.BoolProperty(default=False)
     bpy.types.Object.animation_notes = bpy.props.StringProperty()
+
+    bpy.types.Scene.use_picker_ui = bpy.props.BoolProperty(default=False)
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2936,13 +2878,6 @@ def unregister():
 
     del bpy.types.Object.parent_events_list
     del bpy.types.Object.sound_events_list
-    del bpy.types.Object.sound_events_list_UI
-    del bpy.types.Object.snap_events_list_UI
-    del bpy.types.Object.script_events_list_UI
-    del bpy.types.Object.parent_events_list_UI
-    del bpy.types.Object.visibility_events_list_UI
-    del bpy.types.Object.reaction_events_list_UI
-
     del bpy.types.Object.script_events_list
     del bpy.types.Object.reaction_events_list
     del bpy.types.Object.play_effect_events_list
@@ -3020,4 +2955,8 @@ def unregister():
     del bpy.types.Scene.pose_pack_mode_enabled
 
     del bpy.types.Object.animation_notes
+    del bpy.types.Scene.use_picker_ui
     locomotion_unregister()
+
+    for event_holder in all_event_holders:
+        event_holder.unregister_blender_class()
