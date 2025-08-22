@@ -1066,6 +1066,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 except KeyError:
                     pass
             layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
+            layout.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
             layout.prop(obj, "show_initial_offset_options", text="Show Initial Offset Options")
             if obj.show_initial_offset_options:
                 layout = self.layout.row()
@@ -2869,6 +2870,8 @@ def register():
     bpy.types.Object.animation_notes = bpy.props.StringProperty()
 
     bpy.types.Scene.use_picker_ui = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.insert_last_parent_event_to_start = bpy.props.BoolProperty(default=False)
+
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2970,6 +2973,8 @@ def unregister():
 
     del bpy.types.Object.animation_notes
     del bpy.types.Scene.use_picker_ui
+
+    del bpy.types.Object.insert_last_parent_event_to_start
     locomotion_unregister()
 
     for event_holder in all_event_holders:
