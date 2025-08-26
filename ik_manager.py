@@ -1,4 +1,6 @@
 import bpy
+from bpy.props import IntProperty, CollectionProperty, FloatProperty
+from bpy.types import PropertyGroup
 from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
 MAX_SUBROOTS = 180
 
@@ -299,3 +301,25 @@ class s4animtool_OT_unmute_ik(bpy.types.Operator):
                 if constraint.name.startswith("IKFollow"):
                     constraint.mute = False
         return {'FINISHED'}
+
+
+class TimeRange(PropertyGroup):
+    start_time: IntProperty(name="Start", description="IK Start",
+                            default=0, min=0, soft_max=360)
+    end_time: IntProperty(name="End", description="IK End",
+                          default=0, min=0, soft_max=360)
+
+class IKTarget(PropertyGroup):
+    chain_bone: bpy.props.StringProperty()
+    holder_src_bone: bpy.props.StringProperty()
+
+    target_obj: bpy.props.StringProperty()
+    target_bone: bpy.props.StringProperty()
+    chain_idx: IntProperty(name="Chain Idx", description="Chain index of the ik chain.",
+                           default=-1, min=-1, max=9)
+    start_time: IntProperty(name="Start", description="Start Time",
+                            default=0, min=0, soft_max=360, options={'HIDDEN'})
+    end_time: IntProperty(name="End", description="End Time",
+                          default=0, min=0, soft_max=360, options={'HIDDEN'})
+    ranges: CollectionProperty(type=TimeRange)
+

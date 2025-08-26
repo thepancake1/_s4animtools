@@ -4,6 +4,7 @@ import time
 import math
 
 import s4animtools.bone_names
+from s4animtools.ik_manager import IKTarget, TimeRange
 from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEventInfo, ScriptEventInfo,
                                           ParentEventInfo,
                                           VisibilityEventInfo, ReactionEventInfo, PlayEffectEventInfo,
@@ -33,9 +34,10 @@ import s4animtools.control_rig.basic_control_rig
 import s4animtools.frames.frame
 from s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig, FlipLeftSideAnimationToRightSideSim
-from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget,LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, LIST_OT_MoveIKTarget, \
+from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget, LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, \
+    LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
-    LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget
+    LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget, IKTarget
 import s4animtools.animation_exporter.animation
 from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
 import s4animtools.rig.create_rig
@@ -53,7 +55,7 @@ from collections import defaultdict
 from s4animtools.slot_assignments import SlotAssignment
 from s4animtools.walkstyles.blender import LocomotionBuilderVariantData, draw_locomotion_builder_data, locomotion_register, \
     locomotion_unregister
-
+from s4animtools.control_rig.sticky_bones import OT_S4ANIMTOOLS_EditIKTarget
 CURRENT_S4ANIMTOOLS_VERSION = 2
 JAW_ANIMATE_DURATION = 100000
 
@@ -255,29 +257,6 @@ class Snapper(bpy.types.Operator):
         bpy.data.objects["Cube"].location = y_translations[top_y_bone]
         print(top_y_bone, y_scores[top_y_bone])
         print(time.time())
-
-    def modal(self, context, event):
-        self.execute(context)
-
-        if event.type == 'ESC':
-            context.scene.watcher_running = False
-            print("Giving up.")
-            return {'FINISHED'}
-        print("pass through")
-        # all other events pass through to blender
-        return {'PASS_THROUGH'}
-
-    def invoke(self, context, event):
-        run_as_modal = True
-        print("Invoke me pls")
-        if run_as_modal:
-            self.timer = context.window_manager.event_timer_add(0.01, window=context.window)
-
-            # set the monitoring property to True
-            context.scene.watcher_running = True
-            context.window_manager.modal_handler_add(self)
-            return {'RUNNING_MODAL'}
-            # run self to spawn cubes
         return {'FINISHED'}
 
 
@@ -1066,6 +1045,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 except KeyError:
                     pass
             layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
+            layout.prop(obj, "subroot_for_animations", text="Subroot for Animations")
             layout.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
             layout.prop(obj, "show_initial_offset_options", text="Show Initial Offset Options")
             if obj.show_initial_offset_options:
@@ -1290,6 +1270,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             sub.operator('iktarget.new', text='Clone').command = f"{item.chain_bone}"
 
         sub = row.row(align=True)
+        sub.operator("s4animtools.edit_ik_target", text= "Edit IK Target").command = str(actual_idx)
+        sub = row.row(align=True)
         sub.prop_search(item, "chain_bone", obj.pose, "bones")
         sub = row.row(align=True)
         try:
@@ -1316,11 +1298,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         return row
 
 
-class TimeRange(PropertyGroup):
-    start_time: IntProperty(name="Start", description="IK Start",
-                            default=0, min=0, soft_max=360)
-    end_time: IntProperty(name="End", description="IK End",
-                          default=0, min=0, soft_max=360)
+
 
 
 class QuaternionConfig(PropertyGroup):
@@ -1385,21 +1363,6 @@ class S4ANIMTOOLS_OT_move_new_element(bpy.types.Operator):
             to_edit.add()
             to_edit[-1].info = element
            # print(f'adding {element}')
-
-
-class IKTarget(PropertyGroup):
-    chain_bone: bpy.props.StringProperty()
-    holder_src_bone: bpy.props.StringProperty()
-
-    target_obj: bpy.props.StringProperty()
-    target_bone: bpy.props.StringProperty()
-    chain_idx: IntProperty(name="Chain Idx", description="Chain index of the ik chain.",
-                           default=-1, min=-1, max=9)
-    start_time: IntProperty(name="Start", description="Start Time",
-                            default=0, min=0, soft_max=360, options={'HIDDEN'})
-    end_time: IntProperty(name="End", description="End Time",
-                          default=0, min=0, soft_max=360, options={'HIDDEN'})
-    ranges: CollectionProperty(type=TimeRange)
 
 
 class ClipData(PropertyGroup):
@@ -2565,7 +2528,7 @@ classes = (
     OT_S4ANIMTOOLS_AddSoundEventsListUI, OT_S4ANIMTOOLS_AddScriptEventsListUI,
     OT_S4ANIMTOOLS_UpgradeData,
     OT_S4ANIMTOOLS_NewExportClip,
-    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails)
+    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_EditIKTarget)
 
 def update_selected_bones(self, context):
     pass
@@ -2871,6 +2834,7 @@ def register():
 
     bpy.types.Scene.use_picker_ui = bpy.props.BoolProperty(default=False)
     bpy.types.Object.insert_last_parent_event_to_start = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.subroot_for_animations = bpy.props.IntProperty()
 
 def unregister():
     from bpy.utils import unregister_class
@@ -2975,6 +2939,7 @@ def unregister():
     del bpy.types.Scene.use_picker_ui
 
     del bpy.types.Object.insert_last_parent_event_to_start
+    del bpy.types.Object.subroot_for_animations
     locomotion_unregister()
 
     for event_holder in all_event_holders:
