@@ -6,7 +6,20 @@ import time
 
 START_IDX = 0
 END_IDX = 1
-
+def get_ik_targets_for_chain_bone(obj, chain_bone_name):
+    """
+    Returns a list of all the IK targets of the given object.
+    Note that this should be ordered so that the root bones are first, then all the other ik targets are last.
+    """
+    for ik_target in obj.ik_targets:
+        if ik_target.target_bone == "b__ROOT__" and ik_target.chain_bone == chain_bone_name:
+            yield ik_target
+    for ik_target in obj.ik_targets:
+        if ik_target.target_bone == "b__ROOT__Adjust" and ik_target.chain_bone == chain_bone_name:
+            yield ik_target
+    for ik_target in obj.ik_targets:
+        if ik_target.chain_bone == chain_bone_name:
+            yield ik_target
 
 def get_ik_targets(obj):
     """
@@ -26,6 +39,15 @@ def get_ik_targets(obj):
         if ik_target.target_bone != "b__ROOT__" and ik_target.target_bone != "b__ROOT__Adjust" and "__subroot__" not in\
             ik_target.target_bone:
                 yield ik_target
+
+def get_ik_target_idx_for_slot_assignment_on_chain(obj, slot_assignment):
+    current_bone_idx = defaultdict(int)
+    for idx, item in enumerate(get_ik_targets(obj)):
+        if item == slot_assignment:
+            return current_bone_idx[item.chain_bone]
+        current_bone_idx[item.chain_bone] += 1
+    return -1
+
 
 class s4animtool_OT_bakeik(bpy.types.Operator):
     """Bake the IK weights"""

@@ -1,15 +1,51 @@
 # use typing for type hints
 import bpy
 from typing import TYPE_CHECKING
+
+from s4animtools.ik_baker import get_ik_target_idx_for_slot_assignment_on_chain
+
 if TYPE_CHECKING:
     import s4animtools.ik_manager
 
+def create_childof_constraint_bone(src_obj, to_obj, src_bone, to_bone):
+    constraint = src_bone.constraints.new("CHILD_OF")
+    constraint.target = to_obj
+    constraint.subtarget = to_bone
+    constraint.name = "IK Child Of"
+
+    try:
+        bpy.context.view_layer.objects.active = src_obj
+        src_bone.bone.select = True
+        with bpy.context.temp_override(active_object=src_obj):
+
+            bpy.ops.constraint.childof_clear_inverse(
+                constraint=constraint.name,
+                owner='BONE'
+            )
+    except RuntimeError:
+        print("Could not automatically set inverse matrix")
+
+    return constraint
 
 def create_childof_constraint_obj(src_obj, to_obj, to_bone):
     constraint = src_obj.constraints.new("CHILD_OF")
     constraint.target = to_obj
     constraint.subtarget = to_bone
     constraint.name = "IK Child Of"
+
+    try:
+        bpy.context.view_layer.objects.active = src_obj
+        #src_obj.data.bones.active = src_obj.data.bones[to_bone]
+        #src_obj.data.bones[to_bone].select = True
+        with bpy.context.temp_override(active_object=src_obj):
+
+            bpy.ops.constraint.childof_clear_inverse(
+                constraint=constraint.name,
+                owner='OBJECT'
+            )
+    except RuntimeError:
+        print("Could not automatically set inverse matrix")
+
     return constraint
 
 
@@ -126,10 +162,11 @@ class OT_S4ANIMTOOLS_EditIKTarget(bpy.types.Operator):
         bpy.ops.object.mode_set(mode="OBJECT")
         current_obj = context.object
         bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.empty_add(type='PLAIN_AXES')
-        empty = context.active_object
-        empty.name = "{}_{}_{}".format(current_obj.name, ik_target_info.chain_bone, self.command) + "_target"
-        empty.empty_display_size = 0.2
+        #bpy.ops.object.empty_add(type='PLAIN_AXES')
+        #empty = context.active_object
+
+       # empty.name = "{}_{}_{}".format(current_obj.name, ik_target_info.chain_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info)) + "_target"
+        #empty.empty_display_size = 0.4
         if ik_target_info.target_obj not in bpy.data.objects:
             self.report({'ERROR'}, "Target object not found.")
             return {'CANCELLED'}
@@ -137,7 +174,23 @@ class OT_S4ANIMTOOLS_EditIKTarget(bpy.types.Operator):
             self.report({'ERROR'}, "Target bone not found.")
             return {'CANCELLED'}
         target_obj = bpy.data.objects[ik_target_info.target_obj]
-        create_childof_constraint_obj(empty, target_obj, ik_target_info.target_bone)
+        #create_childof_constraint_obj(empty, target_obj, ik_target_info.target_bone)
+        chain_bone = ik_target_info.chain_bone
+        if chain_bone == "b__L_Hand__":
+            final_bone = "L.Hand"
+        elif chain_bone == "b__R_Hand__":
+            final_bone = "R.Hand"
+        elif chain_bone == "b__L_Foot__":
+            final_bone = "L.Foot"
+        elif chain_bone == "b__R_Foot__":
+            final_bone = "R.Foot"
+        elif chain_bone == "b__ROOT_bind__":
+            final_bone = "RootBind"
+        else:
+            raise Exception("Bone not found")
 
+        bone_name_target = "ik_bone_{}_{}".format(final_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info))
+
+        create_childof_constraint_bone(current_obj, bpy.data.objects[ik_target_info.target_obj], current_obj.pose.bones[bone_name_target], ik_target_info.target_bone)
 
         return {'FINISHED'}
