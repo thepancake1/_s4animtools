@@ -3,6 +3,7 @@ import bpy
 from typing import TYPE_CHECKING
 
 from s4animtools.ik_baker import get_ik_target_idx_for_slot_assignment_on_chain
+from sims_toolkit.blender.ik_chains import mirror_bone_name
 
 if TYPE_CHECKING:
     import s4animtools.ik_manager
@@ -15,7 +16,7 @@ def create_childof_constraint_bone(src_obj, to_obj, src_bone, to_bone):
 
     try:
         bpy.context.view_layer.objects.active = src_obj
-        src_bone.bone.select = True
+        bpy.context.active_object.data.bones.active = src_bone.bone
         with bpy.context.temp_override(active_object=src_obj):
 
             bpy.ops.constraint.childof_clear_inverse(
@@ -62,6 +63,15 @@ def create_rotation_constraint(src_obj, src_bone_name, to_bone):
     constraint.subtarget = src_bone_name
     constraint.target_space = "LOCAL_WITH_PARENT"
     constraint.owner_space = "LOCAL_WITH_PARENT"
+    constraint.name = "IK Copy Rotation"
+    return constraint
+
+
+
+def create_rotation_constraint_worldspace(src_obj, src_bone_name, to_bone):
+    constraint = to_bone.constraints.new("COPY_ROTATION")
+    constraint.target = src_obj
+    constraint.subtarget = src_bone_name
     constraint.name = "IK Copy Rotation"
     return constraint
 
@@ -176,21 +186,33 @@ class OT_S4ANIMTOOLS_EditIKTarget(bpy.types.Operator):
         target_obj = bpy.data.objects[ik_target_info.target_obj]
         #create_childof_constraint_obj(empty, target_obj, ik_target_info.target_bone)
         chain_bone = ik_target_info.chain_bone
+
+        blender_rig_ik_target_bone_name = ""
+
         if chain_bone == "b__L_Hand__":
             final_bone = "L.Hand"
+            blender_rig_ik_target_bone_name = current_obj.ik_bone_05_ik_name
         elif chain_bone == "b__R_Hand__":
             final_bone = "R.Hand"
+            blender_rig_ik_target_bone_name = mirror_bone_name(current_obj.ik_bone_05_ik_name)
         elif chain_bone == "b__L_Foot__":
             final_bone = "L.Foot"
+            blender_rig_ik_target_bone_name = current_obj.ik_bone_15_ik_name
         elif chain_bone == "b__R_Foot__":
             final_bone = "R.Foot"
+            blender_rig_ik_target_bone_name = mirror_bone_name(current_obj.ik_bone_15_ik_name)
         elif chain_bone == "b__ROOT_bind__":
             final_bone = "RootBind"
+            blender_rig_ik_target_bone_name = "b__ROOT_bind__"
         else:
             raise Exception("Bone not found")
-
         bone_name_target = "ik_bone_{}_{}".format(final_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info))
-
-        create_childof_constraint_bone(current_obj, bpy.data.objects[ik_target_info.target_obj], current_obj.pose.bones[bone_name_target], ik_target_info.target_bone)
+        bone_name_target_weight = "ik_bone_{}_{}_weight".format(final_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info))
+        bpy.ops.object.mode_set(mode="POSE")
+        constraint = create_childof_constraint_bone(current_obj, bpy.data.objects[ik_target_info.target_obj], current_obj.pose.bones[bone_name_target], ik_target_info.target_bone)
+        constraint = create_location_constraint(current_obj, bone_name_target, current_obj.pose.bones[blender_rig_ik_target_bone_name])
+        add_driver(constraint, current_obj, "influence", "pose.bones[\"{}\"].location[2]".format(bone_name_target_weight))
+        constraint = create_rotation_constraint_worldspace(current_obj, bone_name_target, current_obj.pose.bones[blender_rig_ik_target_bone_name])
+        add_driver(constraint, current_obj, "influence", "pose.bones[\"{}\"].location[2]".format(bone_name_target_weight))
 
         return {'FINISHED'}

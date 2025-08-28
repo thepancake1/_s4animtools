@@ -20,7 +20,8 @@ from s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, Reacti
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent, GeometryStateChangeEvent
 from s4animtools.serialization.types.basic import f32, u32
 from s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
-from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets
+from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets, get_ik_targets_for_chain_bone, \
+    get_ik_target_idx_for_slot_assignment_on_chain
 
 from s4animtools.rig.create_rig import create_rig_with_context
 import s4animtools.clip_processing.clip_header
@@ -1264,6 +1265,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         sub.prop(item, "chain_idx", text="Chain")
 
         sub.scale_x = 0.5
+        sub.label(text=str(get_ik_target_idx_for_slot_assignment_on_chain(obj, item)))
         sub.operator('iktarget.delete_specific', text='Delete').command = str(actual_idx)
         #print(idx, ik_chain_count, item.chain_bone)
         if idx == ik_chain_count - 1:
