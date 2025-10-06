@@ -70,9 +70,8 @@ class ClipResource(BaseClipResource):
                 self.explicit_namespaces.append(ExplicitNamespace(namespace))
         self.slot_assignments = slot_assignments
         self.slot_assignment_count = len(slot_assignments)
-        self.clipEventCount = 0
-        self.clipEventList = []
-        self.codecDataLength = 0
+        self.clip_event_list = []
+        self.codec_data_length = 0
         self.clip_body = ClipBody(self.clip_name, source_file_name)
 
     @property
@@ -87,6 +86,10 @@ class ClipResource(BaseClipResource):
     def file_name_length(self):
         return len(self.file_name)
 
+    @property
+    def clip_event_count(self):
+        return len(self.clip_event_list)
+
     def update_duration(self, ticks):
         # -1 tick for some reason.
         self.duration = ticks / 30 - (1 / 30)
@@ -94,8 +97,7 @@ class ClipResource(BaseClipResource):
 
 
     def add_event(self, event):
-        self.clipEventList.append(event)
-        self.clipEventCount += 1
+        self.clip_event_list.append(event)
 
     def get_clip_filename(self):
         if self.s3pe_naming:
@@ -202,8 +204,8 @@ class ClipResource(BaseClipResource):
                       u32(self.clip_name_length), String(self.clip_name),
                       u32(self.rig_name_length), String(self.rig_name), u32(self.explicit_namespace_count),
                       *self.explicit_namespaces,
-                      u32(self.slot_assignment_count), *self.slot_assignments, u32(self.clipEventCount),
-                      *self.clipEventList, u32(self.codecDataLength)]
+                      u32(self.slot_assignment_count), *self.slot_assignments, u32(self.clip_event_count),
+                      *self.clip_event_list, u32(self.codec_data_length)]
         header_data = []
 
         header_length = 0
