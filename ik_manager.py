@@ -302,6 +302,16 @@ class s4animtool_OT_unmute_ik(bpy.types.Operator):
                     constraint.mute = False
         return {'FINISHED'}
 
+class S4ANIMTOOLS_OT_DeleteAllIKTargets(bpy.types.Operator):
+    """Remove the IK weights"""
+    bl_idname = "s4animtools.delete_all_ik_channels"
+    bl_label = "Delete All IK Channels"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        for idx in range(len(context.object.ik_targets)):
+            context.object.ik_targets.remove(0)
+        return {'FINISHED'}
 
 class TimeRange(PropertyGroup):
     start_time: IntProperty(name="Start", description="IK Start",

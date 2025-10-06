@@ -38,7 +38,7 @@ from s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRig
 from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget, LIST_OT_CreateIKTarget, LIST_OT_DeleteIKTarget, \
     LIST_OT_MoveIKTarget, \
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
-    LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget, IKTarget
+    LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget, IKTarget, S4ANIMTOOLS_OT_DeleteAllIKTargets
 import s4animtools.animation_exporter.animation
 from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
 import s4animtools.rig.create_rig
@@ -970,6 +970,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             if obj.show_ik_options:
 
                 self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
+                self.layout.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
 
                 layout = self.layout
                 box = layout.row()
@@ -2530,7 +2531,8 @@ classes = (
     OT_S4ANIMTOOLS_AddSoundEventsListUI, OT_S4ANIMTOOLS_AddScriptEventsListUI,
     OT_S4ANIMTOOLS_UpgradeData,
     OT_S4ANIMTOOLS_NewExportClip,
-    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_EditIKTarget)
+    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_EditIKTarget,
+    S4ANIMTOOLS_OT_DeleteAllIKTargets)
 
 def update_selected_bones(self, context):
     pass
