@@ -11,6 +11,8 @@ from s4animtools.serialization.types.strings import IOString
 from s4animtools.slot_assignments import SlotAssignment
 from s4animtools.stream import FileReader
 
+FPS = 30
+
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
                            "b__L_Foot__" : 2, "b__R_Foot__" : 3,
                            "b__ROOT_bind__" : 4}
@@ -21,7 +23,7 @@ class ExplicitNamespace:
         self.length = len(value)
         self.value = value
 
-    def serialize(self):
+    def to_binary(self):
         return u32(self.length).to_binary() + self.value.encode("ascii")
 
 
@@ -92,7 +94,7 @@ class ClipResource(BaseClipResource):
 
     def update_duration(self, ticks):
         # -1 tick for some reason.
-        self.duration = ticks / 30 - (1 / 30)
+        self.duration = ticks / FPS - (1 / FPS)
         self.clip_body.set_clip_length(ticks)
 
 

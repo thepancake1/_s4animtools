@@ -53,14 +53,14 @@ class Bone:
         self.bone_hash = u32(get_32bit_hash(current_bone.name))
         self.flags = u32(Rig.determine_bone_type(current_bone.name))
         return self
-    def serialize(self):
+    def to_binary(self):
         serialized = [*self.position, *self.rotation, *self.scale, self.bone_name_length, self.bone_name,
                       self.mirrored_bone_idx, self.parent_idx, self.bone_hash, self.flags]
 
         serialized_stuff = []
         for value in serialized:
             print(value)
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -114,7 +114,7 @@ class Rig:
         self.rig_name_length = u32(0)
         return self
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.major_version, self.minor_version, self.bone_count, *self.bones, self.rig_name_length]
 
         serialized_stuff = []
