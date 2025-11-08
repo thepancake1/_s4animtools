@@ -151,9 +151,82 @@ def add_driver(
     d.expression = d.expression if not negative else "-1 * " + d.expression
 
 
-class OT_S4ANIMTOOLS_EditIKTarget(bpy.types.Operator):
+def preview_slot_assignment(operator, current_obj, combined_slot_idx):
+    ik_target_info = current_obj.ik_targets[combined_slot_idx]
+    if ik_target_info is None:
+        operator.report({'ERROR'}, "No IK Target found.")
+        return {'CANCELLED'}
+
+    # Create an empty, then add a copy transform constraint to the empty
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.ops.object.select_all(action='DESELECT')
+    # bpy.ops.object.empty_add(type='PLAIN_AXES')
+    # empty = context.active_object
+
+    # empty.name = "{}_{}_{}".format(current_obj.name, ik_target_info.chain_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info)) + "_target"
+    # empty.empty_display_size = 0.4
+
+    # If iktarget info is none, this is probably a sequence and this particular clip doesn't have it assigned.
+    if ik_target_info.target_obj is None or ik_target_info.target_obj == "":
+        return {"FINISHED"}
+    if ik_target_info.target_obj not in bpy.data.objects:
+        operator.report({'ERROR'}, "Target object not found.")
+        return {'CANCELLED'}
+    if ik_target_info.target_bone not in bpy.data.objects[ik_target_info.target_obj].pose.bones:
+        operator.report({'ERROR'}, "Target bone not found.")
+        return {'CANCELLED'}
+    target_obj = bpy.data.objects[ik_target_info.target_obj]
+    chain_bone = ik_target_info.chain_bone
+
+    if chain_bone == "b__L_Hand__":
+        final_bone = "L.Hand"
+        blender_rig_ik_target_bone_name = current_obj.ik_bone_05_ik_name
+    elif chain_bone == "b__R_Hand__":
+        final_bone = "R.Hand"
+        blender_rig_ik_target_bone_name = mirror_bone_name(current_obj.ik_bone_05_ik_name)
+    elif chain_bone == "b__L_Foot__":
+        final_bone = "L.Foot"
+        blender_rig_ik_target_bone_name = current_obj.ik_bone_15_ik_name
+    elif chain_bone == "b__R_Foot__":
+        final_bone = "R.Foot"
+        blender_rig_ik_target_bone_name = mirror_bone_name(current_obj.ik_bone_15_ik_name)
+    elif chain_bone == "b__ROOT_bind__":
+        final_bone = "RootBind"
+        blender_rig_ik_target_bone_name = "b__ROOT_bind__"
+    else:
+        raise Exception("Bone not found")
+
+    slot_assignment_idx = get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info)
+
+    bone_name_target = "ik_bone_{}_{}".format(final_bone, slot_assignment_idx)
+    bone_name_target_weight = "ik_bone_{}_{}_weight".format(final_bone, slot_assignment_idx)
+    bpy.ops.object.mode_set(mode="POSE")
+    constraint = create_childof_constraint_bone(current_obj, bpy.data.objects[ik_target_info.target_obj],
+                                                current_obj.pose.bones[bone_name_target],
+                                                ik_target_info.target_bone)
+    loc_constraint = create_location_constraint(current_obj, bone_name_target,
+                                                current_obj.pose.bones[blender_rig_ik_target_bone_name])
+
+    rot_constraint = create_rotation_constraint_worldspace(current_obj, bone_name_target,
+                                                           current_obj.pose.bones[blender_rig_ik_target_bone_name])
+
+    # Slot assignment idx 0 is reserved for world space ik, aka IK targeting the root bone.
+    # It should always be under the other bones and always be on
+    if slot_assignment_idx != 0:
+        add_driver(loc_constraint, current_obj, "influence",
+                   "pose.bones[\"{}\"].location[2]".format(bone_name_target_weight))
+        add_driver(rot_constraint, current_obj, "influence",
+                   "pose.bones[\"{}\"].location[2]".format(bone_name_target_weight))
+
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    bpy.ops.object.select_all(action='DESELECT')
+
+    current_obj.select_set(True)
+    return {"FINISHED"}
+class OT_S4ANIMTOOLS_PreviewSlotAssignment(bpy.types.Operator):
     """Delete an ik target."""
-    bl_idname = "s4animtools.edit_ik_target"
+    bl_idname = "s4animtools.preview_slot_assignment"
     bl_label = "Edit an IK Target"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -162,57 +235,21 @@ class OT_S4ANIMTOOLS_EditIKTarget(bpy.types.Operator):
     def execute(self, context):
         if not self.command.isdigit():
             return {'CANCELLED'}
-      #  ik_target_info
-        ik_target_info = context.object.ik_targets[int(self.command)]
-        if ik_target_info is None:
-            self.report({'ERROR'}, "No IK Target found.")
-            return {'CANCELLED'}
 
-        # Create an empty, then add a copy transform constraint to the empty
-        bpy.ops.object.mode_set(mode="OBJECT")
-        current_obj = context.object
-        bpy.ops.object.select_all(action='DESELECT')
-        #bpy.ops.object.empty_add(type='PLAIN_AXES')
-        #empty = context.active_object
+        return preview_slot_assignment(self, context.object, int(self.command))
 
-       # empty.name = "{}_{}_{}".format(current_obj.name, ik_target_info.chain_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info)) + "_target"
-        #empty.empty_display_size = 0.4
-        if ik_target_info.target_obj not in bpy.data.objects:
-            self.report({'ERROR'}, "Target object not found.")
-            return {'CANCELLED'}
-        if ik_target_info.target_bone not in bpy.data.objects[ik_target_info.target_obj].pose.bones:
-            self.report({'ERROR'}, "Target bone not found.")
-            return {'CANCELLED'}
-        target_obj = bpy.data.objects[ik_target_info.target_obj]
-        #create_childof_constraint_obj(empty, target_obj, ik_target_info.target_bone)
-        chain_bone = ik_target_info.chain_bone
 
-        blender_rig_ik_target_bone_name = ""
+class OT_S4ANIMTOOLS_PreviewAllSlotAssignments(bpy.types.Operator):
+    bl_idname = "s4animtools.preview_all_slot_assignments"
+    bl_label = "Edit an IK Target"
+    bl_options = {"REGISTER", "UNDO"}
 
-        if chain_bone == "b__L_Hand__":
-            final_bone = "L.Hand"
-            blender_rig_ik_target_bone_name = current_obj.ik_bone_05_ik_name
-        elif chain_bone == "b__R_Hand__":
-            final_bone = "R.Hand"
-            blender_rig_ik_target_bone_name = mirror_bone_name(current_obj.ik_bone_05_ik_name)
-        elif chain_bone == "b__L_Foot__":
-            final_bone = "L.Foot"
-            blender_rig_ik_target_bone_name = current_obj.ik_bone_15_ik_name
-        elif chain_bone == "b__R_Foot__":
-            final_bone = "R.Foot"
-            blender_rig_ik_target_bone_name = mirror_bone_name(current_obj.ik_bone_15_ik_name)
-        elif chain_bone == "b__ROOT_bind__":
-            final_bone = "RootBind"
-            blender_rig_ik_target_bone_name = "b__ROOT_bind__"
-        else:
-            raise Exception("Bone not found")
-        bone_name_target = "ik_bone_{}_{}".format(final_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info))
-        bone_name_target_weight = "ik_bone_{}_{}_weight".format(final_bone, get_ik_target_idx_for_slot_assignment_on_chain(current_obj, ik_target_info))
-        bpy.ops.object.mode_set(mode="POSE")
-        constraint = create_childof_constraint_bone(current_obj, bpy.data.objects[ik_target_info.target_obj], current_obj.pose.bones[bone_name_target], ik_target_info.target_bone)
-        constraint = create_location_constraint(current_obj, bone_name_target, current_obj.pose.bones[blender_rig_ik_target_bone_name])
-        add_driver(constraint, current_obj, "influence", "pose.bones[\"{}\"].location[2]".format(bone_name_target_weight))
-        constraint = create_rotation_constraint_worldspace(current_obj, bone_name_target, current_obj.pose.bones[blender_rig_ik_target_bone_name])
-        add_driver(constraint, current_obj, "influence", "pose.bones[\"{}\"].location[2]".format(bone_name_target_weight))
 
-        return {'FINISHED'}
+    def execute(self, context):
+        if context.object is None:
+            self.report({'ERROR'}, "No selected object found.")
+        for slot_assignment_idx in range(len(context.object.ik_targets)):
+            preview_slot_assignment(self, context.object, slot_assignment_idx)
+        return {"FINISHED"}
+
+

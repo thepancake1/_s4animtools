@@ -40,7 +40,7 @@ def get_ik_targets(obj):
             ik_target.target_bone:
                 yield ik_target
 
-def get_ik_target_idx_for_slot_assignment_on_chain(obj, slot_assignment):
+def get_ik_target_idx_for_slot_assignment_on_chain(obj, slot_assignment) -> int:
     current_bone_idx = defaultdict(int)
     for idx, item in enumerate(get_ik_targets(obj)):
         if item == slot_assignment:

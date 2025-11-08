@@ -56,7 +56,9 @@ from collections import defaultdict
 from s4animtools.slot_assignments import SlotAssignment
 from s4animtools.walkstyles.blender import LocomotionBuilderVariantData, draw_locomotion_builder_data, locomotion_register, \
     locomotion_unregister
-from s4animtools.control_rig.sticky_bones import OT_S4ANIMTOOLS_EditIKTarget
+from s4animtools.control_rig.sticky_bones import OT_S4ANIMTOOLS_PreviewSlotAssignment, \
+    OT_S4ANIMTOOLS_PreviewAllSlotAssignments
+
 CURRENT_S4ANIMTOOLS_VERSION = 2
 JAW_ANIMATE_DURATION = 100000
 
@@ -971,7 +973,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
                 self.layout.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
-
+                self.layout.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
                 layout = self.layout
                 box = layout.row()
                 row = box
@@ -1273,7 +1275,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             sub.operator('iktarget.new', text='Clone').command = f"{item.chain_bone}"
 
         sub = row.row(align=True)
-        sub.operator("s4animtools.edit_ik_target", text= "Edit IK Target").command = str(actual_idx)
+        sub.operator("s4animtools.preview_slot_assignment", text= "Preview Slot Assignment").command = str(actual_idx)
         sub = row.row(align=True)
         sub.prop_search(item, "chain_bone", obj.pose, "bones")
         sub = row.row(align=True)
@@ -2531,7 +2533,7 @@ classes = (
     OT_S4ANIMTOOLS_AddSoundEventsListUI, OT_S4ANIMTOOLS_AddScriptEventsListUI,
     OT_S4ANIMTOOLS_UpgradeData,
     OT_S4ANIMTOOLS_NewExportClip,
-    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_EditIKTarget,
+    OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_PreviewSlotAssignment, OT_S4ANIMTOOLS_PreviewAllSlotAssignments,
     S4ANIMTOOLS_OT_DeleteAllIKTargets)
 
 def update_selected_bones(self, context):
