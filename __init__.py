@@ -743,12 +743,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
      #   layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
+            box = layout.box()
 
-            layout.prop(obj, "is_actor", text="Is Actor")
+            box.prop(obj, "is_actor", text="Is Actor")
+            box.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
+
             if obj.is_actor:
-                box = layout.box()
-
-                box.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
                 box.prop(obj, "actor_type", text="Actor Type")
                 box.prop(obj, "game_type", text="Game Type")
 
@@ -1153,9 +1153,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
                 box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-            box.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
-            # Draw animation notes string as multiline text
-            box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+                box.operator("s4animtools.export_all_clips", text="Export All Clips")
+                # Draw animation notes string as multiline text
+                box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
         else:
             layout.label(text="Select an object to get started.")
 
