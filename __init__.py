@@ -744,7 +744,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
         if obj is not None:
 
-            layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
             layout.prop(obj, "is_actor", text="Is Actor")
             if obj.is_actor:
                 box = layout.box()
@@ -938,13 +937,15 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.prop(obj, "show_ik_options", text="Show Slot Assignments")
             if obj.show_ik_options:
                 box = layout.box()
+                row = box.row()
+
+                row.operator("s4animtools.toggle_slots", text="Toggle Slots")
+                row.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
 
                 row = box.row()
                 row.operator('iktarget.create_roots', text='Create World IK Channels')
                 row.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
-                row = box.row()
 
-                row.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
                 box = layout.row()
 
                 if obj.ik_idx >= 0 and obj.ik_targets:
@@ -1076,31 +1077,31 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  "Geometry State Change Events", layout)
             layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
             if obj.show_experimental_options:
+                box = layout.box()
+                box.prop(obj, "subroot_for_animations", text="Subroot for Animations (Import)")
+                box.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
 
-                layout.prop(obj, "subroot_for_animations", text="Subroot for Animations (Import)")
-                layout.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
+                box.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
 
-                layout.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
-
-                layout.label(text="Use Full Precision means using full precision for all animation data.")
-                layout.label(text="Don't enable if you don't know what that means! ")
-                layout.label(text="This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
-                layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
-                layout.prop(obj, "use_world_bone_as_root",
-                                text="Use World Rig and Bone as Root for IK Targets on Object")
-                layout.label(text="The base rig is only used for additive animations such as the infant carrier from Growing Together.")
-                layout.label(text="The base rig setting is not used for normal animations.")
-                layout.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
-                layout.label(text="Export an Additive Clip. Do not use for normal animations")
-                layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
-                layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
-                layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
-                layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
-                layout.prop(obj, "is_overlay", text="Is Overlay")
+              #  box.label(text="Use Full Precision means using full precision for all animation data.")
+              #  box.label(text="Don't enable if you don't know what that means! ")
+              #  box.label(text="This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
+              #  box.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+              #  box.prop(obj, "use_world_bone_as_root",
+              #           text="Use World Rig and Bone as Root for IK Targets on Object")
+             #   box.label(text="The base rig is only used for additive animations such as the infant carrier from Growing Together.")
+              # ## box.label(text="The base rig setting is not used for normal animations.")
+               # box.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
+               # box.label(text="Export an Additive Clip. Do not use for normal animations")
+              #  box.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
+                box.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
+                box.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
+                box.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
+                box.prop(obj, "is_overlay", text="Is Overlay")
                 if obj.is_actor:
                     if obj.actor_type == "sim":
                         # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
-                        layout.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
+                        box.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
                 box = layout.box()
                 row = box.row()
                 row.operator("s4animtools.mask_out_parents", text="Mask Out Parents")
@@ -1131,30 +1132,32 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
             if obj.is_enabled_for_animation:
-
-                layout.prop(obj, "allow_jaw_animation_for_entire_animation",
-                                 text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
-
-                layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
-                layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
                 box = layout.box()
+
+
+                box.operator("s4animtools.new_export_clip", text="Export Clip")
+
+                box.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
 
                 box.prop(context.scene, "clip_locos", text="Clip Loco(s)")
                 box.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
                 box.prop(context.scene, "clip_name", text = "Clip Name(s)")
-                layout.label(text="The center rig is where the root of your exported animation will be located.")
-                layout.label(text="Useful for poses with multiple sims.")
-                layout.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
+                box.prop(obj, "allow_jaw_animation_for_entire_animation",
+                                 text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
+
+                box.label(text="The center rig is where the root of your exported animation will be located.")
+                box.label(text="Useful for poses with multiple sims.")
+                box.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
                 if len(context.object.world_rig) > 0:
                     if context.object.world_rig in bpy.data.objects:
                         target_bone_obj = bpy.data.objects[obj.world_rig]
-                        layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
+                        box.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
 
 
-                layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-            layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
+                box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
+            box.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
             # Draw animation notes string as multiline text
-            layout.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+            box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
       #      self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
       #      self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
 #
