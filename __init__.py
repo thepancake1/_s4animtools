@@ -1156,6 +1156,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             box.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
             # Draw animation notes string as multiline text
             box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+        else:
+            layout.label(text="Select an object to get started.")
+
       #      self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
       #      self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
 #
