@@ -747,17 +747,20 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
             layout.prop(obj, "is_actor", text="Is Actor")
             if obj.is_actor:
-                layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
-                layout.prop(obj, "actor_type", text="Actor Type")
-                layout.prop(obj, "game_type", text="Game Type")
+                box = layout.box()
 
-                layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
+                box.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
+                box.prop(obj, "actor_type", text="Actor Type")
+                box.prop(obj, "game_type", text="Game Type")
+
+                box.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
 
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
             if obj.show_footprint_options:
                 layout.prop(obj, "is_footprint", text="Is Footprint Object")
+                box = layout.box()
 
-                row = layout.row()
+                row = box.row()
                 row.operator("s4animtools.import_footprint", text="Import Footprint")
                 row.operator("s4animtools.export_footprint", text="Export Footprint")
 
@@ -909,34 +912,40 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 # Trackmasks are not working yet
                 #layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
                 # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-                row = layout.row()
-                row.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
-                row.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
+
+                box = layout.box()
+                row = box.row()
+                row.operator("s4animtools.flip_left_side_sim", text="Flip Sim")
+                row.operator("s4animtools.copy_left_side_sim", text="Copy Left Side to Right Side Sim")
                 #layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
                 # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
+                box = layout.box()
 
-                row = layout.row()
+                row = box.row()
 
-                row.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                row.operator("s4animtools.maintain_keyframe",
                                      text="Maintain Keyframe").direction = "FORWARDS"
-                row.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                row.operator("s4animtools.maintain_keyframe",
                                      text="Maintain Keyframe Backward").direction = "BACK"
+                box = layout.box()
 
-                row = layout.row()
-                row.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
+                row = box.row()
+                row.operator("s4animtools.import_rig", text="Import Rig")
 
-                row.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
+                row.operator("s4animtools.export_rig", text="Export Rig")
 
 
             layout.prop(obj, "show_ik_options", text="Show Slot Assignments")
             if obj.show_ik_options:
+                box = layout.box()
 
-                row = layout.row()
+                row = box.row()
                 row.operator('iktarget.create_roots', text='Create World IK Channels')
                 row.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
-                layout.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
+                row = box.row()
+
+                row.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
                 box = layout.row()
-                row = box
 
                 if obj.ik_idx >= 0 and obj.ik_targets:
                     # These are called rows but are obviously columns.
@@ -979,32 +988,31 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 #layout.operator("s4animtools.update_ik_empties", text="Update IK Empties")
                 row.scale_x = 1
 
-            layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
-            layout.prop(obj, "subroot_for_animations", text="Subroot for Animations")
-            layout.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
             layout.prop(obj, "show_initial_offset_options", text="Show Initial Offset Options")
             if obj.show_initial_offset_options:
-                row = layout.row()
+                box = layout.box()
+                row = box.row()
 
                 row.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
                 if len(context.object.relative_rig) > 0:
                     if context.object.relative_rig in bpy.data.objects:
                         relative_rig_obj = bpy.data.objects[context.object.relative_rig]
-                        layout.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones",
+                        box.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones",
                                            text="Initial Offsets Bone")
-                row = layout.row()
-                row.scale_x = 0.4
-                row.label(text="Initial Offset Q")
-                row.scale_x = 0.5
+                row = box.row()
+                row.prop(obj, "initial_offset_q", text="Initial Offset Q")
+                row = box.row()
 
-                row.prop(obj, "initial_offset_q", text="")
-                row.scale_x = 0.4
-                row.label(text="Initial Offset T")
 
-                row.prop(obj, "initial_offset_t", text="")
+                row.prop(obj, "initial_offset_t", text="Initial Offset T")
+                row = box.row()
+
+                row.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
 
             layout.prop(obj, "show_events", text="Show Events")
             if obj.show_events:
+                layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
+
                 layout.operator("s4animtools.initialize_events", text="Initialize Events")
 
 
@@ -1068,6 +1076,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                  "Geometry State Change Events", layout)
             layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
             if obj.show_experimental_options:
+
+                layout.prop(obj, "subroot_for_animations", text="Subroot for Animations (Import)")
+                layout.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
+
                 layout.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
 
                 layout.label(text="Use Full Precision means using full precision for all animation data.")
@@ -1089,10 +1101,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     if obj.actor_type == "sim":
                         # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
                         layout.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
-                layout.operator("s4animtools.mask_out_parents", icon='MESH_CUBE', text="Mask Out Parents")
-                layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
-                layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
-                layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
+                box = layout.box()
+                row = box.row()
+                row.operator("s4animtools.mask_out_parents", text="Mask Out Parents")
+                row.operator("s4animtools.mask_out_children", text="Mask Out Children")
+               # layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
+               # layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
             row =  layout.row()
             try:
                 selected_bone = bpy.context.selected_pose_bones[0]
@@ -1123,9 +1137,11 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
                 layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
-                layout.prop(context.scene, "clip_locos", text="Clip Loco(s)")
-                layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
-                layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
+                box = layout.box()
+
+                box.prop(context.scene, "clip_locos", text="Clip Loco(s)")
+                box.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
+                box.prop(context.scene, "clip_name", text = "Clip Name(s)")
                 layout.label(text="The center rig is where the root of your exported animation will be located.")
                 layout.label(text="Useful for poses with multiple sims.")
                 layout.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
@@ -1136,7 +1152,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
                 layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-                layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
             layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
             # Draw animation notes string as multiline text
             layout.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
