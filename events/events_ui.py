@@ -164,7 +164,8 @@ class EventUI:
             event_list = getattr(obj, self.event_ui_list_name)
             if len(event_list) > 0:
                 for idx, item in enumerate(event_list):
-                    column = layout.column()
+                    box = layout.box()
+                    column = box.column()
                     self.draw_event(context, column, item, idx)
             else:
                 self.draw_create_event(layout)
@@ -216,7 +217,7 @@ class SoundEventUI(EventUI):
         right_row = layout.row()
         right_row.scale_x = 0.3
         self.draw_options(right_row, idx)
-        layout.row().label(text="")
+
 
 
 
@@ -244,7 +245,7 @@ class ParentEventUI(EventUI):
         right_row = layout.row()
         right_row.scale_x = 0.3
         self.draw_options(right_row, idx)
-        layout.row().label(text="")
+
 
 
 
@@ -261,7 +262,7 @@ class ReactionEventUI(EventUI):
         right_row = layout.row()
         right_row.scale_x = 0.3
         self.draw_options(right_row, idx)
-        layout.row().label(text="")
+
 
 class SnapEventUI(EventUI):
     event_ui_list_name = "snap_events_list_UI"
@@ -286,7 +287,7 @@ class SnapEventUI(EventUI):
         right_row = layout.row()
         right_row.scale_x = 0.3
         self.draw_options(right_row, idx)
-        layout.row().label(text="")
+
 
 
 class ScriptEventUI(EventUI):
@@ -301,7 +302,7 @@ class ScriptEventUI(EventUI):
         right_row = layout.row()
         right_row.scale_x = 0.3
         self.draw_options(right_row, idx)
-        layout.row().label(text="")
+
 
 class VisibilityEventUI(EventUI):
     event_ui_list_name = "visibility_events_list_UI"
@@ -318,7 +319,7 @@ class VisibilityEventUI(EventUI):
         right_row = layout.row()
         right_row.scale_x = 0.3
         self.draw_options(right_row, idx)
-        layout.row().label(text="")
+
 
 
 class PlayEffectEventUI(EventUI):
@@ -361,4 +362,3 @@ class PlayEffectEventUI(EventUI):
         right_row = layout.row()
         right_row.scale_x = 0.3
         self.draw_options(right_row, idx)
-        layout.row().label(text="")
