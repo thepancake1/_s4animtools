@@ -1215,12 +1215,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         for idx, item in enumerate(get_ik_targets(obj)):
             if chain_bone == "":
                 if item.chain_bone not in excluded:
-                    box = self.draw_ik_target(context, current_chain_idx, item, obj, box, ik_chain_count)
+                    self.draw_ik_target(context, current_chain_idx, item, obj, box, ik_chain_count)
                     current_chain_idx += 1
 
             elif item.chain_bone == chain_bone:
 
-                box = self.draw_ik_target(context, current_chain_idx, item, obj, box, ik_chain_count)
+                self.draw_ik_target(context, current_chain_idx, item, obj, box, ik_chain_count)
                 current_chain_idx += 1
         return row
 
