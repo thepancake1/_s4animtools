@@ -2451,9 +2451,10 @@ class OT_S4ANIMTOOLS_ToggleSlots(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        if hasattr(context.object, "pose") is None:
-            return {"FINISHED"}
-
+        if not hasattr(context.object, "pose"):
+            return {"CANCELLED"}
+        if not hasattr(context.object.pose, "bones"):
+            return {"CANCELLED"}
         # The current count of slot bones that are enabled
         visible_slot_bones = 0
         # The current count of slot bones that are hidden
