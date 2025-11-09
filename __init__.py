@@ -936,7 +936,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 col.label(text="")
 
 
-            layout.prop(obj, "show_mirror_and_masking_options", text="Show Mirror/Maintain/Bake Options")
+            layout.prop(obj, "show_mirror_and_masking_options", text="Show Rig Options")
 
             if obj.show_mirror_and_masking_options:
 
