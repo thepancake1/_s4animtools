@@ -78,90 +78,6 @@ all_event_holders = [parent_events_holder, sound_events_holder,
                      script_events_holder, visibility_events_holder,
                       play_effect_events_holder]
 
-def update_valid_skins(scene, context):
-
-    items = []
-
-    for ob in context.scene.objects:
-        if ob.is_sim_skin:
-            items.append((ob.name, ob.name, ""))
-
-    return items
-def update_active_sim_skin(self, context):
-    """
-    Function for updating the active sim skin.
-    This function copies over the rig from the active sim skin to the current rig.
-    Note! Exported rigs do not have bones in our control rig, so for example the
-    Left Hand IK and Right Hand IK need to be copied over from the hands default position.
-    The feet need to be recreated as well.
-    """
-    rig_obj = context.object
-    bpy.ops.object.mode_set(mode='OBJECT')
-
-    bpy.ops.object.select_all(action='DESELECT')
-
-    if rig_obj.is_actor:
-        for child in bpy.data.objects[rig_obj.name].children:
-            #print(rig_obj.name, child.name)
-            child.select_set(True)
-        bpy.ops.object.delete()
-
-        new_skin = rig_obj.active_sim_skin
-        bpy.ops.object.select_all(action='DESELECT')
-
-        new_skin_rig = bpy.data.objects[new_skin]
-        new_skin_rig.users_collection[0].hide_viewport = False
-        new_skin_rig.select_set(True)
-
-        bpy.ops.object.mode_set(mode='EDIT')
-        bone_data = {}
-        for bone in new_skin_rig.data.bones:
-            print(bone.name)
-            bone_data[bone.name] = (bone.head_local.copy(), bone.tail_local.copy())
-            if bone.name == "b__L_Hand__":
-                bone_data["Left Hand IK"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Left Hand Target"] = (bone.head_local.copy(), bone.tail_local.copy())
-            elif bone.name == "b__R_Hand__":
-                bone_data["Right Hand IK"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Right Hand Target"] = (bone.head_local.copy(), bone.tail_local.copy())
-            elif bone.name == "b__L_Foot__":
-                bone_data["Left Foot IK"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Left Foot Target"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Left Foot Main Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Left Foot Pivot"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Left Foot Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
-            elif bone.name == "b__R_Foot__":
-                bone_data["Right Foot IK"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Right Foot Target"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Right Foot Main Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Right Foot Pivot"] = (bone.head_local.copy(), bone.tail_local.copy())
-                bone_data["Right Foot Parent"] = (bone.head_local.copy(), bone.tail_local.copy())
-        bpy.ops.object.mode_set(mode='OBJECT')
-        rig_obj.select_set(True)
-
-        bpy.ops.object.mode_set(mode='EDIT')
-        for bone in rig_obj.data.edit_bones:
-            #print(bone.name)
-            if bone.name in bone_data:
-                bone.head = bone_data[bone.name][0]
-                bone.tail = bone_data[bone.name][1]
-                print(bone.name, bone_data[bone.name][0], bone_data[bone.name][1])
-
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        for child in new_skin_rig.children:
-            new_ob = child.copy()
-            bpy.context.scene.collection.objects.link(new_ob)
-            print(rig_obj.name)
-            new_ob.parent = bpy.data.objects[rig_obj.name]
-            for modifier in new_ob.modifiers:
-                print(modifier)
-                if modifier.type == "ARMATURE":
-                    modifier.object = bpy.data.objects[rig_obj.name]
-        rig_obj.select_set(True)
-
-        new_skin_rig.users_collection[0].hide_viewport = True
-
 def determine_ik_slot_targets(rig):
     all_constraints = defaultdict(list)
     current_bone_idx = defaultdict(int)
@@ -829,7 +745,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         if obj is not None:
 
             layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
-            #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
             layout.prop(obj, "is_actor", text="Is Actor")
             if obj.is_actor:
                 layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
@@ -1019,35 +934,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.scale_x = 1
 
                 layout = self.layout.row()
-                try:
-                    if context.object.pose.bones["b__L_Hand__"].constraints["Copy Rotation"].enabled:
-                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
-                                        text="IK To FK (L Arm)").command = "LEFT,HAND"
-                    else:
-                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
-                                        text="FK To IK (L Arm)").command = "LEFT,HAND"
-                    if context.object.pose.bones["b__R_Hand__"].constraints["Copy Rotation"].enabled:
-                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
-                                        text="IK To FK (R Arm)").command = "RIGHT,HAND"
-                    else:
-                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
-                                        text="FK To IK (R Arm)").command = "RIGHT,HAND"
-
-                    if context.object.pose.bones["b__L_Foot__"].constraints["Copy Rotation"].enabled:
-                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
-                                        text="IK To FK (L Leg)").command = "LEFT,FOOT"
-                    else:
-                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
-                                        text="FK To IK (L Leg)").command = "LEFT,FOOT"
-                    if context.object.pose.bones["b__R_Foot__"].constraints["Copy Rotation"].enabled:
-                        layout.operator("s4animtools.ik_to_fk", icon='MESH_CUBE',
-                                        text="IK To FK (R Leg)").command = "RIGHT,FOOT"
-                    else:
-                        layout.operator("s4animtools.fk_to_ik", icon='MESH_CUBE',
-                                        text="FK To IK (R Leg)").command = "RIGHT,FOOT"
-                    #         layout.prop(obj, "select_slots", text = "Slots")
-                except KeyError:
-                    pass
             layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
             layout.prop(obj, "subroot_for_animations", text="Subroot for Animations")
             layout.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
@@ -2027,6 +1913,7 @@ class OT_S4ANIMTOOLS_DetermineBalance(bpy.types.Operator):
 
         return {"FINISHED"}
 
+# I don't think this is used anymore
 class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
     bl_idname = "s4animtools.fk_to_ik"
     bl_label = "FK To IK"
@@ -2136,6 +2023,8 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
 
 
         return {"FINISHED"}
+
+# I don't think this is used anymore
 class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
     bl_idname = "s4animtools.ik_to_fk"
     bl_label = "IK To FK"
@@ -2709,7 +2598,10 @@ def register():
     from bpy.utils import register_class
     locomotion_register()
     for event_holder in all_event_holders:
-        event_holder.register_blender_class()
+        try:
+            event_holder.register_blender_class()
+        except Exception as e:
+            print(e)
     for cls in classes:
         try:
             register_class(cls)
@@ -2824,7 +2716,6 @@ def register():
 
     bpy.types.Object.show_experimental_options = bpy.props.BoolProperty(default=False)
     bpy.types.Object.is_sim_skin = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.active_sim_skin = bpy.props.EnumProperty(items=update_valid_skins, update=update_active_sim_skin)
 
     bpy.types.Object.allow_slots = bpy.props.BoolProperty(default=False)
 
