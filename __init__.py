@@ -772,9 +772,14 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 row.operator("s4animtools.visualize_footprint", text="Terrain").command="terrain"
                 row.operator("s4animtools.visualize_footprint", text="Floor").command="floor"
-                row = box.row()
 
-                row.operator("s4animtools.visualize_footprint", text="Pool").command="pool"
+                # workaround for 1 item in 2 columns
+                row = box.row()
+                col = row.column()
+                col.operator("s4animtools.visualize_footprint", text="Pool").command="pool"
+                col = row.column()
+                col.label(text="")
+
                 row = layout.row()
 
                 row.label(text="Footprint Name/Hash: ")
@@ -830,9 +835,14 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     row.prop(obj, "fence_post", text="Fence Post")
                     row.prop(obj, "any_surface", text="Any Surface")
                     row = box.row()
+                    # 2 items in three column needs this hacky workaround
+                    col = row.column()
+                    col.prop(obj, "air", text="Air")
+                    col = row.column()
 
-                    row.prop(obj, "air", text="Air")
-                    row.prop(obj, "roof", text="Roof")
+                    col.prop(obj, "roof", text="Roof")
+                    col = row.column()
+                    col.label(text="")
 
                     row = layout.row()
 
@@ -957,9 +967,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 #  row.operator('iktarget.move', text='Down').direction = 'DOWN'
                 #  row.operator('iktarget.move', text='Up').direction = 'UP'
                 row.operator('iktarget.new', text='New InGame IK Target').command = ""
-                layout = self.layout.row()
+                row = layout.row()
 
-                layout.operator("s4animtools.bakeik", text="Bake InGame IK Animation Data")
+                row.operator("s4animtools.bakeik", text="Bake InGame IK Animation Data")
                 #layout.operator("s4animtools.muteik", text="Mute IK")
                 #layout.operator("s4animtools.unmuteik", text="Unmute IK")
 
@@ -967,7 +977,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 #layout.operator("s4animtools.preview_ik", text="Preview IK")
                 #layout.operator("s4animtools.update_ik_empties", text="Update IK Empties")
-                layout.scale_x = 1
+                row.scale_x = 1
 
             layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
             layout.prop(obj, "subroot_for_animations", text="Subroot for Animations")
