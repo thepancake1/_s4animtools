@@ -1585,7 +1585,7 @@ class ExportAnimationStateMachine(bpy.types.Operator):
 
         self.unique_id = 1
 
-        anim_path = os.path.join(os.environ["HOMEPATH"], "Desktop", "Animation Workspace",
+        anim_path = os.path.join(os.path.expanduser("~/Desktop"), "Animation Workspace",
                                  "02D5DF13!00000000!" + get_64bithash(
                                      context.object.name.lower()) + "." + context.object.name + ".AnimationStateMachine")
         text = '<?xml version="1.0" encoding="utf-8"?>' \

@@ -489,7 +489,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             rcol.update_chunk_position_size_automatically(0)
 
             all_data = io.BytesIO()
-            default_export_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
+            default_export_path = os.path.join(os.path.expanduser("~/Desktop"), "Animation Workspace")
             selected_export_path = context.scene.s4animtools_export_path
             if selected_export_path == "":
                 selected_export_path = default_export_path
