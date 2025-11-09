@@ -1028,8 +1028,18 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 if len(context.object.relative_rig) > 0:
                     if context.object.relative_rig in bpy.data.objects:
                         relative_rig_obj = bpy.data.objects[context.object.relative_rig]
-                        box.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones",
-                                           text="Initial Offsets Bone")
+                        warn_user = True
+                        if hasattr(relative_rig_obj, "pose"):
+                            if hasattr(relative_rig_obj.pose, "bones"):
+                                box.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones",
+                                                   text="Initial Offsets Bone")
+                                warn_user = False
+
+                        if warn_user:
+                            box.label(text=f"The object you selected: ({context.object.relative_rig}) is not a rig.")
+                    else:
+                        box.label(text=f"The object you selected: ({context.object.relative_rig}) does not exist.")
+
                 row = box.row()
                 row.prop(obj, "initial_offset_q", text="Initial Offset Q")
                 row = box.row()
