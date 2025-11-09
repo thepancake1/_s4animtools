@@ -918,7 +918,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row.operator("s4animtools.copy_left_side_sim", text="Copy Left Side to Right Side Sim")
                 #layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
                 # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
-                box = layout.box()
 
                 row = box.row()
 
@@ -926,7 +925,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                                      text="Maintain Keyframe").direction = "FORWARDS"
                 row.operator("s4animtools.maintain_keyframe",
                                      text="Maintain Keyframe Backward").direction = "BACK"
-                box = layout.box()
 
                 row = box.row()
                 row.operator("s4animtools.import_rig", text="Import Rig")
