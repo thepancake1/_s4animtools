@@ -16,12 +16,12 @@ class PolygonHeightOverride(Serializable):
         self.name_hash = 0
         self.height = 0
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.name_hash = reader.u32()
         self.height = reader.f32()
         return self
 
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.name_hash), u32(self.height)]
 
         serialized_stuff = []
@@ -72,10 +72,10 @@ class FootprintPolyFlags(Serializable):
                "For Pathing: {}\n" \
                "For Placement: {}\n".format(self.terrain_cutout, self.encouraged, self.placement_slotted, self.no_raycast, self.landing_strip,
                                             self.discouraged, self.is_enabled, self.for_pathing, self.for_placement)
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.bitfield = reader.u32()
         return self
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.bitfield)]
 
         serialized_stuff = []
@@ -144,10 +144,10 @@ class IntersectionFlags(Serializable):
         self.objects, self.walls, self.none)
 
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.bitfield = reader.u32()
         return self
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.bitfield)]
 
         serialized_stuff = []
@@ -197,11 +197,11 @@ class SurfaceTypeFlags(Serializable):
                                       self.pool, self.floor, self.terrain)
 
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.bitfield = reader.u32()
         #print(self)
         return self
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.bitfield)]
 
         serialized_stuff = []
@@ -234,11 +234,11 @@ class SurfaceAttributeFlags(Serializable):
                "Slope: {}\n".format(self.inside, self.outside, self.slope)
 
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.bitfield = reader.u32()
        # print(self)
         return self
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.bitfield)]
 
         serialized_stuff = []
@@ -257,7 +257,7 @@ class BoundingBox(Serializable):
         self.min_z = 0
         self.max_z = 0
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.min_x = reader.f32()
         self.min_z = reader.f32()
         self.max_x = reader.f32()
@@ -265,7 +265,7 @@ class BoundingBox(Serializable):
         self.min_y = reader.f32()
         self.max_y = reader.f32()
         return self
-    def serialize(self):
+    def to_binary(self):
         data = [f32(self.min_x), f32(self.min_z), f32(self.max_x), f32(self.max_z),
                 f32(self.min_y), f32(self.max_y)]
 
@@ -282,13 +282,13 @@ class Point(Serializable):
         self.x = 0
         self.z = 0
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.x = reader.f32()
         self.z = reader.f32()
         return self
 
 
-    def serialize(self):
+    def to_binary(self):
         data = [f32(self.x), f32(self.z)]
 
         serialized_stuff = []
@@ -315,7 +315,7 @@ class Area(Serializable):
     def point_count(self):
         return len(self.points)
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.name_hash = reader.u32()
         self.priority =  reader.u8()
         self.area_type_flags = FootprintPolyFlags().read(reader)
@@ -330,7 +330,7 @@ class Area(Serializable):
         self.bounding_box = BoundingBox().read(reader)
         return self
 
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.name_hash), u8(self.priority), u32(self.area_type_flags.bitfield),
                 u8(self.point_count), *self.points,
                 u32(self.intersection_object_type.bitfield), u32(self.allow_intersection_types.bitfield),
@@ -373,7 +373,7 @@ class Footprint(Serializable):
     def routing_areas_count(self):
         return len(self.routing_areas)
 
-    def read(self, reader:FileReader):
+    def from_binary(self, reader:FileReader):
         self.identifier = reader.read(4)
         self.version = reader.u32()
         self.template_key = TGI().read(reader)
@@ -398,7 +398,7 @@ class Footprint(Serializable):
 
             self.minimum_height = reader.f32()
         return self
-    def serialize(self):
+    def to_binary(self):
         serialized_stuff = []
         if self.template_key.t != 0:
             subdata = [u8(self.min_height_override_count), *self.min_height_overrides,
@@ -415,4 +415,8 @@ class Footprint(Serializable):
             serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
+
+    @property
+    def data(self):
+        return self.to_binary()
 

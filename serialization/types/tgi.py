@@ -8,13 +8,13 @@ class TGI(Serializable):
         self.t = 0
         self.g = 0
 
-    def read(self, stream):
+    def from_binary(self, stream):
         self.i = stream.u64()
         self.t = stream.u32()
         self.g = stream.u32()
         return self
 
-    def serialize(self):
+    def to_binary(self):
         data = [u64(self.i), u32(self.t), u32(self.g)]
         serialized_stuff = []
         for value in data:

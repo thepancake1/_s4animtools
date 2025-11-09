@@ -36,12 +36,12 @@ class ChunkInfo:
         self.chunk_position = chunk_position
         self.chunk_size = chunk_size
 
-    def read(self, stream):
+    def from_binary(self, stream):
         self.chunk_position = stream.u32()
         self.chunk_size = stream.u32()
         return self
 
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.chunk_position), u32(self.chunk_size)]
         serialized_stuff = []
         for value in data:
@@ -71,7 +71,7 @@ class RCOL:
     def external_count(self):
         return len(self.external_tgis)
 
-    def read(self, stream):
+    def from_binary(self, stream):
         self.version = stream.u32()
         self.public_chunks = stream.u32()
         self.index3 = stream.u32()
@@ -83,29 +83,29 @@ class RCOL:
             print("Probably garbage or not an RCOL file. Bailing.")
             return self
         for i in range(internal_count):
-            self.internal_tgis.append(TGI().read(stream))
+            self.internal_tgis.append(TGI().from_binary(stream))
         for i in range(external_count):
-            self.external_tgis.append(TGI().read(stream))
+            self.external_tgis.append(TGI().from_binary(stream))
         for i in range(self.internal_count):
-            self.chunk_info.append(ChunkInfo().read(stream))
+            self.chunk_info.append(ChunkInfo().from_binary(stream))
         for i in range(self.internal_count):
             stream.seek(self.chunk_info[i].chunk_position)
             data = stream.u32(raw=True)
             stream.seek(self.chunk_info[i].chunk_position)
             tag = data.decode("ascii")
             if "SKIN" in tag:
-                chunk_data = Skin().read(stream)
+                chunk_data = Skin().from_binary(stream)
             # print(stream.tell())
             elif "FTPT" in tag:
-                chunk_data = Footprint().read(stream)
+                chunk_data = Footprint().from_binary(stream)
             else:
                 print(hex(self.internal_tgis[i].t))
                 if self.internal_tgis[i].t == 0x355E0A6:
                     from s4animtools.rcol.bone_delta import BoneDelta
-                    chunk_data = BoneDelta().read(stream)
+                    chunk_data = BoneDelta().from_binary(stream)
 
                 else:
-                    chunk_data = Bytes(stream.read(self.chunk_info[i].chunk_size))
+                    chunk_data = Bytes(stream.from_binary(self.chunk_info[i].chunk_size))
             self.chunk_data.append(chunk_data)
         return self
 
@@ -127,9 +127,9 @@ class RCOL:
             current_pos = self.pad(current_pos, serialized_body)
 
             serialized_body.append(self.chunk_data[i].to_binary())
-            current_chunk_len = get_size(self.chunk_data[i].value)
+            current_chunk_len = get_size(self.chunk_data[i].data)
             print(current_chunk_len, "chunklength")
-            # print(self.chunk_data[i].value)
+            # print(self.chunk_data[i].data)
             new_chunk_infos.append(ChunkInfo(current_pos, current_chunk_len))
             current_pos += current_chunk_len
 
@@ -172,7 +172,7 @@ class RCOL:
     def update_chunk_position_size_automatically(self, chunk_idx):
         offset = self.serialize_to_get_current_offset(chunk_idx)
         self.change_chunk_position_size(chunk_idx, self.serialize_to_get_current_offset(chunk_idx),
-                                        get_size(self.chunk_data[chunk_idx].value))
+                                        get_size(self.chunk_data[chunk_idx].data))
 
     def serialize_to_get_current_offset(self, chunk_idx):
         data = [u32(self.version), u32(self.public_chunks), u32(self.index3), u32(self.external_count),
@@ -188,7 +188,7 @@ class RCOL:
         # Pad to next DWORD between chunks
         return total_len
 
-    def serialize(self):
+    def to_binary(self):
         data = [u32(self.version), u32(self.public_chunks), u32(self.index3), u32(self.external_count),
                 u32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
                 *self.chunk_data]
@@ -368,7 +368,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
 
     def create_area(self, obj, footprint, points, context):
         # Should really set a property on the object instead of relying on name
-        footprint.name_hash = hash_name_or_get_hash(obj.name.split(" ")[0]).value
+        footprint.name_hash = hash_name_or_get_hash(obj.name.split(" ")[0]).data
         footprint.area_type_flags.for_placement = obj.for_placement
         footprint.area_type_flags.for_pathing = obj.for_pathing
         footprint.area_type_flags.is_enabled = obj.is_enabled
@@ -450,7 +450,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             rcol.chunk_data.append(footprint_chunk)
             rcol.chunk_info.append(ChunkInfo(0, 0))
             new_tgi = TGI()
-            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.value
+            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.data
             print(new_tgi)
             footprint_areas = footprint_chunk.footprint_areas
             routing_areas = footprint_chunk.routing_areas
@@ -458,7 +458,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             for obj in valid_objs:
                 print(obj, instance_id, hash_name_or_get_hash_64(obj.footprint_name))
 
-                if hash_name_or_get_hash_64(obj.footprint_name).value == instance_id.value:
+                if hash_name_or_get_hash_64(obj.footprint_name).data == instance_id.data:
                     footprint_name = obj.footprint_name
                     print(obj.footprint_resource_variant, obj.footprint_resource_variant == "World Camera Bounds")
                     if obj.footprint_resource_variant == "World Camera Bounds" or obj.footprint_resource_variant == "World Allowed Routing":
@@ -497,7 +497,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             if not os.path.exists(selected_export_path):
                 os.mkdir(selected_export_path)
             try:
-                s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
+                s4animtools.serialization.recursive_write([*rcol.to_binary()], all_data)
             except:
                 print(traceback.format_exc())
 

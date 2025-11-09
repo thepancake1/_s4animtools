@@ -11,22 +11,22 @@ class Skin:
         self.hashes = []
         self.matrices = []
 
-    def read(self, stream):
+    def from_binary(self, stream):
         self.identifier = stream.read(4)
-        self.version = u32.deserialize(stream.read(4))
-        self.count = u32.deserialize(stream.read(4))
+        self.version = u32.from_binary(stream.read(4))
+        self.count = u32.from_binary(stream.read(4))
         self.hashes = []
         self.matrices = []
         for i in range(self.count):
-            self.hashes.append(u32.deserialize(stream.read(4)))
+            self.hashes.append(u32.from_binary(stream.read(4)))
         for i in range(self.count):
             matrix = []
             for v in range(12):
-                matrix.append(f32.deserialize(stream.read(4)))
+                matrix.append(f32.from_binary(stream.read(4)))
             self.matrices.append(matrix)
         return self
 
-    def serialize(self):
+    def to_binary(self):
         serialized_stuff = []
         hashes = []
         count = 0
@@ -50,7 +50,7 @@ class Skin:
 
     @property
     def value(self):
-        return self.serialize()
+        return self.to_binary()
     def __repr__(self):
         return "{}".format(vars(self))
 
