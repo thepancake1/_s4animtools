@@ -317,6 +317,8 @@ class CopySelectedLeftSideToRightSide(bpy.types.Operator):
                                 #print(current_value)
 
         return {"FINISHED"}
+
+# I don't think this is used anymore
 class CopyBakedAnimationToControlRig(bpy.types.Operator):
     bl_idname = "s4animtools.copy_baked_animation"
     bl_label = "Copy Baked Animation"

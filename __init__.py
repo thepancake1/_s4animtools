@@ -868,26 +868,31 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 # Trackmasks are not working yet
                 #layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
                 # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-                layout.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
-                layout.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
-                layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
+                row = layout.row()
+                row.operator("s4animtools.flip_left_side_sim", icon='MESH_CUBE', text="Flip Sim")
+                row.operator("s4animtools.copy_left_side_sim", icon='MESH_CUBE', text="Copy Left Side to Right Side Sim")
+                #layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
                 # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
-                layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+
+                row = layout.row()
+
+                row.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
                                      text="Maintain Keyframe").direction = "FORWARDS"
-                layout.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
+                row.operator("s4animtools.maintain_keyframe", icon="MESH_CUBE",
                                      text="Maintain Keyframe Backward").direction = "BACK"
 
-                layout = self.layout
-                layout.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
+                row = layout.row()
+                row.operator("s4animtools.import_rig", icon='MESH_CUBE', text="Import Rig")
 
-                layout.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
+                row.operator("s4animtools.export_rig", icon='MESH_CUBE', text="Export Rig")
 
 
             layout.prop(obj, "show_ik_options", text="Show Slot Assignments")
             if obj.show_ik_options:
 
-                self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
-                self.layout.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
+                row = layout.row()
+                row.operator('iktarget.create_roots', text='Create World IK Channels')
+                row.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
                 self.layout.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
                 layout = self.layout
                 box = layout.row()
