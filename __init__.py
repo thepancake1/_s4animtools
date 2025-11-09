@@ -754,40 +754,42 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 box.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
 
+
+            if obj.is_enabled_for_animation:
+                box.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
+                box.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
+                box.prop(context.scene, "clip_name", text = "Clip Name(s)")
+                box.prop(obj, "allow_jaw_animation_for_entire_animation",
+                                 text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
+
+                box.label(text="The center rig is where the root of your exported animation will be located.")
+                box.label(text="Useful for poses with multiple sims.")
+                box.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
+                if len(context.object.world_rig) > 0:
+                    if context.object.world_rig in bpy.data.objects:
+                        target_bone_obj = bpy.data.objects[obj.world_rig]
+                        box.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
+
+
+                box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
+                box.operator("s4animtools.new_export_clip", text="Export Clip")
+
+                box.operator("s4animtools.export_all_clips", text="Export All Clips")
+                # Draw animation notes string as multiline text
+                box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+
+
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
             if obj.show_footprint_options:
-                layout.prop(obj, "is_footprint", text="Is Footprint Object")
-                box = layout.box()
-
-                row = box.row()
-                row.operator("s4animtools.import_footprint", text="Import Footprint")
-                row.operator("s4animtools.export_footprint", text="Export Footprint")
-
-                row = layout.row()
-                row.label(text="View footprints for:")
-                box = layout.box()
-                row = box.row()
-
-                row.operator("s4animtools.visualize_footprint", text="Pathing").command="for_pathing"
-                row.operator("s4animtools.visualize_footprint", text="Placement").command="for_placement"
-                row = box.row()
-
-                row.operator("s4animtools.visualize_footprint", text="Terrain").command="terrain"
-                row.operator("s4animtools.visualize_footprint", text="Floor").command="floor"
-
-                # workaround for 1 item in 2 columns
-                row = box.row()
-                col = row.column()
-                col.operator("s4animtools.visualize_footprint", text="Pool").command="pool"
-                col = row.column()
-                col.label(text="")
-
                 row = layout.row()
 
                 row.label(text="Footprint Name/Hash: ")
                 row = layout.box().row()
 
                 row.prop(context.object, "footprint_name", text="Text")
+
+
+                layout.prop(obj, "is_footprint", text="Is Footprint Object")
 
                 if obj.is_footprint:
 
@@ -904,6 +906,36 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                     row = box.row()
 
                     row.prop(obj, "ignores_trim", text="Trim")
+
+
+
+
+                box = layout.box()
+
+                row = box.row()
+                row.operator("s4animtools.import_footprint", text="Import Footprint")
+                row.operator("s4animtools.export_footprint", text="Export Footprint")
+
+                row = layout.row()
+                row.label(text="View footprints for:")
+                box = layout.box()
+                row = box.row()
+
+                row.operator("s4animtools.visualize_footprint", text="Pathing").command="for_pathing"
+                row.operator("s4animtools.visualize_footprint", text="Placement").command="for_placement"
+                row = box.row()
+
+                row.operator("s4animtools.visualize_footprint", text="Terrain").command="terrain"
+                row.operator("s4animtools.visualize_footprint", text="Floor").command="floor"
+
+                # workaround for 1 item in 2 columns
+                row = box.row()
+                col = row.column()
+                col.operator("s4animtools.visualize_footprint", text="Pool").command="pool"
+                col = row.column()
+                col.label(text="")
+
+
             layout.prop(obj, "show_mirror_and_masking_options", text="Show Mirror/Maintain/Bake Options")
 
             if obj.show_mirror_and_masking_options:
@@ -1076,10 +1108,21 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
             if obj.show_experimental_options:
                 box = layout.box()
+                box.prop(context.scene, "clip_locos", text="Clip Loco(s)")
+                box.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
+                box.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
+                box.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
+                if obj.is_actor:
+                    if obj.actor_type == "sim":
+                        # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
+                        box.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
+
+                box.prop(obj, "disable_rig_suffix", text="Disable Rig Suffix")
+                box.prop(obj, "is_overlay", text="Is Overlay")
+
                 box.prop(obj, "subroot_for_animations", text="Subroot for Animations (Import)")
                 box.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
 
-                box.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
 
               #  box.label(text="Use Full Precision means using full precision for all animation data.")
               #  box.label(text="Don't enable if you don't know what that means! ")
@@ -1092,15 +1135,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                # box.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
                # box.label(text="Export an Additive Clip. Do not use for normal animations")
               #  box.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
-                box.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
-                box.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
-                box.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
-                box.prop(obj, "is_overlay", text="Is Overlay")
-                if obj.is_actor:
-                    if obj.actor_type == "sim":
-                        # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
-                        box.prop(obj, "allow_slots", text="Allow Modifying Slot Bone in Clip")
-                box = layout.box()
+
+
                 row = box.row()
                 row.operator("s4animtools.mask_out_parents", text="Mask Out Parents")
                 row.operator("s4animtools.mask_out_children", text="Mask Out Children")
@@ -1129,33 +1165,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
 
-            if obj.is_enabled_for_animation:
-                box = layout.box()
-
-
-                box.operator("s4animtools.new_export_clip", text="Export Clip")
-
-                box.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
-
-                box.prop(context.scene, "clip_locos", text="Clip Loco(s)")
-                box.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
-                box.prop(context.scene, "clip_name", text = "Clip Name(s)")
-                box.prop(obj, "allow_jaw_animation_for_entire_animation",
-                                 text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
-
-                box.label(text="The center rig is where the root of your exported animation will be located.")
-                box.label(text="Useful for poses with multiple sims.")
-                box.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
-                if len(context.object.world_rig) > 0:
-                    if context.object.world_rig in bpy.data.objects:
-                        target_bone_obj = bpy.data.objects[obj.world_rig]
-                        box.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
-
-
-                box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-                box.operator("s4animtools.export_all_clips", text="Export All Clips")
-                # Draw animation notes string as multiline text
-                box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
         else:
             layout.label(text="Select an object to get started.")
 
