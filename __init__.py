@@ -1093,7 +1093,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 layout.operator("s4animtools.mask_out_children", icon='MESH_CUBE', text="Mask Out Children")
                 layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
                 layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
-            layout = self.layout.row()
+            row =  layout.row()
             try:
                 selected_bone = bpy.context.selected_pose_bones[0]
 
@@ -1193,18 +1193,17 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         for new_idx, ik_target in enumerate(obj.ik_targets):
             if ik_target == item:
                 actual_idx = new_idx
-        sub.label(text="IK Target")
+        sub.label(text=f"IK Target #{get_ik_target_idx_for_slot_assignment_on_chain(obj, item)}")
         sub.scale_x = 1
 
-        sub.prop(item, "chain_idx", text="Chain")
+      #  sub.prop(item, "chain_idx", text="Chain")
 
-        sub.scale_x = 0.5
-        sub.label(text=str(get_ik_target_idx_for_slot_assignment_on_chain(obj, item)))
+      #  sub.scale_x = 0.5
         sub.operator('iktarget.delete_specific', text='Delete').command = str(actual_idx)
         #print(idx, ik_chain_count, item.chain_bone)
         if idx == ik_chain_count - 1:
             sub.operator('iktarget.new', text='Clone').command = f"{item.chain_bone}"
-
+        row = row.box()
         sub = row.row(align=True)
         sub.operator("s4animtools.preview_slot_assignment", text= "Preview Slot Assignment").command = str(actual_idx)
         sub = row.row(align=True)
