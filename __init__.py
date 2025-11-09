@@ -757,110 +757,141 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             if obj.show_footprint_options:
                 layout.prop(obj, "is_footprint", text="Is Footprint Object")
 
-                layout.operator("s4animtools.import_footprint", icon="MESH_CUBE", text="Import Footprint")
-                layout.operator("s4animtools.export_footprint", icon="MESH_CUBE", text="Export Footprint")
+                row = layout.row()
+                row.operator("s4animtools.import_footprint", text="Import Footprint")
+                row.operator("s4animtools.export_footprint", text="Export Footprint")
 
-                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pathing Footprints").command="for_pathing"
-                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Placement Footprints").command="for_placement"
-                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Terrain Footprints").command="terrain"
-                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Floor Footprints").command="floor"
-                layout.operator("s4animtools.visualize_footprint", icon="MESH_CUBE", text="View Pool Footprints").command="pool"
-                layout.prop(context.object, "footprint_name", text="Footprint Name Or Hash")
+                row = layout.row()
+                row.label(text="View footprints for:")
+                box = layout.box()
+                row = box.row()
+
+                row.operator("s4animtools.visualize_footprint", text="Pathing").command="for_pathing"
+                row.operator("s4animtools.visualize_footprint", text="Placement").command="for_placement"
+                row = box.row()
+
+                row.operator("s4animtools.visualize_footprint", text="Terrain").command="terrain"
+                row.operator("s4animtools.visualize_footprint", text="Floor").command="floor"
+                row = box.row()
+
+                row.operator("s4animtools.visualize_footprint", text="Pool").command="pool"
+                row = layout.row()
+
+                row.label(text="Footprint Name/Hash: ")
+                row = layout.box().row()
+
+                row.prop(context.object, "footprint_name", text="Text")
 
                 if obj.is_footprint:
-                    layout.prop(obj, "footprint_resource_variant", text="Variant")
 
-                    layout.prop(obj, "is_routing_footprint", text="Is World Pathing Footprint")
+                  #  layout.prop(obj, "footprint_resource_variant", text="Variant")
 
-                    layout = self.layout.row()
-                    self.layout.label(text="Footprint is in: ")
-                    layout = self.layout.row()
+                   # layout.prop(obj, "is_routing_footprint", text="Is World Pathing Footprint")
 
-                    layout.prop(obj, "slope", text="Slope")
-                    layout.prop(obj, "outside", text="Outside")
-                    layout.prop(obj, "inside", text="Inside")
+                    row = layout.row()
+                    layout.label(text="Footprint is in: ")
+                    box = layout.box()
+                    row = box.row()
 
-                    self.layout.label(text="Footprint is of Type: ")
+                    row.prop(obj, "slope", text="Slope")
+                    row.prop(obj, "outside", text="Outside")
+                    row.prop(obj, "inside", text="Inside")
+                    row = layout.row()
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "for_placement", text="For Placement")
-                    layout.prop(obj, "for_pathing", text="For Pathing")
-                    layout.prop(obj, "is_enabled", text="Is Enabled")
-                    layout = self.layout.row()
+                    row.label(text="Footprint is of Type: ")
 
-                    layout.prop(obj, "discouraged", text="Discouraged")
-                    layout.prop(obj, "landing_strip", text="Landing Strip")
-                    layout.prop(obj, "no_raycast", text="No Raycast")
-                    layout = self.layout.row()
+                    box = layout.box()
+                    row = box.row()
+                    row.prop(obj, "for_placement", text="For Placement")
+                    row.prop(obj, "for_pathing", text="For Pathing")
+                    row.prop(obj, "is_enabled", text="Is Enabled")
+                    row = box.row()
 
-                    layout.prop(obj, "placement_slotted", text="Placement Slotted")
-                    layout.prop(obj, "encouraged", text="Encouraged")
-                    layout.prop(obj, "terrain_cutout", text="Terrain Cutout")
+                    row.prop(obj, "discouraged", text="Discouraged")
+                    row.prop(obj, "landing_strip", text="Landing Strip")
+                    row.prop(obj, "no_raycast", text="No Raycast")
+                    row = box.row()
 
-                    self.layout.label(text="Footprint is of Surface Type: ")
+                    row.prop(obj, "placement_slotted", text="Placement Slotted")
+                    row.prop(obj, "encouraged", text="Encouraged")
+                    row.prop(obj, "terrain_cutout", text="Terrain Cutout")
+                    row = layout.row()
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "terrain", text="Terrain")
-                    layout.prop(obj, "floor", text="Floor")
-                    layout.prop(obj, "pool", text="Pool")
-                    layout = self.layout.row()
+                    row.label(text="Footprint is of Surface Type: ")
 
-                    layout.prop(obj, "pond", text="Pond")
-                    layout.prop(obj, "fence_post", text="Fence Post")
-                    layout.prop(obj, "any_surface", text="Any Surface")
-                    layout = self.layout.row()
+                    box = layout.box()
+                    row = box.row()
+                    row.prop(obj, "terrain", text="Terrain")
+                    row.prop(obj, "floor", text="Floor")
+                    row.prop(obj, "pool", text="Pool")
+                    row = box.row()
 
-                    layout.prop(obj, "air", text="Air")
-                    layout.prop(obj, "roof", text="Roof")
+                    row.prop(obj, "pond", text="Pond")
+                    row.prop(obj, "fence_post", text="Fence Post")
+                    row.prop(obj, "any_surface", text="Any Surface")
+                    row = box.row()
 
-                    self.layout.label(text="Footprint Is Of Object Type: ")
+                    row.prop(obj, "air", text="Air")
+                    row.prop(obj, "roof", text="Roof")
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "is_none", text="None")
-                    layout.prop(obj, "is_walls", text="Walls")
-                    layout.prop(obj, "is_objects", text="Objects")
+                    row = layout.row()
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "is_sims", text="Sims")
-                    layout.prop(obj, "is_roofs", text="Roof")
-                    layout.prop(obj, "is_fences", text="Fence")
-                    layout = self.layout.row()
+                    row.label(text="Footprint Is Of Object Type: ")
 
-                    layout.prop(obj, "is_modular_stairs", text="Modular Stairs")
-                    layout.prop(obj, "is_objects_of_same_type", text="Objects of Same Type")
-                    layout.prop(obj, "is_columns", text="Columns")
+                    box = layout.box()
+                    row = box.row()
+                    row.prop(obj, "is_none", text="None")
+                    row.prop(obj, "is_walls", text="Walls")
+                    row.prop(obj, "is_objects", text="Objects")
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "is_reserved_space", text="Reserved Space")
+                    row = box.row()
+                    row.prop(obj, "is_sims", text="Sims")
+                    row.prop(obj, "is_roofs", text="Roof")
+                    row.prop(obj, "is_fences", text="Fence")
+                    row = box.row()
 
-                    layout.prop(obj, "is_foundations", text="Foundations")
-                    layout.prop(obj, "is_fenestration_node", text="Fenestration Node")
-                    layout.prop(obj, "is_trim", text="Trim")
+                    row.prop(obj, "is_modular_stairs", text="Modular Stairs")
+                    row.prop(obj, "is_objects_of_same_type", text="Objects of Same Type")
+                    row.prop(obj, "is_columns", text="Columns")
 
-                    self.layout.label(text="Footprint Ignores Footprints of Object Type: ")
+                    row = box.row()
+                    row.prop(obj, "is_reserved_space", text="Reserved Space")
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "ignores_none", text="None")
-                    layout.prop(obj, "ignores_walls", text="Walls")
-                    layout.prop(obj, "ignores_objects", text="Objects")
+                    row.prop(obj, "is_foundations", text="Foundations")
+                    row.prop(obj, "is_fenestration_node", text="Fenestration Node")
+                    row = box.row()
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "ignores_sims", text="Sims")
+                    row.prop(obj, "is_trim", text="Trim")
+                    row = layout.row()
 
-                    layout.prop(obj, "ignores_roofs", text="Roof")
-                    layout.prop(obj, "ignores_fences", text="Fence")
-                    layout = self.layout.row()
-                    layout.prop(obj, "ignores_modular_stairs", text="Modular Stairs")
-                    layout.prop(obj, "ignores_objects_of_same_type", text="Objects of Same Type")
-                    layout.prop(obj, "ignores_columns", text="Columns")
+                    row.label(text="Footprint Ignores Footprints of Object Type: ")
 
-                    layout = self.layout.row()
-                    layout.prop(obj, "ignores_reserved_space", text="Reserved Space")
+                    box = layout.box()
+                    row = box.row()
 
-                    layout.prop(obj, "ignores_foundations", text="Foundations")
+                    row.prop(obj, "ignores_none", text="None")
+                    row.prop(obj, "ignores_walls", text="Walls")
+                    row.prop(obj, "ignores_objects", text="Objects")
 
-                    layout.prop(obj, "ignores_fenestration_node", text="Fenestration Node")
-                    layout.prop(obj, "ignores_trim", text="Trim")
+                    row = box.row()
+                    row.prop(obj, "ignores_sims", text="Sims")
+
+                    row.prop(obj, "ignores_roofs", text="Roof")
+                    row.prop(obj, "ignores_fences", text="Fence")
+                    row = box.row()
+                    row.prop(obj, "ignores_modular_stairs", text="Modular Stairs")
+                    row.prop(obj, "ignores_objects_of_same_type", text="Objects of Same Type")
+                    row.prop(obj, "ignores_columns", text="Columns")
+
+                    row = box.row()
+                    row.prop(obj, "ignores_reserved_space", text="Reserved Space")
+
+                    row.prop(obj, "ignores_foundations", text="Foundations")
+
+                    row.prop(obj, "ignores_fenestration_node", text="Fenestration Node")
+                    row = box.row()
+
+                    row.prop(obj, "ignores_trim", text="Trim")
             layout.prop(obj, "show_mirror_and_masking_options", text="Show Mirror/Maintain/Bake Options")
 
             if obj.show_mirror_and_masking_options:
@@ -893,12 +924,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row = layout.row()
                 row.operator('iktarget.create_roots', text='Create World IK Channels')
                 row.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
-                self.layout.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
-                layout = self.layout
+                layout.operator("s4animtools.preview_all_slot_assignments", text="Preview All Slot Assignments")
                 box = layout.row()
                 row = box
 
                 if obj.ik_idx >= 0 and obj.ik_targets:
+                    # These are called rows but are obviously columns.
                     row = box.column()
 
                     self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Hand__")
@@ -938,113 +969,112 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 #layout.operator("s4animtools.update_ik_empties", text="Update IK Empties")
                 layout.scale_x = 1
 
-                layout = self.layout.row()
             layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
             layout.prop(obj, "subroot_for_animations", text="Subroot for Animations")
             layout.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
             layout.prop(obj, "show_initial_offset_options", text="Show Initial Offset Options")
             if obj.show_initial_offset_options:
-                layout = self.layout.row()
+                row = layout.row()
 
-                layout.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
+                row.prop_search(context.object, "relative_rig", context.scene, "objects", text="Initial Offsets Rig")
                 if len(context.object.relative_rig) > 0:
                     if context.object.relative_rig in bpy.data.objects:
                         relative_rig_obj = bpy.data.objects[context.object.relative_rig]
                         layout.prop_search(context.object, "relative_bone", relative_rig_obj.pose, "bones",
                                            text="Initial Offsets Bone")
-                layout = self.layout.row()
-                layout.scale_x = 0.4
-                layout.label(text="Initial Offset Q")
-                layout.scale_x = 0.5
+                row = layout.row()
+                row.scale_x = 0.4
+                row.label(text="Initial Offset Q")
+                row.scale_x = 0.5
 
-                layout.prop(obj, "initial_offset_q", text="")
-                layout.scale_x = 0.4
-                layout.label(text="Initial Offset T")
+                row.prop(obj, "initial_offset_q", text="")
+                row.scale_x = 0.4
+                row.label(text="Initial Offset T")
 
-                layout.prop(obj, "initial_offset_t", text="")
+                row.prop(obj, "initial_offset_t", text="")
 
-            self.layout.prop(obj, "show_events", text="Show Events")
+            layout.prop(obj, "show_events", text="Show Events")
             if obj.show_events:
-                self.layout.operator("s4animtools.initialize_events", text="Initialize Events")
+                layout.operator("s4animtools.initialize_events", text="Initialize Events")
 
 
                 self.draw_events(obj, "parent_events_list", 0.1,
                                  "Parameters (Frame/Object To Be Parented/Object To Be Parented To/Bone)",
-                                 "Parent Events", self.layout,
+                                 "Parent Events", layout,
                                  parameters=["Frame", "Object to Be Parented", "Object to be Parented To", "Bone"],
                                  corresponding_widget_list_count=parent_events_holder.get_corresponding_list_count(obj))
 
 
-                parent_events_holder.draw_all_instances(context, obj, self.layout)
+                parent_events_holder.draw_all_instances(context, obj, layout)
 
                 self.draw_events(obj, "sound_events_list", 0.1, "Parameters (Frame Number/Sound Effect Name)",
-                                 "Sound Events", self.layout, parameters=["Frame", "Sound Effect Name"], editable=False,
+                                 "Sound Events", layout, parameters=["Frame", "Sound Effect Name"], editable=False,
                                  corresponding_widget_list_count=sound_events_holder.get_corresponding_list_count(obj))
 
-                sound_events_holder.draw_all_instances(context, obj, self.layout)
+                sound_events_holder.draw_all_instances(context, obj, layout)
 
                 self.draw_events(obj, "script_events_list", 0.1, "Parameters (Frame Number/Script Xevt)",
                                  "Script Events",
-                                 self.layout, parameters=["Frame", "Script Xevt"], corresponding_widget_list_count=
+                                 layout, parameters=["Frame", "Script Xevt"], corresponding_widget_list_count=
                                  script_events_holder.get_corresponding_list_count(obj))
-                script_events_holder.draw_all_instances(context, obj, self.layout)
+                script_events_holder.draw_all_instances(context, obj, layout)
 
 
                 self.draw_events(obj, "snap_events_list", 0.1, "Parameters (Frame Number/Actor/Translation/Quaternion)",
-                                 "Snap Events", self.layout,
+                                 "Snap Events", layout,
                                  parameters=["Frame", "Actor", "X", "Y", "Z", "QX", "QY", "QZ", "QW", ],
                                  corresponding_widget_list_count=snap_events_holder.get_corresponding_list_count(obj))
 
-                snap_events_holder.draw_all_instances(context, obj, self.layout)
+                snap_events_holder.draw_all_instances(context, obj, layout)
 
                 self.draw_events(obj, "reaction_events_list", 0.1,
                                  "Parameters (Frame Number/Reaction ASM/Reaction State)",
-                                 "Reaction Events", self.layout,
+                                 "Reaction Events", layout,
                                  parameters=["Frame", "Reaction ASM Name", "Reaction State Name"],
                                  corresponding_widget_list_count=reaction_events_holder.get_corresponding_list_count(obj))
 
-                reaction_events_holder.draw_all_instances(context, obj, self.layout)
+                reaction_events_holder.draw_all_instances(context, obj, layout)
 
                 self.draw_events(obj, "play_effect_events_list", 0.1,
                                  "Parameters (Frame Number/VFX Name/Actor Name/Bone Name/(always 0)/Target Actor Name/Target Bone Name/Unique VFX Name)",
-                                 "Play Effect Events", self.layout,
+                                 "Play Effect Events", layout,
                                  parameters=["Frame", "VFX Name", "Actor Name", "Bone Name", "(always 0)",
                                              "Target Actor Name", "Target Bone Name", "Unique VFX Name"],
                                  corresponding_widget_list_count=play_effect_events_holder.get_corresponding_list_count(obj))
-                play_effect_events_holder.draw_all_instances(context, obj, self.layout)
+                play_effect_events_holder.draw_all_instances(context, obj, layout)
                 self.draw_events(obj, "stop_effect_events_list", 0.1,
                                  "Parameters (Frame Number/Unique VFX Name/(always 0)/Unknown Bool 1)",
-                                 "Stop Effect Events", self.layout,
+                                 "Stop Effect Events", layout,
                                  parameters=["Frame", "Unique VFX Name", "(always 0)", "(unknown bool)"])
                 self.draw_events(obj, "disable_lipsync_events_list", 0.1, "Parameters (Frame Number/Duration)",
-                                 "Suppress Lipsync Events", self.layout, parameters=["Frame", "End Frame"])
+                                 "Suppress Lipsync Events", layout, parameters=["Frame", "End Frame"])
                 self.draw_events(obj, "visibility_events_list", 0.1, "Parameters (Frame Number/Actor/Visibility)",
-                                 "Visibility Events", self.layout,
+                                 "Visibility Events", layout,
                                  parameters=["Frame", "Actor Name", "Visibility (0 or 1)"], corresponding_widget_list_count=len(obj.visibility_events_list_UI))
-                visibility_events_holder.draw_all_instances(context, obj, self.layout)
+                visibility_events_holder.draw_all_instances(context, obj, layout)
                 self.draw_events(obj, "focus_compatibility_events_list", 0.1, "Parameters (End Frame,Level)",
-                                 "Focus Compatibility Events", self.layout)
+                                 "Focus Compatibility Events", layout)
                 self.draw_events(obj, "geometry_state_change_events_list", 0.1, "Parameters (Frame/Actor Name/Geometry State Name)",
-                                 "Geometry State Change Events", self.layout)
-            self.layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
+                                 "Geometry State Change Events", layout)
+            layout.prop(obj, "show_experimental_options", text="Show Experimental Options")
             if obj.show_experimental_options:
-                self.layout.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
+                layout.prop(context.scene, "downsample_60_to_30", text="Downsample 60 fps to 30")
 
-                self.layout.label(text="Use Full Precision means using full precision for all animation data.")
-                self.layout.label(text="Don't enable if you don't know what that means! ")
-                self.layout.label(text="This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
-                self.layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
-                self.layout.prop(obj, "use_world_bone_as_root",
+                layout.label(text="Use Full Precision means using full precision for all animation data.")
+                layout.label(text="Don't enable if you don't know what that means! ")
+                layout.label(text="This will cause unnecessarily large file sizes and has a hard limit on how much animation data can be stored.")
+                layout.prop(obj, "use_full_precision", text="EXPERIMENTAL!! Use Full Precision")
+                layout.prop(obj, "use_world_bone_as_root",
                                 text="Use World Rig and Bone as Root for IK Targets on Object")
-                self.layout.label(text="The base rig is only used for additive animations such as the infant carrier from Growing Together.")
-                self.layout.label(text="The base rig setting is not used for normal animations.")
-                self.layout.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
-                self.layout.label(text="Export an Additive Clip. Do not use for normal animations")
-                self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
-                self.layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
-                self.layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
-                self.layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
-                self.layout.prop(obj, "is_overlay", text="Is Overlay")
+                layout.label(text="The base rig is only used for additive animations such as the infant carrier from Growing Together.")
+                layout.label(text="The base rig setting is not used for normal animations.")
+                layout.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
+                layout.label(text="Export an Additive Clip. Do not use for normal animations")
+                layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
+                layout.prop(obj, "reset_initial_offset_t", text="Reset Initial Offset T")
+                layout.prop(obj, "additional_snap_frames", text="Additional Snap Frames")
+                layout.prop(obj, "disable_rig_suffix", text ="Disable Rig Suffix")
+                layout.prop(obj, "is_overlay", text="Is Overlay")
                 if obj.is_actor:
                     if obj.actor_type == "sim":
                         # layout.prop(obj, "active_sim_skin", text="Active Sim Skin")
@@ -1078,28 +1108,28 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
             if obj.is_enabled_for_animation:
 
-                self.layout.prop(obj, "allow_jaw_animation_for_entire_animation",
+                layout.prop(obj, "allow_jaw_animation_for_entire_animation",
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
 
-                self.layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
-                self.layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
-                self.layout.prop(context.scene, "clip_locos", text="Clip Loco(s)")
-                self.layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
-                self.layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
-                self.layout.label(text="The center rig is where the root of your exported animation will be located.")
-                self.layout.label(text="Useful for poses with multiple sims.")
-                self.layout.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
+                layout.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Clip")
+                layout.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
+                layout.prop(context.scene, "clip_locos", text="Clip Loco(s)")
+                layout.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
+                layout.prop(context.scene, "clip_name", text = "Clip Name(s)")
+                layout.label(text="The center rig is where the root of your exported animation will be located.")
+                layout.label(text="Useful for poses with multiple sims.")
+                layout.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
                 if len(context.object.world_rig) > 0:
                     if context.object.world_rig in bpy.data.objects:
                         target_bone_obj = bpy.data.objects[obj.world_rig]
-                        self.layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
+                        layout.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
 
 
-                self.layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-                self.layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
-            self.layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
+                layout.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
+                layout.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
+            layout.operator("s4animtools.export_all_clips", icon="MESH_CUBE", text="Export All Clips")
             # Draw animation notes string as multiline text
-            self.layout.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+            layout.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
       #      self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
       #      self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
 #
@@ -2602,6 +2632,7 @@ def register():
     """Register classes for the things."""
     from bpy.utils import register_class
     locomotion_register()
+    register_footprint_properties()
     for event_holder in all_event_holders:
         try:
             event_holder.register_blender_class()
