@@ -49,7 +49,7 @@ import s4animtools.clip_processing.clip_body
 import s4animtools.clip_processing.f1_palette
 from bpy_extras.io_utils import ImportHelper
 from mathutils import Vector, Matrix
-from bpy.props import IntProperty, CollectionProperty, FloatProperty
+from bpy.props import IntProperty, CollectionProperty, FloatProperty, StringProperty, BoolProperty
 from bpy.types import PropertyGroup
 from collections import defaultdict
 
@@ -637,7 +637,7 @@ class OT_S4ANIMTOOLS_NewExportClip(bpy.types.Operator):
     bl_label = "New Export Clip"
     bl_options = {"REGISTER", "UNDO"}
 
-    additive: bpy.props.BoolProperty(default=False)
+    additive: BoolProperty(default=False)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.anim_exporter = NewClipExporter()
@@ -1289,7 +1289,7 @@ class PositionConfig(PropertyGroup):
 
 class ActorSettings(PropertyGroup):
     # Export the animation for this actor
-    actor_enabled: bpy.props.BoolProperty(default=True)
+    actor_enabled: BoolProperty(default=True)
     initial_offset_quaternion: bpy.props.PointerProperty(type=QuaternionConfig)
     initial_offset_position: bpy.props.PointerProperty(type=PositionConfig)
 
@@ -1299,7 +1299,7 @@ class S4ANIMTOOLS_OT_move_new_element(bpy.types.Operator):
     bl_label = ""
     bl_options = {"REGISTER", "UNDO"}
 
-    args: bpy.props.StringProperty()
+    args: StringProperty()
 
     def execute(self, context):
         obj = context.object
@@ -1339,15 +1339,17 @@ class S4ANIMTOOLS_OT_move_new_element(bpy.types.Operator):
 
 
 class ClipData(PropertyGroup):
-    clip_name: bpy.props.StringProperty()
-    referenced_actors: bpy.props.StringProperty()
-    clip_display_name: bpy.props.StringProperty()
+    clip_name: StringProperty()
+    referenced_actors: StringProperty()
+    clip_display_name: StringProperty()
 
-    clip_description: bpy.props.StringProperty()
+    clip_description: StringProperty()
     start_frame: IntProperty(name="Start", description="Start Frame",
                             default=0, min=0, soft_max=360)
     end_frame: IntProperty(name="End", description="End Frame",
                           default=0, min=0, soft_max=360)
+    additional_snap_frames : CollectionProperty(type=IntProperty)
+    clip_loco : BoolProperty()
 
 class s4animtool_PT_IKTargetPanel(bpy.types.Panel):
     """Create the IK Event Panel"""
@@ -1937,7 +1939,7 @@ class OT_S4ANIMTOOLS_SelectExportDirectory(bpy.types.Operator):
     bl_label = "Select Export Path"
     bl_options = {'REGISTER'}
 
-    directory: bpy.props.StringProperty(
+    directory: StringProperty(
         name="Outdir Path")
 
     def execute(self, context):
@@ -2000,7 +2002,7 @@ class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
     bl_idname = "s4animtools.fk_to_ik"
     bl_label = "FK To IK"
     bl_options = {"REGISTER", "UNDO"}
-    command: bpy.props.StringProperty()
+    command: StringProperty()
 
     def execute(self, context):
         from mathutils import Matrix
@@ -2111,7 +2113,7 @@ class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
     bl_idname = "s4animtools.ik_to_fk"
     bl_label = "IK To FK"
     bl_options = {"REGISTER", "UNDO"}
-    command: bpy.props.StringProperty()
+    command: StringProperty()
 
     def execute(self, context):
         arm = context.object.data
@@ -2208,7 +2210,7 @@ class OT_S4ANIMTOOLS_MaskOutParents(bpy.types.Operator):
     bl_idname = "s4animtools.mask_out_parents"
     bl_label = "Mask Out Parents"
     bl_options = {"REGISTER", "UNDO"}
-    command: bpy.props.StringProperty()
+    command: StringProperty()
 
 
     def get_all_parents(self, bone):
@@ -2266,7 +2268,7 @@ class OT_S4ANIMTOOLS_MaskOutChildren(bpy.types.Operator):
     bl_idname = "s4animtools.mask_out_children"
     bl_label = "Mask Out Children"
     bl_options = {"REGISTER", "UNDO"}
-    command: bpy.props.StringProperty()
+    command: StringProperty()
 
 
     def get_all_parents(self, bone):
@@ -2569,62 +2571,62 @@ def handle_version_upgrade(context):
 
 def register_footprint_properties():
     # Tons of footprint related stuff
-    bpy.types.Object.is_footprint = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_footprint = BoolProperty(default=False)
 
-    bpy.types.Object.for_placement = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.for_pathing = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_enabled = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.discouraged = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.landing_strip = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.no_raycast = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.placement_slotted = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.encouraged = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.terrain_cutout = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.for_placement = BoolProperty(default=False)
+    bpy.types.Object.for_pathing = BoolProperty(default=False)
+    bpy.types.Object.is_enabled = BoolProperty(default=False)
+    bpy.types.Object.discouraged = BoolProperty(default=False)
+    bpy.types.Object.landing_strip = BoolProperty(default=False)
+    bpy.types.Object.no_raycast = BoolProperty(default=False)
+    bpy.types.Object.placement_slotted = BoolProperty(default=False)
+    bpy.types.Object.encouraged = BoolProperty(default=False)
+    bpy.types.Object.terrain_cutout = BoolProperty(default=False)
 
-    bpy.types.Object.is_routing_footprint = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_routing_footprint = BoolProperty(default=False)
 
-    bpy.types.Object.slope = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.outside = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.inside = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.slope = BoolProperty(default=False)
+    bpy.types.Object.outside = BoolProperty(default=False)
+    bpy.types.Object.inside = BoolProperty(default=False)
 
-    bpy.types.Object.terrain = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.floor = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.pool = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.pond = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.fence_post = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.any_surface = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.air = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.roof = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.terrain = BoolProperty(default=False)
+    bpy.types.Object.floor = BoolProperty(default=False)
+    bpy.types.Object.pool = BoolProperty(default=False)
+    bpy.types.Object.pond = BoolProperty(default=False)
+    bpy.types.Object.fence_post = BoolProperty(default=False)
+    bpy.types.Object.any_surface = BoolProperty(default=False)
+    bpy.types.Object.air = BoolProperty(default=False)
+    bpy.types.Object.roof = BoolProperty(default=False)
 
-    bpy.types.Object.is_none = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_walls = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_objects = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_sims = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_roofs = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_fences = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_modular_stairs = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_objects_of_same_type = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_columns = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_none = BoolProperty(default=False)
+    bpy.types.Object.is_walls = BoolProperty(default=False)
+    bpy.types.Object.is_objects = BoolProperty(default=False)
+    bpy.types.Object.is_sims = BoolProperty(default=False)
+    bpy.types.Object.is_roofs = BoolProperty(default=False)
+    bpy.types.Object.is_fences = BoolProperty(default=False)
+    bpy.types.Object.is_modular_stairs = BoolProperty(default=False)
+    bpy.types.Object.is_objects_of_same_type = BoolProperty(default=False)
+    bpy.types.Object.is_columns = BoolProperty(default=False)
 
-    bpy.types.Object.is_reserved_space = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_foundations = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_fenestration_node = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_trim = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_reserved_space = BoolProperty(default=False)
+    bpy.types.Object.is_foundations = BoolProperty(default=False)
+    bpy.types.Object.is_fenestration_node = BoolProperty(default=False)
+    bpy.types.Object.is_trim = BoolProperty(default=False)
 
-    bpy.types.Object.ignores_none = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_walls = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_objects = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_sims = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_roofs = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_fences = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_modular_stairs = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_objects_of_same_type = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_columns = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_none = BoolProperty(default=False)
+    bpy.types.Object.ignores_walls = BoolProperty(default=False)
+    bpy.types.Object.ignores_objects = BoolProperty(default=False)
+    bpy.types.Object.ignores_sims = BoolProperty(default=False)
+    bpy.types.Object.ignores_roofs = BoolProperty(default=False)
+    bpy.types.Object.ignores_fences = BoolProperty(default=False)
+    bpy.types.Object.ignores_modular_stairs = BoolProperty(default=False)
+    bpy.types.Object.ignores_objects_of_same_type = BoolProperty(default=False)
+    bpy.types.Object.ignores_columns = BoolProperty(default=False)
 
-    bpy.types.Object.ignores_reserved_space = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_foundations = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_fenestration_node = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.ignores_trim = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.ignores_reserved_space = BoolProperty(default=False)
+    bpy.types.Object.ignores_foundations = BoolProperty(default=False)
+    bpy.types.Object.ignores_fenestration_node = BoolProperty(default=False)
+    bpy.types.Object.ignores_trim = BoolProperty(default=False)
 
 def unregister_footprint_properties():
     del bpy.types.Object.is_footprint
@@ -2691,8 +2693,8 @@ def register():
             register_class(cls)
         except Exception as e:
             print(e)
-    bpy.types.PoseBone.mirrored_bone = bpy.props.StringProperty()
-    bpy.types.PoseBone.bone_flags = bpy.props.StringProperty()
+    bpy.types.PoseBone.mirrored_bone = StringProperty()
+    bpy.types.PoseBone.bone_flags = StringProperty()
 
     # This is for the baked IK data
     for ik_idx in range(-1,11):
@@ -2709,7 +2711,7 @@ def register():
 
     bpy.types.Object.l_foot_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
     bpy.types.Object.r_foot_fk_ik = FloatProperty(default=0, soft_min=0, soft_max=1)
-    bpy.types.Object.disable_rig_suffix = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.disable_rig_suffix = BoolProperty(default=False)
 
     bpy.types.Object.parent_events_list = CollectionProperty(type=AnimationEvent)
     bpy.types.Object.sound_events_list = CollectionProperty(type=AnimationEvent)
@@ -2726,26 +2728,26 @@ def register():
     bpy.types.Object.ik_targets = CollectionProperty(type=IKTarget)
     bpy.types.Object.ik_idx = IntProperty(default=0)
 
-    bpy.types.Object.rig_name = bpy.props.StringProperty()
-    bpy.types.Object.reset_initial_offset_t = bpy.props.StringProperty()
-    bpy.types.Object.allow_jaw_animation_for_entire_animation = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.explicit_namespaces = bpy.props.StringProperty()
-    bpy.types.Object.reference_namespace_hash = bpy.props.StringProperty()
-    bpy.types.Object.initial_offset_q = bpy.props.StringProperty()
-    bpy.types.Object.initial_offset_t = bpy.props.StringProperty()
+    bpy.types.Object.rig_name = StringProperty()
+    bpy.types.Object.reset_initial_offset_t = StringProperty()
+    bpy.types.Object.allow_jaw_animation_for_entire_animation = BoolProperty(default=False)
+    bpy.types.Object.explicit_namespaces = StringProperty()
+    bpy.types.Object.reference_namespace_hash = StringProperty()
+    bpy.types.Object.initial_offset_q = StringProperty()
+    bpy.types.Object.initial_offset_t = StringProperty()
 
-    bpy.types.Object.snap_events = bpy.props.StringProperty()
-    bpy.types.Object.additional_snap_frames = bpy.props.StringProperty()
-    bpy.types.Object.visibility_events = bpy.props.StringProperty()
+    bpy.types.Object.snap_events = StringProperty()
+    bpy.types.Object.additional_snap_frames = StringProperty()
+    bpy.types.Object.visibility_events = StringProperty()
 
-    bpy.types.Object.base_rig = bpy.props.StringProperty()
-    bpy.types.Object.world_rig = bpy.props.StringProperty()
-    bpy.types.Object.world_bone = bpy.props.StringProperty()
-    bpy.types.Object.use_world_bone_as_root = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.base_rig = StringProperty()
+    bpy.types.Object.world_rig = StringProperty()
+    bpy.types.Object.world_bone = StringProperty()
+    bpy.types.Object.use_world_bone_as_root = BoolProperty(default=False)
 
-    bpy.types.Object.relative_rig = bpy.props.StringProperty(update=update_initial_offsets)
-    bpy.types.Object.relative_bone = bpy.props.StringProperty(update=update_initial_offsets)
-    bpy.types.Object.use_full_precision = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.relative_rig = StringProperty(update=update_initial_offsets)
+    bpy.types.Object.relative_bone = StringProperty(update=update_initial_offsets)
+    bpy.types.Object.use_full_precision = BoolProperty(default=False)
 
     # bpy.types.Object.script_idx = IntProperty(name="Index for my_list", default=0)
     # bpy.types.Object.sound_idx = IntProperty(name="Index for sound_idx", default=0)
@@ -2756,15 +2758,15 @@ def register():
     bpy.types.Object.state_connection_idx = IntProperty(name="Index for state", default=0)
 
     #  bpy.types.Object.clip_idx = IntProperty(name="Index for clip", default=0)
-    bpy.types.Object.is_overlay = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_overlay = BoolProperty(default=False)
 
-    bpy.types.Scene.watcher_running = bpy.props.BoolProperty(default=False)
-    bpy.types.Scene.clip_name = bpy.props.StringProperty()
-    bpy.types.Scene.clip_name_prefix = bpy.props.StringProperty()
-    bpy.types.Scene.clip_splits = bpy.props.StringProperty()
-    bpy.types.Scene.clip_locos = bpy.props.StringProperty()
+    bpy.types.Scene.watcher_running = BoolProperty(default=False)
+    bpy.types.Scene.clip_name = StringProperty()
+    bpy.types.Scene.clip_name_prefix = StringProperty()
+    bpy.types.Scene.clip_splits = StringProperty()
+    bpy.types.Scene.clip_locos = StringProperty()
 
-    bpy.types.Object.footprint_name = bpy.props.StringProperty()
+    bpy.types.Object.footprint_name = StringProperty()
 
     bpy.types.Object.footprint_resource_variant = bpy.props.EnumProperty(
         # (identifier, name, description, icon, number)
@@ -2774,47 +2776,47 @@ def register():
         name="Footprint Type Variant",
         default='Regular Object')
 
-    bpy.types.Scene.s4animtools_export_path = bpy.props.StringProperty()
-    bpy.types.Scene.s4animtools_export_path2 = bpy.props.StringProperty()
+    bpy.types.Scene.s4animtools_export_path = StringProperty()
+    bpy.types.Scene.s4animtools_export_path2 = StringProperty()
 
-    bpy.types.Scene.export_as_loose_files = bpy.props.BoolProperty()
+    bpy.types.Scene.export_as_loose_files = BoolProperty()
 
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
     game_types = (("TS4", "TS4", "The Sims 4"), ("TS3", "TS3", "The Sims 3"))
 
     # Deprecated, use is_actor instead.
-    bpy.types.Object.is_s4_actor = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_s4_actor = BoolProperty(default=False)
 
-    bpy.types.Object.is_actor = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_actor = BoolProperty(default=False)
     # Actor type can be sim, object, or prop
     bpy.types.Object.actor_type = bpy.props.EnumProperty(items = actor_types)
     bpy.types.Object.game_type = bpy.props.EnumProperty(items = game_types)
 
-    bpy.types.Object.is_enabled_for_animation = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.show_footprint_options = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.show_mirror_and_masking_options = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.show_ik_options = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.show_events = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.show_clip_options = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.show_initial_offset_options = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.is_enabled_for_animation = BoolProperty(default=False)
+    bpy.types.Object.show_footprint_options = BoolProperty(default=False)
+    bpy.types.Object.show_mirror_and_masking_options = BoolProperty(default=False)
+    bpy.types.Object.show_ik_options = BoolProperty(default=False)
+    bpy.types.Object.show_events = BoolProperty(default=False)
+    bpy.types.Object.show_clip_options = BoolProperty(default=False)
+    bpy.types.Object.show_initial_offset_options = BoolProperty(default=False)
 
-    bpy.types.Object.show_experimental_options = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.is_sim_skin = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.show_experimental_options = BoolProperty(default=False)
+    bpy.types.Object.is_sim_skin = BoolProperty(default=False)
 
-    bpy.types.Object.allow_slots = bpy.props.BoolProperty(default=False)
+    bpy.types.Object.allow_slots = BoolProperty(default=False)
 
     # 60 FPS downsample to 30
-    bpy.types.Scene.downsample_60_to_30 = bpy.props.BoolProperty(default=False)
+    bpy.types.Scene.downsample_60_to_30 = BoolProperty(default=False)
 
     bpy.types.Scene.s4animtools_version = IntProperty(default=CURRENT_S4ANIMTOOLS_VERSION)
 
     bpy.types.Scene.clips = CollectionProperty(type=ClipData)
 
-    bpy.types.Scene.pose_pack_mode_enabled = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.animation_notes = bpy.props.StringProperty()
+    bpy.types.Scene.pose_pack_mode_enabled = BoolProperty(default=False)
+    bpy.types.Object.animation_notes = StringProperty()
 
-    bpy.types.Scene.use_picker_ui = bpy.props.BoolProperty(default=False)
-    bpy.types.Object.insert_last_parent_event_to_start = bpy.props.BoolProperty(default=False)
+    bpy.types.Scene.use_picker_ui = BoolProperty(default=False)
+    bpy.types.Object.insert_last_parent_event_to_start = BoolProperty(default=False)
     bpy.types.Object.subroot_for_animations = bpy.props.IntProperty()
 
 def unregister():
