@@ -2450,7 +2450,7 @@ def handle_version_upgrade(context):
 
                     obj.visibility_events_list_UI[-1].actor  = actor_name
                     obj.visibility_events_list_UI[-1].visibility  = visibility == str(1)
-            obj.reaction_events_list.clear()
+            obj.visibility_events_list.clear()
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register_footprint_properties():
