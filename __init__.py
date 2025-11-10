@@ -755,8 +755,35 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 box.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
 
-
             if obj.is_enabled_for_animation:
+                box = layout.box()
+
+                row = box.row()
+                row.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+                row.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
+                #
+                for idx, item in enumerate(context.scene.clips):
+                    item : ClipData
+                    row = box.row()
+                    row.label(text="Clip #{}".format(idx))
+                    box2 = box.box()
+                    if not context.scene.pose_pack_mode_enabled:
+                        formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
+                        box2.prop(item, "clip_name", text="Clip Name")
+                        box2.label(text="Final clip name: {}".format(formatted_clip_name))
+                    else:
+                        formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
+                        if formatted_clip_name in bpy.data.textures:
+                            tex = bpy.data.textures[formatted_clip_name]
+                            col = box2.box().column()
+                            col.template_preview(tex)
+                        box2.prop(item, "clip_display_name", text="Clip Display Name")
+                        box2.prop(item, "clip_description", text="Clip Description")
+                    row = box2.row()
+                    row.prop(item, "start_frame", text="Start Frame")
+                    row.prop(item, "end_frame", text="End Frame")
+                    box2.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+
                 box.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
                 box.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
                 box.prop(context.scene, "clip_name", text = "Clip Name(s)")
@@ -773,10 +800,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
                 box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
-                box.operator("s4animtools.new_export_clip", text="Export Clip")
+                row = box.row()
+                row.operator("s4animtools.new_export_clip", text="Export Clip")
 
-                box.operator("s4animtools.export_all_clips", text="Export All Clips")
-                # Draw animation notes string as multiline text
+                row.operator("s4animtools.export_all_clips", text="Export All Clips")
                 box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
 
 
@@ -1179,24 +1206,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         else:
             layout.label(text="Select an object to get started.")
 
-      #      self.layout.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
-      #      self.layout.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
-#
-      #      for item in context.scene.clips:
-      #          if context.scene.pose_pack_mode_enabled:
-      #              self.layout.prop(item, "clip_name", text="Clip Name")
-#
-#
-      #          else:
-      #              formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
-      #              if formatted_clip_name in bpy.data.textures:
-      #                  tex = bpy.data.textures[formatted_clip_name]
-      #                  col = self.layout.box().column()
-      #                  col.template_preview(tex)
-      #              self.layout.prop(item, "clip_display_name", text="Clip Display Name")
-      #              self.layout.prop(item, "clip_description", text="Clip Description")
-      #          self.layout.prop(item, "start_frame", text="Start Frame")
-      #          self.layout.prop(item, "end_frame", text="End Frame")
       #  self.layout.operator("s4animtools.add_new_locomotion_builder", text="Add New Locomotion Builder")
       #  self.layout.operator("s4animtools.read_locomotion_builder_from_folder", text="Read Locomotion Builder From Folder Extracted By S4S")
       #
@@ -1346,9 +1355,9 @@ class ClipData(PropertyGroup):
 
     clip_description: StringProperty()
     start_frame: IntProperty(name="Start", description="Start Frame",
-                            default=0, min=0, soft_max=360)
+                            default=0, min=0)
     end_frame: IntProperty(name="End", description="End Frame",
-                          default=0, min=0, soft_max=360)
+                          default=0, min=0)
     additional_snap_frames : CollectionProperty(type=IntProperty)
     clip_loco : BoolProperty()
 

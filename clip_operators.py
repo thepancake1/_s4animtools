@@ -3,7 +3,7 @@ import bpy
 class OT_S4ANIMTOOLS_CreateClipData(bpy.types.Operator):
     """Add roots to the list."""
     bl_idname = "s4animtools.create_clip_data"
-    bl_label = "Create new clip data"
+    bl_label = "Create Clip"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
