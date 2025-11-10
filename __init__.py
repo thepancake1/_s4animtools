@@ -2399,7 +2399,7 @@ def handle_version_upgrade(context):
                     obj.parent_events_list_UI[-1].parent_actor = parent_actor
                     obj.parent_events_list_UI[-1].parent_bone = parent_bone
             obj.parent_events_list.clear()
-        if len(obj.script_events_list):
+        if len(obj.script_events_list) > 0:
             for event in obj.script_events_list:
                 if event.info != "":
                     frame_number, event_id = event.info.split(",")
@@ -2407,7 +2407,7 @@ def handle_version_upgrade(context):
                     obj.script_events_list_UI[-1].frame_number = int(frame_number)
                     obj.script_events_list_UI[-1].event_id = int(event_id)
             obj.script_events_list.clear()
-        if len(obj.reaction_events_list):
+        if len(obj.reaction_events_list) > 0:
             for event in obj.reaction_events_list:
                 if event.info != "":
                     frame_number, reaction_asm, reaction_state = event.info.split(",")
@@ -2417,9 +2417,40 @@ def handle_version_upgrade(context):
                     obj.reaction_events_list_UI[-1].reaction_asm  = reaction_asm
                     obj.reaction_events_list_UI[-1].reaction_state = reaction_state
             obj.reaction_events_list.clear()
-        if len(obj.play_effect_events_list):
-            # TODO do this for the play effect, script, and reaction events
-            pass
+
+        if len(obj.play_effect_events_list) > 0:
+            for event in obj.play_effect_events_list:
+                if event.info != "":
+                    try:
+                        frame_number, vfx_name, actor_name, bone_name, always_zero, target_actor_name, target_bone_name, unique_vfx_name = event.info.split(",")
+                    except ValueError:
+                        # Earlier versions didn't support target_actor_name and target_bone_name and set it to the same value. Fill these with blank
+                        frame_number, vfx_name, actor_name, bone_name, always_zero, always_zero_2, unique_vfx_name = event.info.split(",")
+                        target_actor_name = ""
+                        target_bone_name = ""
+                    obj.play_effect_events_list_UI.add()
+                    obj.play_effect_events_list_UI[-1].frame_number  = int(frame_number)
+
+                    obj.play_effect_events_list_UI[-1].vfx_name  = vfx_name
+                    obj.play_effect_events_list_UI[-1].actor  = actor_name
+                    obj.play_effect_events_list_UI[-1].bone  = bone_name
+                    obj.play_effect_events_list_UI[-1].always_zero  = int(always_zero)
+
+                    obj.play_effect_events_list_UI[-1].target_actor  = target_actor_name
+                    obj.play_effect_events_list_UI[-1].target_bone  = target_bone_name
+                    obj.play_effect_events_list_UI[-1].unique_vfx_name  = unique_vfx_name
+            obj.play_effect_events_list.clear()
+
+        if len(obj.visibility_events_list) > 0:
+            for event in obj.visibility_events_list:
+                if event.info != "":
+                    frame_number, actor_name, visibility = event.info.split(",")
+                    obj.visibility_events_list_UI.add()
+                    obj.visibility_events_list_UI[-1].frame_number  = int(frame_number)
+
+                    obj.visibility_events_list_UI[-1].actor  = actor_name
+                    obj.visibility_events_list_UI[-1].visibility  = visibility == str(1)
+            obj.reaction_events_list.clear()
     context.scene.s4animtools_version = CURRENT_S4ANIMTOOLS_VERSION
 
 def register_footprint_properties():

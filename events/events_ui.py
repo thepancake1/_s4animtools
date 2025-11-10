@@ -311,6 +311,8 @@ class VisibilityEventUI(EventUI):
         return VisibilityEventInfo
 
     def draw_event(self, context, layout, item, idx):
+        layout.row().prop(item, "frame_number", text="Frame")
+
         if context.scene.use_picker_ui:
             layout.row().prop_search(item, "actor", context.scene, "objects", text="Actor")
         else:
