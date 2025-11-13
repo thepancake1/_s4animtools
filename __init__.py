@@ -12,6 +12,8 @@ from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEv
                                           ParentEventUI, SoundEventUI,
                                           ReactionEventUI, SnapEventUI, ScriptEventUI, VisibilityEventUI,
                                           PlayEffectEventUI)
+from s4animtools.rig.ik_chains import S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones, \
+    S4ANIMTOOLS_OT_FKIKSwitch, S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig
 from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
@@ -971,6 +973,118 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 # Trackmasks are not working yet
                 #layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
                 # self.layout.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
+
+                box = layout.box()
+                if context.object.type == "ARMATURE":
+                    row = layout.row()
+                    row = layout.operator("s4animtools.load_preset_bone_config", text="Load Preset Bone Config")
+                    row = layout.row()
+
+                    row.prop_search(context.object, "original_bone_01", context.object.pose, "bones",
+                                    text="IK Chain Start")
+                    row = layout.row()
+
+                    row.prop_search(context.object, "original_bone_02", context.object.pose, "bones",
+                                    text="IK Chain Middle")
+                    row = layout.row()
+
+                    row.prop_search(context.object, "original_bone_03", context.object.pose, "bones",
+                                    text="IK Chain End")
+
+                    row = layout.row()
+                    row.prop_search(context.object, "original_bone_04", context.object.pose, "bones",
+                                    text="Pole Target")
+                    row = layout.row()
+
+                    row.prop(context.object, "ik_bone_01_fk_name", text="St FK Name")
+                    row.prop(context.object, "ik_bone_01_ik_name", text="St IK Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_02_fk_name", text="Mid FK Name")
+                    row.prop(context.object, "ik_bone_02_ik_name", text="Mid IK Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_03_fk_name", text="End FK Name")
+                    row.prop(context.object, "ik_bone_03_ik_name", text="End IK Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_04_ik_name", text="Holder Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_05_ik_name", text="Target Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_06_ik_name", text="Pole Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_07_ik_name", text="Pole Indicator ")
+                    row = layout.row()
+
+                    row.operator("s4animtools.create_ik_chain", text="Create Arms IK Chain").to_build = "Arms"
+
+                    row = layout.row()
+                    row.prop_search(context.object, "original_bone_11", context.object.pose, "bones",
+                                    text="IK Chain Start")
+                    row = layout.row()
+
+                    row.prop_search(context.object, "original_bone_12", context.object.pose, "bones",
+                                    text="IK Chain Middle")
+                    row = layout.row()
+
+                    row.prop_search(context.object, "original_bone_13", context.object.pose, "bones",
+                                    text="IK Chain End")
+                    row = layout.row()
+                    row.prop_search(context.object, "original_bone_14", context.object.pose, "bones",
+                                    text="Pole Target")
+
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_11_fk_name", text="St FK Name")
+                    row.prop(context.object, "ik_bone_11_ik_name", text="St IK Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_12_fk_name", text="Mid FK Name")
+                    row.prop(context.object, "ik_bone_12_ik_name", text="Mid IK Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_13_fk_name", text="End FK Name")
+                    row.prop(context.object, "ik_bone_13_ik_name", text="End IK Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_14_ik_name", text="Holder Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_15_ik_name", text="Target Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_16_ik_name", text="Pole Name")
+                    row = layout.row()
+                    row.prop(context.object, "ik_bone_17_ik_name", text="Pole Indicator Name")
+                    row = layout.row()
+                    row.operator("s4animtools.create_ik_chain", text="Create Legs IK Chain").to_build = "Legs"
+                    row = layout.row()
+
+                    row.prop(context.object, "left_arm_ik_enabled", text="Left Arm IK Enabled")
+                    if context.object.left_arm_ik_enabled < 0.99:
+                        row.operator("s4animtools.fk_to_ik_switch", text="Left Arm FK to IK").to_build = "LeftArm"
+                    else:
+                        row.operator("s4animtools.ik_to_fk_switch", text="Left Arm IK to FK").to_build = "LeftArm"
+                    row = layout.row()
+
+                    row.prop(context.object, "right_arm_ik_enabled", text="Right Arm IK Enabled")
+
+                    if context.object.right_arm_ik_enabled < 0.99:
+                        row.operator("s4animtools.fk_to_ik_switch", text="Right Arm FK to IK").to_build = "RightArm"
+                    else:
+                        row.operator("s4animtools.ik_to_fk_switch", text="Right Arm IK to FK").to_build = "RightArm"
+                    row = layout.row()
+
+                    row.prop(context.object, "left_leg_ik_enabled", text="Left Leg IK Enabled")
+                    if context.object.left_leg_ik_enabled < 0.99:
+                        row.operator("s4animtools.fk_to_ik_switch", text="Left Leg FK to IK").to_build = "LeftLeg"
+                    else:
+                        row.operator("s4animtools.ik_to_fk_switch", text="Left Leg IK to FK").to_build = "LeftLeg"
+                    row = layout.row()
+
+                    row.prop(context.object, "right_leg_ik_enabled", text="Right Leg IK Enabled")
+                    if context.object.right_leg_ik_enabled < 0.99:
+                        row.operator("s4animtools.fk_to_ik_switch", text="Right Leg FK to IK").to_build = "RightLeg"
+                    else:
+                        row.operator("s4animtools.ik_to_fk_switch", text="Right Leg IK to FK").to_build = "RightLeg"
+                    row = layout.row()
+
+                    row.prop(context.object, "baked_eye_animation_enabled", text="Baked Eye Animation Enabled")
+                    row = layout.row()
+
+                    row.operator("s4animtools.create_bones", text="Create Bones")
 
                 box = layout.box()
                 row = box.row()
@@ -2361,7 +2475,7 @@ classes = (
     OT_S4ANIMTOOLS_UpgradeData,
     OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_PreviewSlotAssignment, OT_S4ANIMTOOLS_PreviewAllSlotAssignments,
-    S4ANIMTOOLS_OT_DeleteAllIKTargets)
+    S4ANIMTOOLS_OT_DeleteAllIKTargets,S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones,S4ANIMTOOLS_OT_FKIKSwitch,S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig)
 
 def update_selected_bones(self, context):
     pass
@@ -2703,6 +2817,64 @@ def register():
     bpy.types.Object.insert_last_parent_event_to_start = BoolProperty(default=False)
     bpy.types.Object.subroot_for_animations = bpy.props.IntProperty()
 
+    # Bones to create IK chains for. Despite the name
+    # these are the FK
+    bpy.types.Object.original_bone_01 = bpy.props.StringProperty()
+    bpy.types.Object.original_bone_02 = bpy.props.StringProperty()
+    bpy.types.Object.original_bone_03 = bpy.props.StringProperty()
+
+    bpy.types.Object.original_bone_04 = bpy.props.StringProperty()
+
+    bpy.types.Object.ik_bone_01_fk_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_02_fk_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_03_fk_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_01_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_02_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_03_ik_name = bpy.props.StringProperty()
+
+    bpy.types.Object.original_bone_11 = bpy.props.StringProperty()
+    bpy.types.Object.original_bone_12 = bpy.props.StringProperty()
+    bpy.types.Object.original_bone_13 = bpy.props.StringProperty()
+    bpy.types.Object.original_bone_14 = bpy.props.StringProperty()
+
+    bpy.types.Object.ik_bone_11_fk_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_12_fk_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_13_fk_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_11_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_12_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_13_ik_name = bpy.props.StringProperty()
+
+    # The bone at the end of the IK chain, same level as IK Bone 3 (Hand), but its main purpose is to
+    # actually store the IK constraint. (IK Bone 3 has the *final* rotation for the hand)
+    bpy.types.Object.ik_bone_04_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_14_ik_name = bpy.props.StringProperty()
+
+    # The target bone for the IK chain. This bone has no parent.
+    bpy.types.Object.ik_bone_05_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_15_ik_name = bpy.props.StringProperty()
+
+    # The IK Chain pole
+    bpy.types.Object.ik_bone_06_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_16_ik_name = bpy.props.StringProperty()
+
+    # The IK pole indicator
+    bpy.types.Object.ik_bone_07_ik_name = bpy.props.StringProperty()
+    bpy.types.Object.ik_bone_17_ik_name = bpy.props.StringProperty()
+    # Whether IK is enabled for this IK Chain. 0 = disabled, 1 = enabled
+    # Values inbetween are possible, but why.
+    bpy.types.Object.left_arm_ik_enabled = bpy.props.FloatProperty(name="Left Arm IK Enabled", soft_min=0, soft_max=1,
+                                                                   min=0, max=1)
+    bpy.types.Object.right_arm_ik_enabled = bpy.props.FloatProperty(name="Right Arm IK Enabled", soft_min=0, soft_max=1,
+                                                                    min=0, max=1)
+    bpy.types.Object.left_leg_ik_enabled = bpy.props.FloatProperty(name="Left Leg IK Enabled", soft_min=0, soft_max=1,
+                                                                   min=0, max=1)
+    bpy.types.Object.right_leg_ik_enabled = bpy.props.FloatProperty(name="Right Leg IK Enabled", soft_min=0, soft_max=1,
+                                                                    min=0, max=1)
+    bpy.types.Object.baked_eye_animation_enabled = bpy.props.FloatProperty(name="Baked Eye Animation Enabled",
+                                                                           soft_min=0, soft_max=1, min=0, max=1,
+                                                                           default=1)
+
+
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2811,3 +2983,39 @@ def unregister():
 
     for event_holder in all_event_holders:
         event_holder.unregister_blender_class()
+
+    del bpy.types.Object.original_bone_01
+    del bpy.types.Object.original_bone_02
+    del bpy.types.Object.original_bone_03
+    del bpy.types.Object.original_bone_04
+    del bpy.types.Object.ik_bone_01_fk_name
+    del bpy.types.Object.ik_bone_02_fk_name
+    del bpy.types.Object.ik_bone_03_fk_name
+    del bpy.types.Object.ik_bone_01_ik_name
+    del bpy.types.Object.ik_bone_02_ik_name
+    del bpy.types.Object.ik_bone_03_ik_name
+    del bpy.types.Object.ik_bone_04_ik_name
+    del bpy.types.Object.ik_bone_05_ik_name
+
+    del bpy.types.Object.ik_bone_11
+    del bpy.types.Object.ik_bone_12
+    del bpy.types.Object.ik_bone_13
+    del bpy.types.Object.ik_bone_11_fk_name
+    del bpy.types.Object.ik_bone_12_fk_name
+    del bpy.types.Object.ik_bone_13_fk_name
+    del bpy.types.Object.ik_bone_11_ik_name
+    del bpy.types.Object.ik_bone_12_ik_name
+    del bpy.types.Object.ik_bone_13_ik_name
+    del bpy.types.Object.ik_bone_14_ik_name
+    del bpy.types.Object.ik_bone_15_ik_name
+
+    del bpy.types.Object.ik_bone_06_ik_name
+    del bpy.types.Object.ik_bone_16_ik_name
+
+    del bpy.types.Object.ik_bone_07_ik_name
+    del bpy.types.Object.ik_bone_17_ik_name
+
+    del bpy.types.Object.left_arm_ik_enabled
+    del bpy.types.Object.right_arm_ik_enabled
+    del bpy.types.Object.left_leg_ik_enabled
+    del bpy.types.Object.right_leg_ik_enabled

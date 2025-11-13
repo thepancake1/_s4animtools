@@ -3,10 +3,10 @@ import bpy
 from typing import TYPE_CHECKING
 
 from s4animtools.ik_baker import get_ik_target_idx_for_slot_assignment_on_chain
-from sims_toolkit.blender.ik_chains import mirror_bone_name
+from s4animtools.rig.ik_chains import mirror_bone_name
 
 if TYPE_CHECKING:
-    import s4animtools.ik_manager
+    pass
 
 def create_childof_constraint_bone(src_obj, to_obj, src_bone, to_bone):
     constraint = src_bone.constraints.new("CHILD_OF")
