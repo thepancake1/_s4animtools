@@ -820,7 +820,30 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
                 layout.prop(obj, "is_footprint", text="Is Footprint Object")
+                box = layout.box()
 
+                row = box.row()
+                row.operator("s4animtools.import_footprint", text="Import Footprint")
+                row.operator("s4animtools.export_footprint", text="Export Footprint")
+
+                row = layout.row()
+                row.label(text="View footprints for:")
+                box = layout.box()
+                row = box.row()
+
+                row.operator("s4animtools.visualize_footprint", text="Pathing").command="for_pathing"
+                row.operator("s4animtools.visualize_footprint", text="Placement").command="for_placement"
+                row = box.row()
+
+                row.operator("s4animtools.visualize_footprint", text="Terrain").command="terrain"
+                row.operator("s4animtools.visualize_footprint", text="Floor").command="floor"
+
+                # workaround for 1 item in 2 columns
+                row = box.row()
+                col = row.column()
+                col.operator("s4animtools.visualize_footprint", text="Pool").command="pool"
+                col = row.column()
+                col.label(text="")
                 if obj.is_footprint:
 
                   #  layout.prop(obj, "footprint_resource_variant", text="Variant")
@@ -940,30 +963,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
 
 
-                box = layout.box()
 
-                row = box.row()
-                row.operator("s4animtools.import_footprint", text="Import Footprint")
-                row.operator("s4animtools.export_footprint", text="Export Footprint")
-
-                row = layout.row()
-                row.label(text="View footprints for:")
-                box = layout.box()
-                row = box.row()
-
-                row.operator("s4animtools.visualize_footprint", text="Pathing").command="for_pathing"
-                row.operator("s4animtools.visualize_footprint", text="Placement").command="for_placement"
-                row = box.row()
-
-                row.operator("s4animtools.visualize_footprint", text="Terrain").command="terrain"
-                row.operator("s4animtools.visualize_footprint", text="Floor").command="floor"
-
-                # workaround for 1 item in 2 columns
-                row = box.row()
-                col = row.column()
-                col.operator("s4animtools.visualize_footprint", text="Pool").command="pool"
-                col = row.column()
-                col.label(text="")
 
 
             layout.prop(obj, "show_mirror_and_masking_options", text="Show Rig Options")
