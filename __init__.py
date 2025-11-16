@@ -1121,7 +1121,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 box = layout.row()
 
                 if obj.ik_idx >= 0 and obj.ik_targets:
-                    # These are called rows but are obviously columns.
+                    # These are called rows but are obviously columns?
                     row = box.column()
 
                     self.draw_all_ik_targets_of_type(context, obj, row, "b__L_Hand__")
@@ -1274,7 +1274,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 box.prop(obj, "subroot_for_animations", text="Subroot for Animations (Import)")
                 box.prop(obj, "insert_last_parent_event_to_start", text="Insert Last Parent Event To Start (Import)")
-
+                box.operator("s4animtools.reset_slot_assignment_preview", text="Reset Slot Assignment Preview")
 
               #  box.label(text="Use Full Precision means using full precision for all animation data.")
               #  box.label(text="Don't enable if you don't know what that means! ")
@@ -1964,215 +1964,6 @@ class OT_S4ANIMTOOLS_DetermineBalance(bpy.types.Operator):
 
         return {"FINISHED"}
 
-# I don't think this is used anymore
-class OT_S4ANIMTOOLS_FKToIK(bpy.types.Operator):
-    bl_idname = "s4animtools.fk_to_ik"
-    bl_label = "FK To IK"
-    bl_options = {"REGISTER", "UNDO"}
-    command: StringProperty()
-
-    def execute(self, context):
-        from mathutils import Matrix
-        # TODO reset forearm and calf bones location and rotation when switching modes
-        # What gets activated
-        # Left Hand Target
-        # Left Hand IK
-        # Left Arm Pole
-        # Left Hand IK Constraint to Left Hand Target
-        # What gets hidden
-        # Left Upper Arm
-        # Left Forearm
-        # Left Hand
-        arm = context.object.data
-        pose = context.object.pose
-
-        if "LEFT,HAND" == self.command:
-            hand = "b__L_Hand__"
-            forearm = "b__L_Forearm__"
-            upper_arm = "b__L_UpperArm__"
-            target = "Left Hand Target"
-            pole = "Left Arm Pole"
-            export_pole = "b__L_ArmExportPole__"
-            ik = "Left Hand IK"
-
-        elif "RIGHT,HAND" == self.command:
-            hand = "b__R_Hand__"
-            forearm = "b__R_Forearm__"
-            upper_arm = "b__R_UpperArm__"
-            target = "Right Hand Target"
-            pole = "Right Arm Pole"
-            export_pole = "b__R_ArmExportPole__"
-            ik = "Right Hand IK"
-
-        elif "LEFT,FOOT" == self.command:
-            hand = "b__L_Foot__"
-            forearm = "b__L_Calf__"
-            upper_arm = "b__L_Thigh__"
-            target = "Left Foot Main Parent"
-            pole = "Left Leg Pole"
-            export_pole = "b__L_LegExportPole__"
-            ik = "Left Foot IK"
-
-        elif "RIGHT,FOOT" == self.command:
-            hand = "b__R_Foot__"
-            forearm = "b__R_Calf__"
-            upper_arm = "b__R_Thigh__"
-            target = "Right Foot Main Parent"
-            pole = "Right Leg Pole"
-            export_pole = "b__R_LegExportPole__"
-            ik = "Right Foot IK"
-        else:
-            return {"FINISHED"}
-        if ik in pose.bones:
-            left_hand_ik = pose.bones[ik]
-            left_arm_pole = pose.bones[export_pole]
-            matrix_data = pose.bones[pole].matrix.copy()
-
-            left_arm_pole.matrix = matrix_data
-            left_arm_pole.keyframe_insert(data_path="location", frame=context.scene.frame_current)
-
-            left_hand = pose.bones[target]
-
-
-
-            matrix_data = pose.bones[hand].matrix.copy()
-            pose.bones[hand].constraints["Copy Rotation"].enabled = True
-            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["Copy Rotation"].enabled'.format(hand), frame=context.scene.frame_current)
-
-            left_hand.matrix = matrix_data
-            left_hand.keyframe_insert(data_path="location", frame=context.scene.frame_current)
-            left_hand.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
-            left_hand.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
-
-            pose.bones[forearm].matrix_basis = Matrix()
-            pose.bones[forearm].keyframe_insert(data_path="location", frame=context.scene.frame_current)
-            pose.bones[forearm].keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
-            pose.bones[forearm].keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
-
-            # Enable the left hand ik constraint
-            left_hand_ik.constraints["IK"].enabled = True
-            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["IK"].enabled'.format(ik), frame=context.scene.frame_current)
-
-            # Setup bone visibility
-            pose.bones[target].bone.hide = False
-            pose.bones[ik].bone.hide = True
-            pose.bones[export_pole].bone.hide = False
-            pose.bones[pole].bone.hide = True
-
-            pose.bones[upper_arm].bone.hide = True
-            pose.bones[forearm].bone.hide = True
-            pose.bones[hand].bone.hide = True
-
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(target), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(ik), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(export_pole), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(pole), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(upper_arm), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(forearm), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(hand), frame=context.scene.frame_current)
-
-
-
-        return {"FINISHED"}
-
-# I don't think this is used anymore
-class OT_S4ANIMTOOLS_IKToFK(bpy.types.Operator):
-    bl_idname = "s4animtools.ik_to_fk"
-    bl_label = "IK To FK"
-    bl_options = {"REGISTER", "UNDO"}
-    command: StringProperty()
-
-    def execute(self, context):
-        arm = context.object.data
-        pose = context.object.pose
-
-        if "LEFT,HAND" == self.command:
-            hand = "b__L_Hand__"
-            forearm = "b__L_Forearm__"
-            upper_arm = "b__L_UpperArm__"
-            target = "Left Hand Target"
-            pole = "Left Arm Pole"
-            export_pole = "b__L_ArmExportPole__"
-            ik = "Left Hand IK"
-
-        elif "RIGHT,HAND" == self.command:
-            hand = "b__R_Hand__"
-            forearm = "b__R_Forearm__"
-            upper_arm = "b__R_UpperArm__"
-            target = "Right Hand Target"
-            pole = "Right Arm Pole"
-            export_pole = "b__R_ArmExportPole__"
-            ik = "Right Hand IK"
-        elif "LEFT,FOOT" == self.command:
-            hand = "b__L_Foot__"
-            forearm = "b__L_Calf__"
-            upper_arm = "b__L_Thigh__"
-            target = "Left Foot Main Parent"
-            pole = "Left Leg Pole"
-            export_pole = "b__L_LegExportPole__"
-            ik = "Left Foot IK"
-
-        elif "RIGHT,FOOT" == self.command:
-            hand = "b__R_Foot__"
-            forearm = "b__R_Calf__"
-            upper_arm = "b__R_Thigh__"
-            target = "Right Foot Main Parent"
-            pole = "Right Leg Pole"
-            export_pole = "b__R_LegExportPole__"
-            ik = "Right Foot IK"
-        else:
-            return {"FINISHED"}
-
-        if ik in pose.bones:
-            left_hand_ik = pose.bones[ik]
-            left_upper_arm = pose.bones[upper_arm]
-            matrix_data = left_upper_arm.matrix.copy()
-
-            left_upper_arm.matrix = matrix_data
-            left_upper_arm.keyframe_insert(data_path="location", frame=context.scene.frame_current)
-            left_upper_arm.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
-            left_upper_arm.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
-            left_forearm = pose.bones[forearm]
-            matrix_data = left_forearm.matrix.copy()
-
-            left_forearm.matrix = matrix_data
-            left_forearm.keyframe_insert(data_path="location", frame=context.scene.frame_current)
-            left_forearm.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
-            left_forearm.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
-
-            left_hand = pose.bones[hand]
-            matrix_data = left_hand.matrix.copy()
-            left_hand.constraints["Copy Rotation"].enabled = False
-            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["Copy Rotation"].enabled'.format(hand), frame=context.scene.frame_current)
-
-            left_hand.matrix = matrix_data
-            left_hand.keyframe_insert(data_path="location", frame=context.scene.frame_current)
-            left_hand.keyframe_insert(data_path="rotation_quaternion", frame=context.scene.frame_current)
-            left_hand.keyframe_insert(data_path="rotation_euler", frame=context.scene.frame_current)
-            left_hand_ik.constraints["IK"].enabled = False
-            context.object.keyframe_insert(data_path=r'pose.bones["{}"].constraints["IK"].enabled'.format(ik), frame=context.scene.frame_current)
-
-            pose.bones[target].bone.hide = True
-            pose.bones[ik].bone.hide = True
-            pose.bones[export_pole].bone.hide = True
-            pose.bones[pole].bone.hide = True
-
-            pose.bones[upper_arm].bone.hide = False
-            pose.bones[forearm].bone.hide = False
-            pose.bones[hand].bone.hide = False
-
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(target), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(ik), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(export_pole), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(pole), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(upper_arm), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(forearm), frame=context.scene.frame_current)
-            context.object.data.keyframe_insert(data_path=r'bones["{}"].hide'.format(hand), frame=context.scene.frame_current)
-
-
-
-        return {"FINISHED"}
-
 class OT_S4ANIMTOOLS_MaskOutParents(bpy.types.Operator):
     bl_idname = "s4animtools.mask_out_parents"
     bl_label = "Mask Out Parents"
@@ -2288,142 +2079,6 @@ class OT_S4ANIMTOOLS_MaskOutChildren(bpy.types.Operator):
                             fcurve.mute = bone not in bones_to_enable
         return {"FINISHED"}
 
-class OT_S4ANIMTOOLS_PreviewIK(bpy.types.Operator):
-    bl_idname = "s4animtools.preview_ik"
-    bl_label = "Preview IK"
-    bl_options = {"REGISTER", "UNDO"}
-
-
-    def cleanup_stale_empties(self):
-        for obj in bpy.data.objects:
-            if obj.name.startswith("IKEmpty_"):
-                bpy.data.objects.remove(obj)
-
-    def execute(self, context):
-        obj = context.object
-        # Note: this assumes there is only one possible actor to go into Slot selection mode at a time
-        self.cleanup_stale_empties()
-        ik_target_per_bone = defaultdict(int)
-        for idx, target in enumerate(get_ik_targets(obj)):
-            bone_id = hex(get_32bit_hash(
-                "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
-                    "utf-8")))
-            hashed_id = "IKEmpty_{}_UserAdjust".format(bone_id)
-            o = bpy.data.objects.new(hashed_id, None)
-            o.rotation_mode = 'QUATERNION'
-            bpy.context.scene.collection.objects.link(o)
-            o.empty_display_size = 0.01
-            o.empty_display_type = 'PLAIN_AXES'
-            # Create a child of constraint on the new empty.
-            c = o.constraints.new('CHILD_OF')
-            c.target = bpy.data.objects[target.target_obj]
-            c.subtarget = target.target_bone
-            bpy.context.view_layer.objects.active = o
-            o.select_set(True)
-            context_py = bpy.context.copy()
-            context_py["constraint"] = c
-            bpy.ops.constraint.childof_clear_inverse(context_py, constraint="Child Of", owner='OBJECT')
-
-
-            # Create animated slot offset driven by drivers
-            # This needs to be separated from UserAdjust so the user can adjust the slot offset
-            # and then the driver applies it relative to the UserAdjust
-            hashed_id = "IKEmpty_{}_DriverAdjust".format(bone_id)
-            o2 = bpy.data.objects.new(hashed_id, None)
-            o2.rotation_mode = 'QUATERNION'
-            bpy.context.scene.collection.objects.link(o2)
-            o2.empty_display_size = 0.1
-            o2.empty_display_type = 'PLAIN_AXES'
-            o2.parent = o
-            bpy.context.view_layer.objects.active = o2
-            o2.select_set(True)
-
-
-            for j in range(3):
-                location = o2.driver_add("location", j)
-                v = location.driver.variables.new()
-                driver_target = v.targets[0]
-                driver_target.id = obj
-                driver_target.data_path = 'pose.bones["{}"].ik_pos_{}[{}]'.format(target.chain_bone, ik_target_per_bone[target.chain_bone], j)
-                location.driver.expression = v.name
-
-            for k in range(4):
-                location = o2.driver_add("rotation_quaternion", k)
-                v = location.driver.variables.new()
-                driver_target = v.targets[0]
-                driver_target.id = obj
-                driver_target.data_path = 'pose.bones["{}"].ik_rot_{}[{}]'.format(target.chain_bone, ik_target_per_bone[target.chain_bone], k)
-                location.driver.expression = v.name
-            ik_target_per_bone[target.chain_bone] += 1
-        return {"FINISHED"}
-
-
-class OT_S4ANIMTOOLS_UpdateIKEmpties(bpy.types.Operator):
-    bl_idname = "s4animtools.update_ik_empties"
-    bl_label = "Update IK Empties"
-    bl_options = {"REGISTER", "UNDO"}
-
-    LEFT_HAND = "b__L_Hand__"
-    RIGHT_HAND = "b__R_Hand__"
-    LEFT_FOOT = "b__L_Foot__"
-    RIGHT_FOOT = "b__R_Foot__"
-
-    ik_bones = [LEFT_HAND, RIGHT_HAND, LEFT_FOOT, RIGHT_FOOT]
-
-
-    def get_matching_bone_name(self, target):
-        target_bone = None
-
-        if target == "b__L_Hand__":
-            target_bone = "Left Hand Target"
-        elif target == "b__R_Hand__":
-            target_bone = "Right Hand Target"
-        elif target == "b__L_Foot__":
-            target_bone = "Left Foot Target"
-        elif target == "b__R_Foot__":
-            target_bone = "Right Foot Target"
-        return target_bone
-    def cleanup_stale_constraints(self, context):
-        # NOTE! This assumes your IK bones are the target bones. Not the bone where the ik constraint lives on.
-        for bone_name in self.ik_bones:
-            target_bone = self.get_matching_bone_name(bone_name)
-            if target_bone in context.object.pose.bones:
-                for constraint in context.object.pose.bones[target_bone].constraints[:]:
-                    print(constraint)
-                    if constraint.type == 'COPY_TRANSFORMS':
-                        context.object.pose.bones[target_bone].constraints.remove(constraint)
-
-
-    def execute(self, context):
-        obj = context.object
-        # Note: this assumes there is only one possible actor to go into Slot selection mode at a time
-        self.cleanup_stale_constraints(context)
-        ik_target_per_bone = defaultdict(int)
-        for idx, target in enumerate(get_ik_targets(obj)):
-            bone_id = hex(get_32bit_hash(
-                "{}_{}_{}_{}".format(obj.rig_name, target.chain_bone, target.target_obj, target.target_bone).encode(
-                    "utf-8")))
-            driver_adjust_obj = "IKEmpty_{}_DriverAdjust".format(bone_id)
-            if "b__ROOT_bind__" == target.chain_bone:
-                continue
-            target_bone = self.get_matching_bone_name(target.chain_bone)
-            if target_bone is None:
-                continue
-            c = obj.pose.bones[target_bone].constraints.new('COPY_TRANSFORMS')
-            c.target = bpy.data.objects[driver_adjust_obj]
-            if ik_target_per_bone[target.chain_bone] >= 1:
-                location = c.driver_add("influence")
-                for v in location.driver.variables[:]:
-                    location.driver.variables.remove(v)
-                v = location.driver.variables.new()
-                driver_target = v.targets[0]
-                driver_target.id = obj
-                driver_target.data_path = 'pose.bones["{}"].ik_weight_{}'.format(target.chain_bone, ik_target_per_bone[target.chain_bone])
-                location.driver.expression = v.name
-            ik_target_per_bone[target.chain_bone] += 1
-
-        return {"FINISHED"}
-
 class OT_S4ANIMTOOLS_ToggleSlots(bpy.types.Operator):
     bl_idname = "s4animtools.toggle_slots"
     bl_label = "Toggle Slots"
@@ -2457,6 +2112,34 @@ class OT_S4ANIMTOOLS_ToggleSlots(bpy.types.Operator):
 
         return {"FINISHED"}
 
+
+class OT_S4ANIMTOOLS_ResetSlotAssignmentPreview(bpy.types.Operator):
+    bl_idname = "s4animtools.reset_slot_assignment_preview"
+    bl_label = "Toggle Slots"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        for obj in context.scene.objects:
+            if hasattr(obj, "pose"):
+                if hasattr(obj.pose, "bones"):
+                    for bone in obj.pose.bones:
+                        if bone.name.startswith("ik_bone_"):
+                            # Delete the constraints from the bone to make it ready for use in another anim
+                            for constraint in bone.constraints:
+                                if constraint.name.startswith("IK Child Of"):
+                                    bone.constraints.remove(constraint)
+                        if bone.name in ["L.FootTarget.IK", "R.FootTarget.IK"] or \
+                            bone.name in ["L.HandTarget.IK", "R.HandTarget.IK"] or \
+                            bone.name == "b__ROOT_bind__":
+                            for constraint in bone.constraints:
+                                constraint.driver_remove("influence")
+                                if constraint.name.startswith("IK Copy Location") or constraint.name.startswith("IK Copy Rotation"):
+                                    bone.constraints.remove(constraint)
+
+
+        return {"FINISHED"}
+
+
 classes = (
     Snapper, ExportRig, SyncRigToMesh,
     S4ANIMTOOLS_PT_MainPanel,
@@ -2469,13 +2152,14 @@ classes = (
     S4ANIMTOOLS_OT_move_new_element, AnimationEvent,
     LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, LIST_OT_DeleteSpecificIKTarget, FlipLeftSideAnimationToRightSideSim, OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_ExportFootprint,
     OT_S4ANIMTOOLS_VisualizeFootprint, OT_S4ANIMTOOLS_CreateBoneSelectors, OT_S4ANIMTOOLS_CreateFingerIK, OT_S4ANIMTOOLS_CreateIKRig,
-    OT_S4ANIMTOOLS_FKToIK, OT_S4ANIMTOOLS_IKToFK, OT_S4ANIMTOOLS_DetermineBalance, OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
-    OT_S4ANIMTOOLS_PreviewIK, OT_S4ANIMTOOLS_UpdateIKEmpties, S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
+    OT_S4ANIMTOOLS_MaskOutParents, OT_S4ANIMTOOLS_ApplyTrackmask, OT_S4ANIMTOOLS_MaskOutChildren,
+    S4ANIMTOOL_OT_ExportAllClips, OT_S4ANIMTOOLS_SelectExportDirectory,
     OT_S4ANIMTOOLS_AddSoundEventsListUI, OT_S4ANIMTOOLS_AddScriptEventsListUI,
     OT_S4ANIMTOOLS_UpgradeData,
     OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_PreviewSlotAssignment, OT_S4ANIMTOOLS_PreviewAllSlotAssignments,
-    S4ANIMTOOLS_OT_DeleteAllIKTargets,S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones,S4ANIMTOOLS_OT_FKIKSwitch,S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig)
+    S4ANIMTOOLS_OT_DeleteAllIKTargets,S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones,S4ANIMTOOLS_OT_FKIKSwitch,S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig,
+OT_S4ANIMTOOLS_ResetSlotAssignmentPreview)
 
 def update_selected_bones(self, context):
     pass
