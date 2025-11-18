@@ -522,7 +522,7 @@ class NewClipExporter:
                 raise ValueError("You need to set your render settings to 60 fps to downsample to 30.")
 
         # Set the source filename in the exported clip to be this blend's filename.
-        source_filename = bpy.data.filepath.split(os.sep)[-1]
+        source_filename = f"{bpy.data.filepath.split(os.sep)[-1]} (Exported with Blender {bpy.app.version[0]}.{bpy.app.version[1]}.{bpy.app.version[2]})"
         ik_targets_to_bone = determine_ik_slot_targets(self.context.active_object)
 
         clip_infos = self.get_clip_infos()
@@ -804,7 +804,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
                 row = box.row()
                 row.operator("s4animtools.new_export_clip", text="Export Clip")
-
                 row.operator("s4animtools.export_all_clips", text="Export All Clips")
                 box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
 
@@ -1117,6 +1116,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row = box.row()
                 row.operator('iktarget.create_roots', text='Create World IK Channels')
                 row.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
+
+                row = box.row()
+                row.operator('s4animtools.removeik', text='Remove Baked IK Channels')
 
                 box = layout.row()
 
