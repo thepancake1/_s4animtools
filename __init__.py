@@ -557,7 +557,7 @@ class NewClipExporter:
                 raise ValueError("You need to set your render settings to 60 fps to downsample to 30.")
 
         # Set the source filename in the exported clip to be this blend's filename.
-        source_filename = bpy.data.filepath.split(os.sep)[-1]
+        source_filename = f"{bpy.data.filepath.split(os.sep)[-1]} (Exported with Blender {bpy.app.version[0]}.{bpy.app.version[1]}.{bpy.app.version[2]})"
         ik_targets_to_bone = determine_ik_slot_targets(self.context.active_object)
 
         clip_infos = self.get_clip_infos()
@@ -741,14 +741,68 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
        # layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
+            box = layout.box()
 
-            layout.operator("s4animtools.toggle_slots", text="Toggle Slots")
-            #layout.prop(obj, "is_sim_skin", text="Is Sims 4 Skin")
-            layout.prop(obj, "is_s4_actor", text="Is Sims 4 Actor")
-            if obj.is_s4_actor:
-                layout.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
-                layout.prop(obj, "actor_type", text="Actor Type")
-                layout.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
+            box.prop(obj, "is_actor", text="Is Actor")
+            box.prop(obj, "is_enabled_for_animation", text="Is Enabled for Animation")
+
+            if obj.is_actor:
+                box.prop(obj, "actor_type", text="Actor Type")
+                box.prop(obj, "game_type", text="Game Type")
+
+                box.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
+
+            if obj.is_enabled_for_animation:
+                box = layout.box()
+
+                row = box.row()
+                row.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+                row.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
+                #
+                for idx, item in enumerate(context.scene.clips):
+                    item : ClipData
+                    row = box.row()
+                    row.label(text="Clip #{}".format(idx))
+                    box2 = box.box()
+                    if not context.scene.pose_pack_mode_enabled:
+                        formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
+                        box2.prop(item, "clip_name", text="Clip Name")
+                        box2.label(text="Final clip name: {}".format(formatted_clip_name))
+                    else:
+                        formatted_clip_name = get_formatted_clip_name(item.clip_name, obj.rig_name)
+                        if formatted_clip_name in bpy.data.textures:
+                            tex = bpy.data.textures[formatted_clip_name]
+                            col = box2.box().column()
+                            col.template_preview(tex)
+                        box2.prop(item, "clip_display_name", text="Clip Display Name")
+                        box2.prop(item, "clip_description", text="Clip Description")
+                    row = box2.row()
+                    row.prop(item, "start_frame", text="Start Frame")
+                    row.prop(item, "end_frame", text="End Frame")
+                    box2.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+
+                box.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
+                box.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
+                box.prop(context.scene, "clip_name", text = "Clip Name(s)")
+                box.prop(obj, "allow_jaw_animation_for_entire_animation",
+                                 text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
+
+                box.label(text="The center rig is where the root of your exported animation will be located.")
+                box.label(text="Useful for poses with multiple sims.")
+                box.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
+                if len(context.object.world_rig) > 0:
+                    if context.object.world_rig in bpy.data.objects:
+                        target_bone_obj = bpy.data.objects[obj.world_rig]
+                        box.prop_search(context.object, "world_bone", target_bone_obj.pose, "bones", text="Center Bone")
+
+
+                box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
+                row = box.row()
+                row.operator("s4animtools.new_export_clip", text="Export Clip")
+
+                row.operator("s4animtools.export_all_clips", text="Export All Clips")
+                box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+
 
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
             if obj.show_footprint_options:
@@ -885,7 +939,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 self.layout.operator('iktarget.create_roots', text='Create World IK Channels')
 
-                layout = self.layout
+                row = box.row()
+                row.operator('iktarget.create_roots', text='Create World IK Channels')
+                row.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
+
                 box = layout.row()
                 row = box
 

@@ -1,3 +1,4 @@
+import bpy
 from s4animtools.serialization.types.basic import UInt32
 from s4animtools.rig_constants import slot
 from s4animtools.channels.translation_channel import Vector3Channel
@@ -10,6 +11,7 @@ from mathutils import Vector, Quaternion
 from s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
 import s4animtools
+import bpy_extras
 ENABLE_SCALE = True
 F4_QuaternionIdentity = 17
 
@@ -361,12 +363,20 @@ class AnimationExporter:
         translation_data_path = f'pose.bones["{source_bone_name}"].ik_pos_{ik_idx}'
         rotation_data_path = f'pose.bones["{source_bone_name}"].ik_rot_{ik_idx}'
 
+
+
         translation_channel_clip = self.animated_frame_data[source_bone_name].get_translation_channel(ik_idx)
         rotation_channel_clip = self.animated_frame_data[source_bone_name].get_rotation_channel(ik_idx)
         translations = defaultdict(dict)
-        # Convert from baked data from "Set IK Weights" into actual ik keyframe data
+        # Convert from baked data from "Bake InGame IK Animation Data" into actual ik keyframe data
         for t_axis in range(3):
-            fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
+            if bpy.app.version >= (5,0,0):
+                action = self.source_rig.animation_data.action
+                slot = self.source_rig.animation_data.action_slot
+                channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+                fc_t = channelbag.fcurves.find(translation_data_path, index=t_axis)
+            else:
+                fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
             for keyframe in fc_t.keyframe_points:
                 frame = math.floor(keyframe.co[0])
                 # Skip every other frame, sampling_rate == 2 means downsampling 60 to 30 fps
@@ -382,7 +392,13 @@ class AnimationExporter:
             translation_channel_clip.add_keyframe(Vector(translations[frame].values()), frame, force=frame==0)
         rotations = defaultdict(dict)
         for r_axis in range(4):
-            fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
+            if bpy.app.version >= (5,0,0):
+                action = self.source_rig.animation_data.action
+                slot = self.source_rig.animation_data.action_slot
+                channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+                fc_r = channelbag.fcurves.find(rotation_data_path, index=r_axis)
+            else:
+                fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
             for keyframe in fc_r.keyframe_points:
                 frame = math.floor(keyframe.co[0])
                 if sampling_rate == 2:
