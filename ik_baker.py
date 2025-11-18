@@ -3,7 +3,7 @@ import bpy
 from functools import lru_cache
 from collections import defaultdict
 import time
-
+import bpy_extras.anim_utils
 START_IDX = 0
 END_IDX = 1
 def get_ik_targets_for_chain_bone(obj, chain_bone_name):
@@ -244,16 +244,22 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
     def remove_IK(obj):
 
         for bone in obj.pose.bones:
-            for weight_idx in range(0, 9):
-                print(weight_idx)
+            for weight_idx in range(0, 11):
                 s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_weight_{weight_idx}', obj)
                 for i in range(3):
                     s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_pos_{weight_idx}', obj, index=i)
                 for i in range(4):
-
                     s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_rot_{weight_idx}', obj, index=i)
     @staticmethod
     def find_and_remove(data_path, obj, index=0):
-        old_fc = obj.animation_data.action.fcurves.find(data_path, index=index)
-        if old_fc is not None:
-            obj.animation_data.action.fcurves.remove(old_fc)
+        if bpy.app.version >= (5, 0, 0):
+            action = obj.animation_data.action
+            slot = obj.animation_data.action_slot
+            channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+            old_fc = channelbag.fcurves.find(data_path, index=index)
+            if old_fc is not None:
+                channelbag.fcurves.remove(old_fc)
+        else:
+            old_fc = obj.animation_data.action.fcurves.find(data_path, index=index)
+            if old_fc is not None:
+                obj.animation_data.action.fcurves.remove(old_fc)
