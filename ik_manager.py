@@ -216,6 +216,10 @@ class s4animtool_OT_removeIK(bpy.types.Operator):
 
     def execute(self, context):
         s4animtool_OT_bakeik.remove_IK(context.object)
+        for bone in context.object.pose.bones:
+            for constraint in bone.constraints:
+                if not constraint.name.startswith("IKFollow"):
+                    constraint.mute = False
         return {'FINISHED'}
 
 class s4animtools_OT_guessTarget(bpy.types.Operator):
