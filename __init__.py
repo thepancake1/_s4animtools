@@ -994,119 +994,120 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row.operator("s4animtools.import_rig", text="Import Rig")
 
                 row.operator("s4animtools.export_rig", text="Export Rig")
-            layout.prop(obj, "show_control_rig_options", text="Show Control Rig Options (EXPERIMENTAL)")
-            if obj.show_control_rig_options:
-                if context.object.type == "ARMATURE":
-                    box = layout.box()
+            if obj.show_experimental_options:
+                layout.prop(obj, "show_control_rig_options", text="Show Control Rig Options (EXPERIMENTAL)")
+                if obj.show_control_rig_options:
+                    if context.object.type == "ARMATURE":
+                        box = layout.box()
 
-                    row = box.operator("s4animtools.load_preset_bone_config", text="Load Preset Bone Config")
-                    row = box.row()
+                        row = box.operator("s4animtools.load_preset_bone_config", text="Load Preset Bone Config")
+                        row = box.row()
 
-                    row.prop_search(context.object, "original_bone_01", context.object.pose, "bones",
-                                    text="IK Chain Start")
-                    row = box.row()
+                        row.prop_search(context.object, "original_bone_01", context.object.pose, "bones",
+                                        text="IK Chain Start")
+                        row = box.row()
 
-                    row.prop_search(context.object, "original_bone_02", context.object.pose, "bones",
-                                    text="IK Chain Middle")
-                    row = box.row()
+                        row.prop_search(context.object, "original_bone_02", context.object.pose, "bones",
+                                        text="IK Chain Middle")
+                        row = box.row()
 
-                    row.prop_search(context.object, "original_bone_03", context.object.pose, "bones",
-                                    text="IK Chain End")
+                        row.prop_search(context.object, "original_bone_03", context.object.pose, "bones",
+                                        text="IK Chain End")
 
-                    row = box.row()
-                    row.prop_search(context.object, "original_bone_04", context.object.pose, "bones",
-                                    text="Pole Target")
-                    row = box.row()
+                        row = box.row()
+                        row.prop_search(context.object, "original_bone_04", context.object.pose, "bones",
+                                        text="Pole Target")
+                        row = box.row()
 
-                    row.prop(context.object, "ik_bone_01_fk_name", text="St FK Name")
-                    row.prop(context.object, "ik_bone_01_ik_name", text="St IK Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_02_fk_name", text="Mid FK Name")
-                    row.prop(context.object, "ik_bone_02_ik_name", text="Mid IK Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_03_fk_name", text="End FK Name")
-                    row.prop(context.object, "ik_bone_03_ik_name", text="End IK Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_04_ik_name", text="Holder Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_05_ik_name", text="Target Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_06_ik_name", text="Pole Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_07_ik_name", text="Pole Indicator ")
-                    row = box.row()
+                        row.prop(context.object, "ik_bone_01_fk_name", text="St FK Name")
+                        row.prop(context.object, "ik_bone_01_ik_name", text="St IK Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_02_fk_name", text="Mid FK Name")
+                        row.prop(context.object, "ik_bone_02_ik_name", text="Mid IK Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_03_fk_name", text="End FK Name")
+                        row.prop(context.object, "ik_bone_03_ik_name", text="End IK Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_04_ik_name", text="Holder Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_05_ik_name", text="Target Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_06_ik_name", text="Pole Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_07_ik_name", text="Pole Indicator ")
+                        row = box.row()
 
-                    row.operator("s4animtools.create_ik_chain", text="Create Arms IK Chain").to_build = "Arms"
+                        row.operator("s4animtools.create_ik_chain", text="Create Arms IK Chain").to_build = "Arms"
 
-                    row = box.row()
-                    row.prop_search(context.object, "original_bone_11", context.object.pose, "bones",
-                                    text="IK Chain Start")
-                    row = box.row()
+                        row = box.row()
+                        row.prop_search(context.object, "original_bone_11", context.object.pose, "bones",
+                                        text="IK Chain Start")
+                        row = box.row()
 
-                    row.prop_search(context.object, "original_bone_12", context.object.pose, "bones",
-                                    text="IK Chain Middle")
-                    row = box.row()
+                        row.prop_search(context.object, "original_bone_12", context.object.pose, "bones",
+                                        text="IK Chain Middle")
+                        row = box.row()
 
-                    row.prop_search(context.object, "original_bone_13", context.object.pose, "bones",
-                                    text="IK Chain End")
-                    row = box.row()
-                    row.prop_search(context.object, "original_bone_14", context.object.pose, "bones",
-                                    text="Pole Target")
+                        row.prop_search(context.object, "original_bone_13", context.object.pose, "bones",
+                                        text="IK Chain End")
+                        row = box.row()
+                        row.prop_search(context.object, "original_bone_14", context.object.pose, "bones",
+                                        text="Pole Target")
 
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_11_fk_name", text="St FK Name")
-                    row.prop(context.object, "ik_bone_11_ik_name", text="St IK Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_12_fk_name", text="Mid FK Name")
-                    row.prop(context.object, "ik_bone_12_ik_name", text="Mid IK Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_13_fk_name", text="End FK Name")
-                    row.prop(context.object, "ik_bone_13_ik_name", text="End IK Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_14_ik_name", text="Holder Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_15_ik_name", text="Target Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_16_ik_name", text="Pole Name")
-                    row = box.row()
-                    row.prop(context.object, "ik_bone_17_ik_name", text="Pole Indicator Name")
-                    row = box.row()
-                    row.operator("s4animtools.create_ik_chain", text="Create Legs IK Chain").to_build = "Legs"
-                    row = box.row()
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_11_fk_name", text="St FK Name")
+                        row.prop(context.object, "ik_bone_11_ik_name", text="St IK Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_12_fk_name", text="Mid FK Name")
+                        row.prop(context.object, "ik_bone_12_ik_name", text="Mid IK Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_13_fk_name", text="End FK Name")
+                        row.prop(context.object, "ik_bone_13_ik_name", text="End IK Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_14_ik_name", text="Holder Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_15_ik_name", text="Target Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_16_ik_name", text="Pole Name")
+                        row = box.row()
+                        row.prop(context.object, "ik_bone_17_ik_name", text="Pole Indicator Name")
+                        row = box.row()
+                        row.operator("s4animtools.create_ik_chain", text="Create Legs IK Chain").to_build = "Legs"
+                        row = box.row()
 
-                    row.prop(context.object, "left_arm_ik_enabled", text="Left Arm IK Enabled")
-                    if context.object.left_arm_ik_enabled < 0.99:
-                        row.operator("s4animtools.fk_to_ik_switch", text="Left Arm FK to IK").to_build = "LeftArm"
-                    else:
-                        row.operator("s4animtools.ik_to_fk_switch", text="Left Arm IK to FK").to_build = "LeftArm"
-                    row = box.row()
+                        row.prop(context.object, "left_arm_ik_enabled", text="Left Arm IK Enabled")
+                        if context.object.left_arm_ik_enabled < 0.99:
+                            row.operator("s4animtools.fk_to_ik_switch", text="Left Arm FK to IK").to_build = "LeftArm"
+                        else:
+                            row.operator("s4animtools.ik_to_fk_switch", text="Left Arm IK to FK").to_build = "LeftArm"
+                        row = box.row()
 
-                    row.prop(context.object, "right_arm_ik_enabled", text="Right Arm IK Enabled")
+                        row.prop(context.object, "right_arm_ik_enabled", text="Right Arm IK Enabled")
 
-                    if context.object.right_arm_ik_enabled < 0.99:
-                        row.operator("s4animtools.fk_to_ik_switch", text="Right Arm FK to IK").to_build = "RightArm"
-                    else:
-                        row.operator("s4animtools.ik_to_fk_switch", text="Right Arm IK to FK").to_build = "RightArm"
-                    row = box.row()
+                        if context.object.right_arm_ik_enabled < 0.99:
+                            row.operator("s4animtools.fk_to_ik_switch", text="Right Arm FK to IK").to_build = "RightArm"
+                        else:
+                            row.operator("s4animtools.ik_to_fk_switch", text="Right Arm IK to FK").to_build = "RightArm"
+                        row = box.row()
 
-                    row.prop(context.object, "left_leg_ik_enabled", text="Left Leg IK Enabled")
-                    if context.object.left_leg_ik_enabled < 0.99:
-                        row.operator("s4animtools.fk_to_ik_switch", text="Left Leg FK to IK").to_build = "LeftLeg"
-                    else:
-                        row.operator("s4animtools.ik_to_fk_switch", text="Left Leg IK to FK").to_build = "LeftLeg"
-                    row = box.row()
+                        row.prop(context.object, "left_leg_ik_enabled", text="Left Leg IK Enabled")
+                        if context.object.left_leg_ik_enabled < 0.99:
+                            row.operator("s4animtools.fk_to_ik_switch", text="Left Leg FK to IK").to_build = "LeftLeg"
+                        else:
+                            row.operator("s4animtools.ik_to_fk_switch", text="Left Leg IK to FK").to_build = "LeftLeg"
+                        row = box.row()
 
-                    row.prop(context.object, "right_leg_ik_enabled", text="Right Leg IK Enabled")
-                    if context.object.right_leg_ik_enabled < 0.99:
-                        row.operator("s4animtools.fk_to_ik_switch", text="Right Leg FK to IK").to_build = "RightLeg"
-                    else:
-                        row.operator("s4animtools.ik_to_fk_switch", text="Right Leg IK to FK").to_build = "RightLeg"
-                    row = box.row()
+                        row.prop(context.object, "right_leg_ik_enabled", text="Right Leg IK Enabled")
+                        if context.object.right_leg_ik_enabled < 0.99:
+                            row.operator("s4animtools.fk_to_ik_switch", text="Right Leg FK to IK").to_build = "RightLeg"
+                        else:
+                            row.operator("s4animtools.ik_to_fk_switch", text="Right Leg IK to FK").to_build = "RightLeg"
+                        row = box.row()
 
-                    row.prop(context.object, "baked_eye_animation_enabled", text="Baked Eye Animation Enabled")
-                    row = box.row()
+                        row.prop(context.object, "baked_eye_animation_enabled", text="Baked Eye Animation Enabled")
+                        row = box.row()
 
-                    row.operator("s4animtools.create_bones", text="Create Bones")
+                        row.operator("s4animtools.create_bones", text="Create Bones")
 
 
             layout.prop(obj, "show_ik_options", text="Show Slot Assignments")
@@ -1369,8 +1370,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         if idx == ik_chain_count - 1:
             sub.operator('iktarget.new', text='Clone').command = f"{item.chain_bone}"
         row = row.box()
-        sub = row.row(align=True)
-        sub.operator("s4animtools.preview_slot_assignment", text= "Preview Slot Assignment").command = str(actual_idx)
+        #if obj.show_experimental_options:
+        #    sub = row.row(align=True)
+        #    sub.operator("s4animtools.preview_slot_assignment", text= "Preview Slot Assignment").command = str(actual_idx)
         sub = row.row(align=True)
         sub.prop_search(item, "chain_bone", obj.pose, "bones")
         sub = row.row(align=True)
@@ -2180,7 +2182,7 @@ def handle_version_upgrade(context):
     for obj in context.scene.objects:
         if obj.is_s4_actor:
             obj.is_actor = obj.is_s4_actor
-            
+
         if len(obj.sound_events_list) > 0:
             # Iterate through all sound events and upgrade them to the new format.
             for event in obj.sound_events_list:
