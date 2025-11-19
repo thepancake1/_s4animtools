@@ -2182,6 +2182,7 @@ def handle_version_upgrade(context):
     for obj in context.scene.objects:
         if obj.is_s4_actor:
             obj.is_actor = obj.is_s4_actor
+            obj.is_s4_actor = False
 
         if len(obj.sound_events_list) > 0:
             # Iterate through all sound events and upgrade them to the new format.
