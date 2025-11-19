@@ -761,8 +761,8 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 box = layout.box()
 
                 row = box.row()
-                row.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
-                row.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
+                #row.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
+                #row.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
                 #
                 for idx, item in enumerate(context.scene.clips):
                     item : ClipData
@@ -804,6 +804,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 box.prop(obj, "explicit_namespaces", text="Explicit Namespaces")
                 row = box.row()
                 row.operator("s4animtools.new_export_clip", text="Export Clip")
+
                 row.operator("s4animtools.export_all_clips", text="Export All Clips")
                 box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
 
@@ -972,10 +973,29 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 # Trackmasks are not working yet
                 #layout.operator("s4animtools.apply_trackmask", icon='MESH_CUBE', text="Apply Trackmask")
                 # self.box.operator("s4animtools.copy_left_side", icon='MESH_CUBE', text="Copy Left Side (Bed)")
-
                 box = layout.box()
+                row = box.row()
+                row.operator("s4animtools.flip_left_side_sim", text="Flip Sim")
+                row.operator("s4animtools.copy_left_side_sim", text="Copy Left Side to Right Side Sim")
+                #layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
+                # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
+
+                row = box.row()
+
+                row.operator("s4animtools.maintain_keyframe",
+                                     text="Maintain Keyframe").direction = "FORWARDS"
+                row.operator("s4animtools.maintain_keyframe",
+                                     text="Maintain Keyframe Backward").direction = "BACK"
+
+                row = box.row()
+                row.operator("s4animtools.import_rig", text="Import Rig")
+
+                row.operator("s4animtools.export_rig", text="Export Rig")
+            layout.prop(obj, "show_control_rig_options", text="Show Control Rig Options")
+            if obj.show_control_rig_options:
                 if context.object.type == "ARMATURE":
-                    row = box.row()
+                    box = layout.box()
+
                     row = box.operator("s4animtools.load_preset_bone_config", text="Load Preset Bone Config")
                     row = box.row()
 
@@ -1085,25 +1105,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                     row.operator("s4animtools.create_bones", text="Create Bones")
 
-                box = layout.box()
-                row = box.row()
-                row.operator("s4animtools.flip_left_side_sim", text="Flip Sim")
-                row.operator("s4animtools.copy_left_side_sim", text="Copy Left Side to Right Side Sim")
-                #layout.operator("s4animtools.copy_baked_animation", icon='MESH_CUBE', text="Copy Baked Animation")
-                # self.layout.operator("s4animtools.copy_left_side_sim_selected", icon='MESH_CUBE', text="Copy Left Side (Sim) Selected")
-
-                row = box.row()
-
-                row.operator("s4animtools.maintain_keyframe",
-                                     text="Maintain Keyframe").direction = "FORWARDS"
-                row.operator("s4animtools.maintain_keyframe",
-                                     text="Maintain Keyframe Backward").direction = "BACK"
-
-                row = box.row()
-                row.operator("s4animtools.import_rig", text="Import Rig")
-
-                row.operator("s4animtools.export_rig", text="Export Rig")
-
 
             layout.prop(obj, "show_ik_options", text="Show Slot Assignments")
             if obj.show_ik_options:
@@ -1116,9 +1117,6 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row = box.row()
                 row.operator('iktarget.create_roots', text='Create World IK Channels')
                 row.operator('s4animtools.delete_all_ik_channels', text='Delete All IK Channels')
-
-                row = box.row()
-                row.operator('s4animtools.removeik', text='Remove Baked IK Channels')
 
                 box = layout.row()
 
@@ -2466,7 +2464,7 @@ def register():
     bpy.types.Scene.export_as_loose_files = BoolProperty()
 
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
-    game_types = (("TS4", "TS4", "The Sims 4"), ("TS3", "TS3", "The Sims 3"))
+    game_types = (("TS4", "TS4", "The Sims 4"),)#, ("TS3", "TS3", "The Sims 3"))
 
     # Deprecated, use is_actor instead.
     bpy.types.Object.is_s4_actor = BoolProperty(default=False)
@@ -2479,6 +2477,7 @@ def register():
     bpy.types.Object.is_enabled_for_animation = BoolProperty(default=False)
     bpy.types.Object.show_footprint_options = BoolProperty(default=False)
     bpy.types.Object.show_mirror_and_masking_options = BoolProperty(default=False)
+    bpy.types.Object.show_control_rig_options = BoolProperty(default=False)
     bpy.types.Object.show_ik_options = BoolProperty(default=False)
     bpy.types.Object.show_events = BoolProperty(default=False)
     bpy.types.Object.show_clip_options = BoolProperty(default=False)
@@ -2645,6 +2644,7 @@ def unregister():
     del bpy.types.Object.is_enabled_for_animation
     del bpy.types.Object.show_footprint_options
     del bpy.types.Object.show_mirror_and_masking_options
+    del bpy.types.Object.show_control_rig_options
     del bpy.types.Object.show_ik_options
     del bpy.types.Object.show_events
     del bpy.types.Object.show_clip_options
