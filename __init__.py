@@ -717,6 +717,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
         # There used to be a bug here where this used to be called obj and was causing it to replace the original obj defined just before.
         for obj_maybe_needs_update in context.scene.objects:
+            if obj_maybe_needs_update.is_s4_actor:
+                old_version = True
+                break
             if len(obj_maybe_needs_update.sound_events_list) > 0:
                 old_version = True
                 break
@@ -736,7 +739,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 old_version = True
                 break
         if old_version:
-            layout.operator("s4animtools.upgrade_data", text="New version detected. Update file format to latest version?")
+            layout.operator("s4animtools.upgrade_data", text="New version detected. Update file?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
      #   layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
@@ -2177,6 +2180,7 @@ def handle_version_upgrade(context):
     for obj in context.scene.objects:
         if obj.is_s4_actor:
             obj.is_actor = obj.is_s4_actor
+            
         if len(obj.sound_events_list) > 0:
             # Iterate through all sound events and upgrade them to the new format.
             for event in obj.sound_events_list:
