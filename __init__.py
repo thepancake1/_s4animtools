@@ -991,7 +991,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row.operator("s4animtools.import_rig", text="Import Rig")
 
                 row.operator("s4animtools.export_rig", text="Export Rig")
-            layout.prop(obj, "show_control_rig_options", text="Show Control Rig Options")
+            layout.prop(obj, "show_control_rig_options", text="Show Control Rig Options (EXPERIMENTAL)")
             if obj.show_control_rig_options:
                 if context.object.type == "ARMATURE":
                     box = layout.box()
