@@ -742,11 +742,11 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
-     #   layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
+       # layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
 
-   #     layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
-     #                                                            "2 as regular files")
-     #   layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
+      #  layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
+      #                                                           "2 as regular files")
+       # layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
             box = layout.box()
