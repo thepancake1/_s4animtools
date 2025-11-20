@@ -1,6 +1,6 @@
-from s4animtools import Float32, UInt32
+from s4animtools import f32, u32
 from s4animtools.serialization import Serializable
-from s4animtools.stream import StreamReader
+from s4animtools.stream import FileReader
 from s4animtools.rcol.rcol_wrapper import RCOL
 import bpy
 from bpy_extras.io_utils import ImportHelper
@@ -22,29 +22,29 @@ class SlotAdjust(Serializable):
         self.rot_z = 0
         self.rot_w = 0
 
-    def read(self, reader:StreamReader):
-        self.pos_x = reader.float32()
-        self.pos_y = reader.float32()
-        self.pos_z = reader.float32()
-        self.scale_x = reader.float32()
-        self.scale_y = reader.float32()
-        self.scale_z = reader.float32()
+    def from_binary(self, reader:FileReader):
+        self.pos_x = reader.f32()
+        self.pos_y = reader.f32()
+        self.pos_z = reader.f32()
+        self.scale_x = reader.f32()
+        self.scale_y = reader.f32()
+        self.scale_z = reader.f32()
 
-        self.rot_x = reader.float32()
-        self.rot_y = reader.float32()
-        self.rot_z = reader.float32()
-        self.rot_w = reader.float32()
+        self.rot_x = reader.f32()
+        self.rot_y = reader.f32()
+        self.rot_z = reader.f32()
+        self.rot_w = reader.f32()
 
         return self
 
-    def serialize(self):
-        data = [Float32(self.pos_x), Float32(self.pos_y), Float32(self.pos_z), Float32(self.scale_x),
-                Float32(self.scale_y), Float32(self.scale_z),
-                Float32(self.rot_x), Float32(self.rot_y), Float32(self.rot_z), Float32(self.rot_w)]
+    def to_binary(self):
+        data = [f32(self.pos_x), f32(self.pos_y), f32(self.pos_z), f32(self.scale_x),
+                f32(self.scale_y), f32(self.scale_z),
+                f32(self.rot_x), f32(self.rot_y), f32(self.rot_z), f32(self.rot_w)]
 
         serialized_stuff = []
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         return serialized_stuff
 class BoneDelta(Serializable):
@@ -57,18 +57,18 @@ class BoneDelta(Serializable):
     def bone_count(self):
         return len(self.bones)
 
-    def read(self, reader:StreamReader):
+    def from_binary(self, reader:FileReader):
         self.version = reader.u32()
         bone_count = reader.u32()
         for bone in range(bone_count):
             self.bones.append(SlotAdjust().read(reader))
 
         return self
-    def serialize(self):
+    def to_binary(self):
         serialized_stuff = []
-        data = [UInt32(self.version), UInt32(self.bone_count), *self.bones]
+        data = [u32(self.version), u32(self.bone_count), *self.bones]
         for value in data:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -78,7 +78,7 @@ class BoneDelta(Serializable):
 
 if __name__ == "__main__":
     filepath = r"D:\Assets\Projects\Sims 3 Exporter\S3_0355E0A6_00000001_000000008114DDC7_amTopNudenormal%%+BOND.bonedelta"
-    reader = StreamReader(filepath)
+    reader = FileReader(filepath)
     rcol = RCOL().read(reader)
     bonedelta_chunk = None
     for chunk in rcol.chunk_data:

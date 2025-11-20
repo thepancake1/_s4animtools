@@ -21,7 +21,7 @@ class ExportRig(bpy.types.Operator):
             os.mkdir(anim_path)
         serialized_rig = Rig().create(armature.edit_bones[:])
         all_data = io.BytesIO()
-        s4animtools.serialization.recursive_write([*serialized_rig.serialize()], all_data)
+        s4animtools.serialization.recursive_write([*serialized_rig.to_binary()], all_data)
         bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
         with open(os.path.join(anim_path, self.get_filename(context)), "wb") as file:

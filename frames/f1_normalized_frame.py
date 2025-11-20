@@ -1,4 +1,4 @@
-from s4animtools.serialization.types.basic import UInt16
+from s4animtools.serialization.types.basic import u16
 from s4animtools.frames.frame import Frame
 
 class F1NormalizedFrame(Frame):
@@ -6,12 +6,12 @@ class F1NormalizedFrame(Frame):
         """Set frame data for F1 Normalized Frame.
         This is slightly different as there is only
         one value in the animation data and sign bits."""
-        self._startTick = UInt16(startTick)
-        self._sign_bits = UInt16(int(value < 0))
+        self._startTick = u16(startTick)
+        self._sign_bits = u16(int(value < 0))
         self._frame_data = value
 
 
-    def serialize(self):
+    def to_binary(self):
         """This function serializes the data somewhat differently as
         it frame data is a single value.
         Returns a serialized version of the frame data.
@@ -19,6 +19,6 @@ class F1NormalizedFrame(Frame):
         serialize_order = [self._startTick, self._sign_bits]
         frame_data = []
         for item in serialize_order:
-            frame_data.append(item.serialize())
-        frame_data.append(self._frame_data.serialize())
+            frame_data.append(item.to_binary())
+        frame_data.append(self._frame_data.to_binary())
         return frame_data

@@ -7,9 +7,9 @@ import s4animtools
 from s4animtools.rcol.footprints import Footprint, Area, Point
 from s4animtools.serialization.types.tgi import TGI
 from s4animtools.rcol.skin import Skin
-from s4animtools.serialization.types.basic import UInt32, Bytes
+from s4animtools.serialization.types.basic import u32, Bytes
 from s4animtools.serialization import get_size
-from s4animtools.stream import StreamReader
+from s4animtools.stream import FileReader
 import bpy
 from bpy_extras.io_utils import ImportHelper
 from bpy.types import Operator
@@ -36,16 +36,16 @@ class ChunkInfo:
         self.chunk_position = chunk_position
         self.chunk_size = chunk_size
 
-    def read(self, stream):
+    def from_binary(self, stream):
         self.chunk_position = stream.u32()
         self.chunk_size = stream.u32()
         return self
 
-    def serialize(self):
-        data = [UInt32(self.chunk_position), UInt32(self.chunk_size)]
+    def to_binary(self):
+        data = [u32(self.chunk_position), u32(self.chunk_size)]
         serialized_stuff = []
         for value in data:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -71,7 +71,7 @@ class RCOL:
     def external_count(self):
         return len(self.external_tgis)
 
-    def read(self, stream):
+    def from_binary(self, stream):
         self.version = stream.u32()
         self.public_chunks = stream.u32()
         self.index3 = stream.u32()
@@ -83,29 +83,29 @@ class RCOL:
             print("Probably garbage or not an RCOL file. Bailing.")
             return self
         for i in range(internal_count):
-            self.internal_tgis.append(TGI().read(stream))
+            self.internal_tgis.append(TGI().from_binary(stream))
         for i in range(external_count):
-            self.external_tgis.append(TGI().read(stream))
+            self.external_tgis.append(TGI().from_binary(stream))
         for i in range(self.internal_count):
-            self.chunk_info.append(ChunkInfo().read(stream))
+            self.chunk_info.append(ChunkInfo().from_binary(stream))
         for i in range(self.internal_count):
             stream.seek(self.chunk_info[i].chunk_position)
             data = stream.u32(raw=True)
             stream.seek(self.chunk_info[i].chunk_position)
             tag = data.decode("ascii")
             if "SKIN" in tag:
-                chunk_data = Skin().read(stream)
+                chunk_data = Skin().from_binary(stream)
             # print(stream.tell())
             elif "FTPT" in tag:
-                chunk_data = Footprint().read(stream)
+                chunk_data = Footprint().from_binary(stream)
             else:
                 print(hex(self.internal_tgis[i].t))
                 if self.internal_tgis[i].t == 0x355E0A6:
                     from s4animtools.rcol.bone_delta import BoneDelta
-                    chunk_data = BoneDelta().read(stream)
+                    chunk_data = BoneDelta().from_binary(stream)
 
                 else:
-                    chunk_data = Bytes(stream.read(self.chunk_info[i].chunk_size))
+                    chunk_data = Bytes(stream.from_binary(self.chunk_info[i].chunk_size))
             self.chunk_data.append(chunk_data)
         return self
 
@@ -126,10 +126,10 @@ class RCOL:
             # if isinstance(self.chunk_data[i], Skin):
             current_pos = self.pad(current_pos, serialized_body)
 
-            serialized_body.append(self.chunk_data[i].serialize())
-            current_chunk_len = get_size(self.chunk_data[i].value)
+            serialized_body.append(self.chunk_data[i].to_binary())
+            current_chunk_len = get_size(self.chunk_data[i].data)
             print(current_chunk_len, "chunklength")
-            # print(self.chunk_data[i].value)
+            # print(self.chunk_data[i].data)
             new_chunk_infos.append(ChunkInfo(current_pos, current_chunk_len))
             current_pos += current_chunk_len
 
@@ -172,31 +172,31 @@ class RCOL:
     def update_chunk_position_size_automatically(self, chunk_idx):
         offset = self.serialize_to_get_current_offset(chunk_idx)
         self.change_chunk_position_size(chunk_idx, self.serialize_to_get_current_offset(chunk_idx),
-                                        get_size(self.chunk_data[chunk_idx].value))
+                                        get_size(self.chunk_data[chunk_idx].data))
 
     def serialize_to_get_current_offset(self, chunk_idx):
-        data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
-                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
+        data = [u32(self.version), u32(self.public_chunks), u32(self.index3), u32(self.external_count),
+                u32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
                 *self.chunk_data[:chunk_idx - 1]]
 
         serialized_stuff = []
         total_len = 0
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
             total_len += get_combined_len(serialied)
         # Pad to next DWORD between chunks
         return total_len
 
-    def serialize(self):
-        data = [UInt32(self.version), UInt32(self.public_chunks), UInt32(self.index3), UInt32(self.external_count),
-                UInt32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
+    def to_binary(self):
+        data = [u32(self.version), u32(self.public_chunks), u32(self.index3), u32(self.external_count),
+                u32(self.internal_count), *self.internal_tgis, *self.external_tgis, *self.chunk_info,
                 *self.chunk_data]
 
         serialized_stuff = []
         total_len = 0
         for value in data:
-            serialied = value.serialize()
+            serialied = value.to_binary()
             serialized_stuff.append(serialied)
         #  print(total_len, serialied)
         # print(total_len)
@@ -264,7 +264,7 @@ class ImportFootprint:
         obj.is_routing_footprint = is_routing_footprint
 
     def execute(self, context, filepath):
-        reader = StreamReader(filepath)
+        reader = FileReader(filepath)
         rcol = RCOL().read(reader)
         footprint_chunk = None
         for chunk in rcol.chunk_data:
@@ -368,7 +368,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
 
     def create_area(self, obj, footprint, points, context):
         # Should really set a property on the object instead of relying on name
-        footprint.name_hash = hash_name_or_get_hash(obj.name.split(" ")[0]).value
+        footprint.name_hash = hash_name_or_get_hash(obj.name.split(" ")[0]).data
         footprint.area_type_flags.for_placement = obj.for_placement
         footprint.area_type_flags.for_pathing = obj.for_pathing
         footprint.area_type_flags.is_enabled = obj.is_enabled
@@ -450,7 +450,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             rcol.chunk_data.append(footprint_chunk)
             rcol.chunk_info.append(ChunkInfo(0, 0))
             new_tgi = TGI()
-            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.value
+            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.data
             print(new_tgi)
             footprint_areas = footprint_chunk.footprint_areas
             routing_areas = footprint_chunk.routing_areas
@@ -458,7 +458,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             for obj in valid_objs:
                 print(obj, instance_id, hash_name_or_get_hash_64(obj.footprint_name))
 
-                if hash_name_or_get_hash_64(obj.footprint_name).value == instance_id.value:
+                if hash_name_or_get_hash_64(obj.footprint_name).data == instance_id.data:
                     footprint_name = obj.footprint_name
                     print(obj.footprint_resource_variant, obj.footprint_resource_variant == "World Camera Bounds")
                     if obj.footprint_resource_variant == "World Camera Bounds" or obj.footprint_resource_variant == "World Allowed Routing":
@@ -489,7 +489,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             rcol.update_chunk_position_size_automatically(0)
 
             all_data = io.BytesIO()
-            default_export_path = os.path.join(os.environ["HOMEPATH"], "Desktop") + os.sep + "Animation Workspace"
+            default_export_path = os.path.join(os.path.expanduser("~/Desktop"), "Animation Workspace")
             selected_export_path = context.scene.s4animtools_export_path
             if selected_export_path == "":
                 selected_export_path = default_export_path
@@ -497,7 +497,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             if not os.path.exists(selected_export_path):
                 os.mkdir(selected_export_path)
             try:
-                s4animtools.serialization.recursive_write([*rcol.serialize()], all_data)
+                s4animtools.serialization.recursive_write([*rcol.to_binary()], all_data)
             except:
                 print(traceback.format_exc())
 

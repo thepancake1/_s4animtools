@@ -1,16 +1,14 @@
 import importlib
 import s4animtools.frames.palette_frame
-from s4animtools.serialization.types.basic import UInt16, UInt32, Float32, Byte
+from s4animtools.serialization.types.basic import u16, u32, f32, u8
 import s4animtools.serialization
 import s4animtools.channels.quaternion_channel
 import s4animtools.frames
 from s4animtools.frames.frame import PaletteFrame, PaletteTranslationFrame
 
-importlib.reload(s4animtools.channels.quaternion_channel)
-importlib.reload(s4animtools.frames.palette_frame)
 class PaletteQuaternionChannel(s4animtools.channels.quaternion_channel.QuaternionChannel):
     def serialize_data(self, value):
-        return UInt16(value)
+        return u16(value)
 
     def quantize_data(self, value):
         return
@@ -38,22 +36,22 @@ class PaletteQuaternionChannel(s4animtools.channels.quaternion_channel.Quaternio
             self.serialized_frames[idx] = single_frame
 
 
-    def serialize(self):
+    def to_binary(self):
 
-        order = [UInt32(self._data_offset), self._target, Float32(self._offset), Float32(self._scale), UInt16(self._frame_count), Byte(self._channel_type), Byte(self._sub_type)]
+        order = [u32(self._data_offset), self._target, f32(self._offset), f32(self._scale), u16(self._frame_count), u8(self._channel_type), u8(self._sub_type)]
         serialized_header = []
         serialized_frames = []
 
         for item in order:
-            serialized_header.append(item.serialize())
+            serialized_header.append(item.to_binary())
         for idx, frame in self.serialized_frames.items():
-            serialized_frames.append(frame.serialize())
+            serialized_frames.append(frame.to_binary())
 
         return serialized_header, serialized_frames
 
 class PaletteTranslationChannel(PaletteQuaternionChannel):
     def serialize_data(self, value):
-        return UInt16(value)
+        return u16(value)
 
     def quantize_data(self, value):
         return
@@ -71,16 +69,16 @@ class PaletteTranslationChannel(PaletteQuaternionChannel):
             serialized = single_frame._frame_data
             self.serialized_frames[idx] = single_frame
 
-    def serialize(self):
+    def to_binary(self):
 
-        serialize_order = [UInt32(self._data_offset), self._target, Float32(self._offset), Float32(self._scale), UInt16(self._frame_count), Byte(self._channel_type), Byte(self._sub_type)]
+        serialize_order = [u32(self._data_offset), self._target, f32(self._offset), f32(self._scale), u16(self._frame_count), u8(self._channel_type), u8(self._sub_type)]
         serialized_header = []
         serialized_frames = []
 
         for item in serialize_order:
-            serialized_header.append(item.serialize())
+            serialized_header.append(item.to_binary())
         for idx, frame in self.serialized_frames.items():
-            serialized_frames.append(frame.serialize())
+            serialized_frames.append(frame.to_binary())
 
         return serialized_header, serialized_frames
 

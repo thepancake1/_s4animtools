@@ -3,10 +3,23 @@ import bpy
 from functools import lru_cache
 from collections import defaultdict
 import time
-
+import bpy_extras.anim_utils
 START_IDX = 0
 END_IDX = 1
-
+def get_ik_targets_for_chain_bone(obj, chain_bone_name):
+    """
+    Returns a list of all the IK targets of the given object.
+    Note that this should be ordered so that the root bones are first, then all the other ik targets are last.
+    """
+    for ik_target in obj.ik_targets:
+        if ik_target.target_bone == "b__ROOT__" and ik_target.chain_bone == chain_bone_name:
+            yield ik_target
+    for ik_target in obj.ik_targets:
+        if ik_target.target_bone == "b__ROOT__Adjust" and ik_target.chain_bone == chain_bone_name:
+            yield ik_target
+    for ik_target in obj.ik_targets:
+        if ik_target.chain_bone == chain_bone_name:
+            yield ik_target
 
 def get_ik_targets(obj):
     """
@@ -27,6 +40,15 @@ def get_ik_targets(obj):
             ik_target.target_bone:
                 yield ik_target
 
+def get_ik_target_idx_for_slot_assignment_on_chain(obj, slot_assignment) -> int:
+    current_bone_idx = defaultdict(int)
+    for idx, item in enumerate(get_ik_targets(obj)):
+        if item == slot_assignment:
+            return current_bone_idx[item.chain_bone]
+        current_bone_idx[item.chain_bone] += 1
+    return -1
+
+
 class s4animtool_OT_bakeik(bpy.types.Operator):
     """Bake the IK weights"""
     bl_idname = "s4animtools.bakeik"
@@ -36,13 +58,26 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
     def get_keyframes(self, obj, data_path):
         keyframes = []
         anim = obj.animation_data
-        if anim is not None and anim.action is not None:
-            for fcu in anim.action.fcurves:
-                if fcu.data_path == data_path:
-                    for keyframe in fcu.keyframe_points:
+
+        if bpy.app.version >= (5,0,0):
+            action = obj.animation_data.action
+            slot = obj.animation_data.action_slot
+            channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+            for fcurve in channelbag.fcurves:
+                if fcurve.data_path == data_path:
+                    for keyframe in fcurve.keyframe_points:
                         x, y = keyframe.co
                         if x not in keyframes:
                             keyframes.append((math.ceil(x)))
+
+        else:
+            if anim is not None and anim.action is not None:
+                for fcurve in anim.action.fcurves:
+                    if fcurve.data_path == data_path:
+                        for keyframe in fcurve.keyframe_points:
+                            x, y = keyframe.co
+                            if x not in keyframes:
+                                keyframes.append((math.ceil(x)))
         return keyframes
 
     def set_interpolation_keyframes(self, obj, bone):
@@ -91,7 +126,13 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
                 next_ik_target_range = frames_ordered[idx + 1]
                 post_end_frame = frames[next_ik_target_range][START_IDX]
             data_path = f'pose.bones["{bone}"].ik_weight_{weight_idx}'
-            fc = obj.animation_data.action.fcurves.find(data_path)
+            if bpy.app.version >= (5,0,0):
+                action = obj.animation_data.action
+                slot = obj.animation_data.action_slot
+                channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+                fc = channelbag.fcurves.find(data_path)
+            else:
+                fc = obj.animation_data.action.fcurves.find(data_path)
             fc.keyframe_points.insert(pre_start_frame, 0)
             fc.keyframe_points.insert(post_end_frame, 0)
             fc.update()
@@ -101,7 +142,7 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
         bones_to_interpolate = []
         positions = defaultdict(list)
         quaternions = defaultdict(list)
-        if obj.ik_idx >= 0 and obj.ik_targets:
+        if len(obj.ik_targets) > 0:
             s4animtool_OT_bakeik.remove_IK(obj)
             for idx, item in enumerate(get_ik_targets(obj)):
                 chain_bone = obj.pose.bones[item.chain_bone]
@@ -124,47 +165,44 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
                     rotation_data = matrix_data.to_quaternion()
                     translation_data = matrix_data.to_translation()
 
-                    if i == 0:
-                        print(translation_data, rotation_data)
                     for axis_idx, value in enumerate(translation_data):
                         positions[(chain_bone, target_bone, target_rig)][axis_idx].extend([i, value])
                     for axis_idx, value in enumerate(rotation_data):
                         quaternions[(chain_bone, target_bone, target_rig)][axis_idx].extend([i, value])
 
-
-            for potential_ik_bone in obj.pose.bones:
-                for idx in range(11):
-                    for pos_idx in range(3):
-                        data_path = f'pose.bones["{potential_ik_bone.name}"].ik_pos_{idx}'
-                        old_fc = obj.animation_data.action.fcurves.find(data_path, index=pos_idx)
-                        if old_fc is not None:
-                            obj.animation_data.action.fcurves.remove(old_fc)
-
-                    for rot_idx in range(4):
-                        data_path = f'pose.bones["{potential_ik_bone.name}"].ik_rot_{idx}'
-                        old_fc = obj.animation_data.action.fcurves.find(data_path, index=rot_idx)
-                        if old_fc is not None:
-                            obj.animation_data.action.fcurves.remove(old_fc)
-                    data_path = f'pose.bones["{potential_ik_bone.name}"].ik_weight_{idx}'
-                    s4animtool_OT_bakeik.find_and_remove(data_path, obj)
             current_bone_idx = defaultdict(int)
 
             for idx, item in enumerate(get_ik_targets(obj)):
 
                 chain_bone, target_bone, target_rig = self.get_bonedata(item, obj)
-                print(chain_bone, target_bone, target_rig)
                 for pos_idx in range(3):
                     data_path = f'pose.bones["{chain_bone.name}"].ik_pos_{current_bone_idx[chain_bone]}'
+                    if bpy.app.version >= (5, 0, 0):
+                        action = obj.animation_data.action
+                        slot = obj.animation_data.action_slot
+                        channelbag = bpy_extras.anim_utils.action_ensure_channelbag_for_slot(action, slot)
+                        fc = channelbag.fcurves.new(data_path, index=pos_idx,
+                                                            group_name=f"{chain_bone.name} IK Location")
 
-                    fc = obj.animation_data.action.fcurves.new(data_path, index=pos_idx)
-                    #print(positions[(chain_bone, target_bone, target_rig)][pos_idx])
+                    else:
+                        fc = obj.animation_data.action.fcurves.new(data_path, index=pos_idx)
+
+                                           #print(positions[(chain_bone, target_bone, target_rig)][pos_idx])
                     fc.keyframe_points.add(round(len(positions[(chain_bone, target_bone, target_rig)][pos_idx]) / 2))
                     fc.keyframe_points.foreach_set("co", positions[(chain_bone, target_bone, target_rig)][pos_idx])
                     fc.update()
                 for rot_idx in range(4):
                     data_path = f'pose.bones["{chain_bone.name}"].ik_rot_{current_bone_idx[chain_bone]}'
 
-                    fc = obj.animation_data.action.fcurves.new(data_path, index=rot_idx)
+                    if bpy.app.version >= (5, 0, 0):
+                        action = obj.animation_data.action
+                        slot = obj.animation_data.action_slot
+                        channelbag = bpy_extras.anim_utils.action_ensure_channelbag_for_slot(action, slot)
+                        fc = channelbag.fcurves.new(data_path, index=rot_idx,
+                                                            group_name=f"{chain_bone.name} IK Rotation")
+                    else:
+                        fc = obj.animation_data.action.fcurves.new(data_path, index=rot_idx)
+
 
                     fc.keyframe_points.add(round(len(quaternions[(chain_bone, target_bone, target_rig)][rot_idx]) / 2))
                     fc.keyframe_points.foreach_set("co", quaternions[(chain_bone, target_bone, target_rig)][rot_idx])
@@ -175,15 +213,15 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
         if obj.ik_idx >= 0 and obj.ik_targets:
             for idx, item in enumerate(get_ik_targets(obj)):
                 chain_bone = obj.pose.bones[item.chain_bone]
-                chain_idx = item.chain_idx
-
-                target_rig = bpy.data.objects[item.target_obj]
-
                 data_path = f'pose.bones["{chain_bone.name}"].ik_weight_{current_bone_idx[chain_bone]}'
                 s4animtool_OT_bakeik.find_and_remove(data_path, obj)
-                fc = obj.animation_data.action.fcurves.new(data_path)
-
-
+                if bpy.app.version >= (5, 0, 0):
+                    action = obj.animation_data.action
+                    slot = obj.animation_data.action_slot
+                    channelbag = bpy_extras.anim_utils.action_ensure_channelbag_for_slot(action, slot)
+                    fc = channelbag.fcurves.new(data_path)
+                else:
+                    fc = obj.animation_data.action.fcurves.new(data_path)
 
                 for range_value in item.ranges:
                     if range_value.start_time == range_value.end_time:
@@ -222,16 +260,22 @@ class s4animtool_OT_bakeik(bpy.types.Operator):
     def remove_IK(obj):
 
         for bone in obj.pose.bones:
-            for weight_idx in range(0, 9):
-                print(weight_idx)
+            for weight_idx in range(0, 11):
                 s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_weight_{weight_idx}', obj)
                 for i in range(3):
                     s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_pos_{weight_idx}', obj, index=i)
                 for i in range(4):
-
                     s4animtool_OT_bakeik.find_and_remove(f'pose.bones["{bone.name}"].ik_rot_{weight_idx}', obj, index=i)
     @staticmethod
     def find_and_remove(data_path, obj, index=0):
-        old_fc = obj.animation_data.action.fcurves.find(data_path, index=index)
-        if old_fc is not None:
-            obj.animation_data.action.fcurves.remove(old_fc)
+        if bpy.app.version >= (5, 0, 0):
+            action = obj.animation_data.action
+            slot = obj.animation_data.action_slot
+            channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+            old_fc = channelbag.fcurves.find(data_path, index=index)
+            if old_fc is not None:
+                channelbag.fcurves.remove(old_fc)
+        else:
+            old_fc = obj.animation_data.action.fcurves.find(data_path, index=index)
+            if old_fc is not None:
+                obj.animation_data.action.fcurves.remove(old_fc)

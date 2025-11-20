@@ -1,7 +1,7 @@
 from s4animtools.game_types import uint8, uint16, uint32, uint64, float32, int32
 
 
-class StreamReader:
+class FileReader:
     def __init__(self, file):
         self.filename = file
         self.stream = open(file, "rb").read()
@@ -40,7 +40,7 @@ class StreamReader:
 
         return uint64().read(self.stream[self.current_pos-8:self.current_pos])
 
-    def float32(self, raw=False):
+    def f32(self, raw=False):
         self.current_pos += 4
         return float32().read(self.stream[self.current_pos-4:self.current_pos])
     def tell(self):

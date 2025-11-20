@@ -1,14 +1,17 @@
 import io
 import os
-import importlib
 import s4animtools.clip_processing
 import s4animtools.serialization
-from s4animtools.serialization.types.basic import UInt32, Float32, String
+from s4animtools.serialization.types.transforms import Quaternion, Vector3
+from s4animtools.serialization.types.basic import u32, f32, String
 from s4animtools.clip_processing.clip_body import ClipBody
-from s4animtools.serialization import get_size
+from s4animtools.serialization import get_binary_size, get_size, concatenate_bytes
 from s4animtools.serialization.fnv import get_64bithash
+from s4animtools.serialization.types.strings import IOString
 from s4animtools.slot_assignments import SlotAssignment
-importlib.reload(s4animtools.clip_processing.clip_body)
+from s4animtools.stream import FileReader
+
+FPS = 30
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
                            "b__L_Foot__" : 2, "b__R_Foot__" : 3,
@@ -20,25 +23,35 @@ class ExplicitNamespace:
         self.length = len(value)
         self.value = value
 
-    def serialize(self):
-        return UInt32(self.length).serialize() + self.value.encode("ascii")
-class ClipResource:
-    def __init__(self, clip_name, rig_name, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
-                 initial_offset_t, source_file_name, loco_animation,disable_rig_suffix):
+    def to_binary(self):
+        return u32(self.length).to_binary() + self.value.encode("ascii")
+
+
+class BaseClipResource:
+    pass
+
+class ClipResource(BaseClipResource):
+    def __init__(self, clip_name, rig_name, slot_assignments:list[SlotAssignment], explicit_namespaces, reference_namespace_hash, initial_offset_q,
+                 initial_offset_t, source_file_name, loco_animation,disable_rig_suffix, version=14,
+                    surface_namespace_hash=2166136261, surface_joint_name_hash=2166136261, surface_child_namespace_hash=2166136261,
+                 duration=0, flags=0):
         # If version number were to ever be updated to include later versions, make sure to remember that events and strings were updated.
-        self.version = 14
+        if version is None:
+            self.version = 14
+
+        else:
+            self.version = version
         self.s3pe_naming = False
-        self.flags = 0
+        self.flags = flags
         if loco_animation:
-            self.flags = 1
-        self.duration = 0
+            self.flags |= 1
+        self.duration = duration
         self.initial_offset_q = initial_offset_q
         self.initial_offset_t =  initial_offset_t
-        #TODO Add support for user-specified namespace hashes
         self.reference_namespace_hash = reference_namespace_hash
-        self.surface_namespace_hash = 2166136261
-        self.surface_joint_name_hash = 2166136261
-        self.surface_child_namespace_hash = 2166136261
+        self.surface_namespace_hash = surface_namespace_hash
+        self.surface_joint_name_hash = surface_joint_name_hash
+        self.surface_child_namespace_hash = surface_child_namespace_hash
         if disable_rig_suffix:
             #TODO Hack to support sims 4 pose packs from s4s
             encoded_clipname = clip_name
@@ -47,53 +60,46 @@ class ClipResource:
             encoded_clipname = "{}_{}".format(clip_name, rig_name)
             export_filename = encoded_clipname
 
-        self.clip_name_length, self.clip_name = len(encoded_clipname), encoded_clipname
-        self.file_name_length, self.file_name = len(export_filename), export_filename
-        self.rig_name_length, self.rig_name = len(rig_name), rig_name
-        self.explicit_namespace_count = 0
+        self.clip_name = encoded_clipname
+        self.file_name = export_filename
+        self.rig_name = rig_name
+        self.explicit_namespace_count = len(explicit_namespaces)
         self.explicit_namespaces = []
-        self.slot_assignment_count = 0
-        self.slot_assignments = []
-        slot_idx = 0
-        for chain_bone in slot_assignments:
-            for idx, slot_assignment in enumerate(slot_assignments[chain_bone]):
-                target_rig = slot_assignment.target_rig
-                print("target rig is {}".format(target_rig))
-                target_bone = slot_assignment.target_bone
-                chain_idx = slot_assignment.chain_idx
-                if "subroot" in target_bone:
-                    target_bone = "b__ROOT__"
-                if "loco" in target_bone:
-                    target_bone = "b__ROOT__"
-                if target_bone.endswith("Adjust"):
-                    target_bone = target_bone.replace("Adjust", "")
-                if chain_idx == -1:
-                    chain_idx = bone_to_slot_offset_idx[slot_assignment.source_bone]
-                sA = SlotAssignment(chain_idx, idx, target_rig.rig_name.encode('ascii'), target_bone.encode('ascii'))
-                self.slot_assignments.append(sA)
-                slot_idx += 1
-
-        self.slot_assignment_count += slot_idx
-        self.clipEventCount = 0
-        self.clipEventList = []
-        self.codecDataLength = 0
+        for namespace in explicit_namespaces:
+            if isinstance(namespace, ExplicitNamespace):
+                self.explicit_namespaces.append(namespace)
+            else:
+                self.explicit_namespaces.append(ExplicitNamespace(namespace))
+        self.slot_assignments = slot_assignments
+        self.slot_assignment_count = len(slot_assignments)
+        self.clip_event_list = []
+        self.codec_data_length = 0
         self.clip_body = ClipBody(self.clip_name, source_file_name)
-        if len(explicit_namespaces) >= 2:
-            for namespace in explicit_namespaces.split(","):
-                self.add_explicit_namespace(namespace.lstrip())
+
+    @property
+    def clip_name_length(self):
+        return len(self.clip_name)
+
+    @property
+    def rig_name_length(self):
+        return len(self.rig_name)
+
+    @property
+    def file_name_length(self):
+        return len(self.file_name)
+
+    @property
+    def clip_event_count(self):
+        return len(self.clip_event_list)
 
     def update_duration(self, ticks):
         # -1 tick for some reason.
-        self.duration = ticks / 30 - (1 / 30)
+        self.duration = ticks / FPS - (1 / FPS)
         self.clip_body.set_clip_length(ticks)
 
-    def add_explicit_namespace(self, name):
-        self.explicit_namespace_count += 1
-        self.explicit_namespaces.append(ExplicitNamespace(name))
 
     def add_event(self, event):
-        self.clipEventList.append(event)
-        self.clipEventCount += 1
+        self.clip_event_list.append(event)
 
     def get_clip_filename(self):
         if self.s3pe_naming:
@@ -111,6 +117,7 @@ class ClipResource:
 
     def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy
+        export_bytes = self.to_binary()
         anim_path = os.path.abspath(export_path)
 
         if export_path.startswith(".\\"):
@@ -130,46 +137,95 @@ class ClipResource:
             clip_filename = self.get_clip_filename()
             clip_header_filename = self.get_clip_header_filename()
 
-        serialized = [UInt32(self.version), UInt32(self.flags), Float32(self.duration),
+
+        try:
+            with open(os.path.join(anim_path, clip_filename), "wb") as file:
+                file.write(export_bytes)
+                with open(os.path.join(anim_path, clip_header_filename), "wb") as clip_header_file:
+                    clip_header_file.write(export_bytes)
+
+            if alternative_export_path != "":
+                with open(os.path.join(alternative_export_path, self.get_clip_filename()), "wb") as clip_file:
+                    clip_file.write(export_bytes)
+                with open(os.path.join(alternative_export_path, self.get_clip_header_filename()), "wb") as clip_header_file:
+                    clip_header_file.write(export_bytes)
+        except Exception as e:
+            print(e)
+
+    @staticmethod
+    def from_binary(reader):
+        version = reader.u32()
+        if version > 18:
+            raise ValueError("Clip version {} is not supported.".format(version))
+        flags = reader.u32()
+        duration = reader.f32()
+        initial_offset_q = Quaternion.from_binary(reader)
+        initial_offset_t = Vector3.from_binary(reader)
+        reference_namespace_hash = 0
+        if version >= 5:
+            reference_namespace_hash = reader.u32()
+        surface_namespace_hash = 2166136261
+        surface_joint_name_hash = 2166136261
+        surface_child_namespace_hash = 2166136261
+        if version >= 10:
+            surface_namespace_hash = reader.u32()
+            surface_joint_name_hash = reader.u32()
+
+        if version >= 11:
+            surface_child_namespace_hash = reader.u32()
+        clip_name = ""
+        if version >= 7:
+            clip_name = IOString.from_binary(reader).string
+
+
+        rig_namespace = IOString.from_binary(reader).string
+        explicit_namespaces = []
+        if version >= 4:
+            explicit_namespace_count = reader.u32()
+            for _ in range(explicit_namespace_count):
+                explicit_namespaces.append(String(IOString.from_binary(reader).string))
+
+        slot_assignment_count = reader.u32()
+        slot_assignments = []
+        for _ in range(slot_assignment_count):
+            slot_assignments.append(SlotAssignment.from_binary(reader))
+
+
+        clip = ClipResource(clip_name, rig_namespace, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
+                            initial_offset_t,"", False,  disable_rig_suffix=True,
+                            version=version, surface_namespace_hash=surface_namespace_hash,
+                            surface_joint_name_hash=surface_joint_name_hash,
+                            surface_child_namespace_hash=surface_child_namespace_hash, duration=duration, flags=flags)
+
+
+    def to_binary(self):
+        serialized = [u32(self.version), u32(self.flags), f32(self.duration),
                       *self.initial_offset_q.to_binary(), *self.initial_offset_t.to_binary(),
-                      UInt32(self.reference_namespace_hash), UInt32(self.surface_namespace_hash),
-                      UInt32(self.surface_joint_name_hash), UInt32(self.surface_child_namespace_hash),
-                      UInt32(self.clip_name_length), String(self.clip_name),
-                      UInt32(self.rig_name_length), String(self.rig_name), UInt32(self.explicit_namespace_count),
+                      u32(self.reference_namespace_hash), u32(self.surface_namespace_hash),
+                      u32(self.surface_joint_name_hash), u32(self.surface_child_namespace_hash),
+                      u32(self.clip_name_length), String(self.clip_name),
+                      u32(self.rig_name_length), String(self.rig_name), u32(self.explicit_namespace_count),
                       *self.explicit_namespaces,
-                      UInt32(self.slot_assignment_count), *self.slot_assignments, UInt32(self.clipEventCount),
-                      *self.clipEventList, UInt32(self.codecDataLength)]
+                      u32(self.slot_assignment_count), *self.slot_assignments, u32(self.clip_event_count),
+                      *self.clip_event_list, u32(self.codec_data_length)]
         header_data = []
 
         header_length = 0
         for item in serialized:
-            serialized_data = item.serialize()
+            serialized_data = item.to_binary()
             header_data.append(serialized_data)
-            header_length += get_size(serialized_data)
+        header_length += get_size(header_data)
+        print(self.clip_body)
+        clip_body = self.clip_body.to_binary()
 
-        clip_body, frame_data = self.clip_body.serialize()
-
-        actual_codec_data_length = get_size(clip_body) + get_size(frame_data)
+        actual_codec_data_length = len(clip_body)
         # Replace codec data length with actual one
-        header_data[-1] = UInt32(actual_codec_data_length).serialize()
-        all_data = io.BytesIO()
-        # offsets
+        print(header_data)
+        header_data[-1] = u32(actual_codec_data_length).to_binary()
+        return concatenate_bytes([header_data, clip_body])
 
-        s4animtools.serialization.recursive_write([*header_data, clip_body, frame_data], all_data)
-        write_data = all_data.getvalue()
-
-        try:
-            with open(os.path.join(anim_path, clip_filename), "wb") as file:
-                file.write(write_data)
-                with open(os.path.join(anim_path, clip_header_filename), "wb") as clip_header_file:
-                    clip_header_file.write(write_data)
-
-            if alternative_export_path != "":
-                with open(os.path.join(alternative_export_path, self.get_clip_filename()), "wb") as clip_file:
-                    clip_file.write(write_data)
-                with open(os.path.join(alternative_export_path, self.get_clip_header_filename()), "wb") as clip_header_file:
-                    clip_header_file.write(write_data)
-        except Exception as e:
-            print(e)
+class ClipResourceTS3(BaseClipResource):
+    def __init__(self):
+        pass
 if __name__ == "__main__":
-    ClipResource().serialize()
+    clip = ClipResource.from_binary(reader=FileReader(r"D:\Assets\Resources\1.114 Clips Hold 2\6B20C4F3!00000000!1DEC500053B15F0B.a_loco_run_turnAndStop_0_x.Clip"))

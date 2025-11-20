@@ -1,4 +1,6 @@
-from s4animtools.serialization.types.basic import UInt32
+import bpy
+
+from s4animtools.serialization.types.basic import u32
 from s4animtools.rig_constants import slot
 from s4animtools.channels.translation_channel import Vector3Channel
 from s4animtools.channels.quaternion_channel import QuaternionChannel
@@ -10,6 +12,7 @@ from mathutils import Vector, Quaternion
 from s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
 import s4animtools
+import bpy_extras
 ENABLE_SCALE = True
 F4_QuaternionIdentity = 17
 
@@ -361,12 +364,20 @@ class AnimationExporter:
         translation_data_path = f'pose.bones["{source_bone_name}"].ik_pos_{ik_idx}'
         rotation_data_path = f'pose.bones["{source_bone_name}"].ik_rot_{ik_idx}'
 
+
+
         translation_channel_clip = self.animated_frame_data[source_bone_name].get_translation_channel(ik_idx)
         rotation_channel_clip = self.animated_frame_data[source_bone_name].get_rotation_channel(ik_idx)
         translations = defaultdict(dict)
-        # Convert from baked data from "Set IK Weights" into actual ik keyframe data
+        # Convert from baked data from "Bake InGame IK Animation Data" into actual ik keyframe data
         for t_axis in range(3):
-            fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
+            if bpy.app.version >= (5,0,0):
+                action = self.source_rig.animation_data.action
+                slot = self.source_rig.animation_data.action_slot
+                channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+                fc_t = channelbag.fcurves.find(translation_data_path, index=t_axis)
+            else:
+                fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
             for keyframe in fc_t.keyframe_points:
                 frame = math.floor(keyframe.co[0])
                 # Skip every other frame, sampling_rate == 2 means downsampling 60 to 30 fps
@@ -382,7 +393,13 @@ class AnimationExporter:
             translation_channel_clip.add_keyframe(Vector(translations[frame].values()), frame, force=frame==0)
         rotations = defaultdict(dict)
         for r_axis in range(4):
-            fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
+            if bpy.app.version >= (5,0,0):
+                action = self.source_rig.animation_data.action
+                slot = self.source_rig.animation_data.action_slot
+                channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+                fc_r = channelbag.fcurves.find(rotation_data_path, index=r_axis)
+            else:
+                fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
             for keyframe in fc_r.keyframe_points:
                 frame = math.floor(keyframe.co[0])
                 if sampling_rate == 2:
@@ -418,7 +435,7 @@ class AnimationExporter:
             animation_data = self.animated_frame_data[bone.name]
             if len(animation_data.get_translation_channel().items()) > 0:
                 location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
-                location_channel._target = UInt32(720414894)
+                location_channel._target = u32(720414894)
                 translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3, loco_channel=True)
 
                 location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
@@ -426,7 +443,7 @@ class AnimationExporter:
                 self.exported_channels.append(location_channel)
                 rotation_channel = s4animtools.channels.quaternion_channel.QuaternionChannel("loco", F4_QuaternionIdentity, 2)
                 rotation_channel.set_channel_data(0, 1, {}, self.snap_frames)
-                rotation_channel._target = UInt32(720414894)
+                rotation_channel._target = u32(720414894)
                 self.exported_channels.append(rotation_channel)
 
         if bone.name != "b__ROOT__" and bone.name != "loco":

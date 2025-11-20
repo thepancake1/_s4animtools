@@ -1,4 +1,4 @@
-from s4animtools.serialization.types.basic import Float32
+from s4animtools.serialization.types.basic import f32
 from s4animtools.serialization import Serializable
 
 """
@@ -26,8 +26,12 @@ class Vector3(Serializable):
             raise ValueError("Vector3 requires 3 values, Got: {}".format(values))
         return Vector3(*map(float, values))
 
+    @staticmethod
+    def from_binary(reader):
+        x, y, z = reader.f32(), reader.f32(), reader.f32()
+        return Vector3(x, y, z)
     def to_binary(self):
-        return list(map(Float32, self))
+        return list(map(f32, self))
 
     def __str__(self):
         return "XYZ: {:.02f} {:.02f} {:.02f}".format(self.x, self.y, self.z)
@@ -35,7 +39,7 @@ class Vector3(Serializable):
     def __repr__(self):
         return self.__str__()
 
-class Quaternion4(Serializable):
+class Quaternion(Serializable):
     def __init__(self, w, x, y, z):
         self.w = w
         self.x = x
@@ -50,10 +54,15 @@ class Quaternion4(Serializable):
         values = string.split(separator)
         if len(values) != 4:
             raise ValueError("Quaternion requires 4 values, Got: {}".format(values))
-        return Quaternion4(*map(float, values))
+        return Quaternion(*map(float, values))
+
+    @staticmethod
+    def from_binary(reader):
+        x, y, z, w = reader.f32(), reader.f32(), reader.f32(), reader.f32()
+        return Quaternion(w, x, y, z)
 
     def to_binary(self):
-        return list(map(Float32, self))
+        return list(map(f32, self))
 
     def __str__(self):
         return "XYZW: {:.02f} {:.02f} {:.02f} {:.02f}".format(self.x, self.y, self.z, self.w)

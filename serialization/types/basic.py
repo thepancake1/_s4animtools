@@ -5,89 +5,107 @@ Basic Types are the types that go into a file.
 These include things like an array of bytes, 
 an 8, 16, 32, or 64 bit integer, or a string.
 """
-
-class Bytes:
-    def __init__(self, value):
-        if not isinstance(value, bytes):
-            raise Exception("Bytes value is not bytes")
-        self.value = value
-
-    def serialize(self):
-        if not isinstance(self.value, bytes):
-            raise Exception("Bytes value is not bytes")
-        return self.value
-
-
-class Byte:
-    def __init__(self, value):
-        self.value = value
-
-    def serialize(self):
-        return pack("<B", self.value)
-
-
-class UInt16:
-    def __init__(self, value):
-        self.value = value
-
-    def serialize(self):
-        return pack("<H", self.value)
-
-
-class UInt32:
-    def __init__(self, value):
-        self.value = value
-
-    def serialize(self):
-        return pack("<L", self.value)
+class Serializable:
+    def to_binary(self):
+        raise NotImplementedError
 
     @staticmethod
-    def deserialize(value):
-        return unpack("<L", value)[0]
+    def from_binary(reader):
+        raise NotImplementedError
 
 
-class UInt64:
-    def __init__(self, value):
-        self.value = value
+class Bytes(Serializable):
+    def __init__(self, data:bytes) -> None:
+        if not isinstance(data, bytes):
+            raise Exception("Bytes data is not bytes")
+        self.data = data
 
-    def serialize(self):
-        return pack("<Q", self.value)
+    def to_binary(self) -> bytes:
+        return self.data
 
-    @staticmethod
-    def deserialize(value):
-        return unpack("<Q", value)[0]
+    def from_binary(reader) -> None:
+        raise Exception("Bytes.from_binary is not implemented. Use a subclass that has length control instead")
 
+class u8:
+    def __init__(self, data:int) -> None:
+        self.data = data
 
-class Int32:
-    def __init__(self, value):
-        self.value = value
-
-    def serialize(self):
-        return pack("<l", self.value)
-
-
-class Float32:
-    def __init__(self, value):
-        self.value = value
-
-    def serialize(self):
-        return pack("<f", self.value)
+    def to_binary(self) -> bytes:
+        return pack("<B", self.data)
 
     @staticmethod
-    def deserialize(value):
-        return unpack("<f", value)[0]
+    def from_binary(reader) -> int:
+        data = reader.read(1)
+        return unpack("<B", data)[0]
+class u16:
+    def __init__(self, data) -> None:
+        self.data = data
+
+    def to_binary(self) -> bytes:
+        return pack("<H", self.data)
+
+    @staticmethod
+    def from_binary(reader) -> int:
+        data = reader.read(2)
+        return unpack("<H", data)[0]
+class u32:
+    def __init__(self, data):
+        self.data = data
+
+    def to_binary(self) -> bytes:
+        return pack("<L", self.data)
+
+    @staticmethod
+    def from_binary(reader) -> int:
+        data = reader.read(4)
+        return unpack("<L", data)[0]
+
+class u64:
+    def __init__(self, data):
+        self.data = data
+
+    def to_binary(self) -> bytes:
+        return pack("<Q", self.data)
+
+    @staticmethod
+    def from_binary(reader) -> int:
+        data = reader.read(8)
+        return unpack("<Q", data)[0]
+
+
+class i32:
+    def __init__(self, data):
+        self.data = data
+
+    def to_binary(self) -> bytes:
+        return pack("<l", self.data)
+
+    @staticmethod
+    def from_binary(reader) -> int:
+        data = reader.read(4)
+        return unpack("<l", data)[0]
+
+class f32:
+    def __init__(self, data):
+        self.data = data
+
+    def to_binary(self) -> bytes:
+        return pack("<f", self.data)
+
+    @staticmethod
+    def from_binary(reader) -> int:
+        data = reader.read(4)
+        return unpack("<f", data)[0]
+
 
 
 class String:
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, data):
+        self.data = data
 
-    def serialize(self):
-        return self.value.encode("ascii")
+    def to_binary(self) -> bytes:
+        return self.data.encode("ascii")
 
-class Serializable:
-    def serialize(self):
-        raise Exception
-    @property
-    def value(self):
-        return self.serialize()
+    @staticmethod
+    def from_binary(reader) -> str:
+        raise Exception("String.from_binary is not implemented. Use a subclass that has length control instead")

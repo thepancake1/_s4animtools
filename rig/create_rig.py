@@ -1,9 +1,9 @@
 import os
 
 from s4animtools.serialization.fnv import get_32bit_hash
-from s4animtools.serialization.types.basic import UInt32, Float32, Bytes, Int32
+from s4animtools.serialization.types.basic import u32, f32, Bytes, i32
 import bpy
-from s4animtools.stream import StreamReader
+from s4animtools.stream import FileReader
 
 class Bone:
     def __init__(self):
@@ -18,16 +18,16 @@ class Bone:
         self.flags = 0
 
     def read(self, reader):
-        self.position = [reader.float32(), reader.float32(), reader.float32()]
-        self.rotation = [reader.float32(), reader.float32(), reader.float32(), reader.float32()]
-        self.scale = [reader.float32(), reader.float32(), reader.float32()]
+        self.position = [reader.f32(), reader.f32(), reader.f32()]
+        self.rotation = [reader.f32(), reader.f32(), reader.f32(), reader.f32()]
+        self.scale = [reader.f32(), reader.f32(), reader.f32()]
         self.bone_name_length = reader.u32()
         self.bone_name = reader.read_string(self.bone_name_length)
         self.mirrored_bone_idx = reader.u32()
         self.parent_idx = reader.s32()
         self.bone_hash = reader.u32()
         self.flags = reader.u32()
-        print(self.bone_name, hex(self.bone_hash))
+        #print(self.bone_name, hex(self.bone_hash))
         return self
 
 
@@ -38,29 +38,29 @@ class Bone:
         location = (bp2.inverted() @ bp1).to_translation()
         rotation = matrix_data.to_quaternion()
 
-        print("Bone: {}, Parent: {}".format(current_bone.name, parent_bone.name))
-        print("Location: {}, Rotation: {}".format(location, rotation))
-        self.position = [Float32(round(location.x, 4)), Float32(round(location.y, 4)),
-                         Float32(round(location.z, 4))]
-        self.rotation = [Float32(round(rotation.x, 4)), Float32(round(rotation.y, 4)), Float32(round(rotation.z, 4)),
-                         Float32(round(rotation.w, 4))]
+       # print("Bone: {}, Parent: {}".format(current_bone.name, parent_bone.name))
+       # print("Location: {}, Rotation: {}".format(location, rotation))
+        self.position = [f32(round(location.x, 4)), f32(round(location.y, 4)),
+                         f32(round(location.z, 4))]
+        self.rotation = [f32(round(rotation.x, 4)), f32(round(rotation.y, 4)), f32(round(rotation.z, 4)),
+                         f32(round(rotation.w, 4))]
 
-        self.scale = [Float32(1), Float32(1), Float32(1)]
-        self.bone_name_length, self.bone_name = UInt32(len(current_bone.name)), \
+        self.scale = [f32(1), f32(1), f32(1)]
+        self.bone_name_length, self.bone_name = u32(len(current_bone.name)), \
                                                 Bytes(current_bone.name.encode('ascii'))
-        self.mirrored_bone_idx = Int32(current_idx)
-        self.parent_idx = Int32(parent_idx)
-        self.bone_hash = UInt32(get_32bit_hash(current_bone.name))
-        self.flags = UInt32(Rig.determine_bone_type(current_bone.name))
+        self.mirrored_bone_idx = i32(current_idx)
+        self.parent_idx = i32(parent_idx)
+        self.bone_hash = u32(get_32bit_hash(current_bone.name))
+        self.flags = u32(Rig.determine_bone_type(current_bone.name))
         return self
-    def serialize(self):
+    def to_binary(self):
         serialized = [*self.position, *self.rotation, *self.scale, self.bone_name_length, self.bone_name,
                       self.mirrored_bone_idx, self.parent_idx, self.bone_hash, self.flags]
 
         serialized_stuff = []
         for value in serialized:
             print(value)
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
@@ -95,9 +95,9 @@ class Rig:
             self.bones.append(Bone().read(reader))
         return self
     def create(self, bones):
-        self.major_version = UInt32(3)
-        self.minor_version = UInt32(1)
-        self.bone_count = UInt32(len(bones))
+        self.major_version = u32(3)
+        self.minor_version = u32(1)
+        self.bone_count = u32(len(bones))
         self.bones = []
         bone_to_idx = {}
         for i in range(len(bones)):
@@ -111,22 +111,22 @@ class Rig:
                 parent_bone = current_bone
                 parent_bone_idx = -1
             self.bones.append(Bone().create(current_bone, parent_bone, parent_bone_idx, i))
-        self.rig_name_length = UInt32(0)
+        self.rig_name_length = u32(0)
         return self
 
-    def serialize(self):
+    def to_binary(self):
         serialized = [self.major_version, self.minor_version, self.bone_count, *self.bones, self.rig_name_length]
 
         serialized_stuff = []
         for value in serialized:
-            serialized_stuff.append(value.serialize())
+            serialized_stuff.append(value.to_binary())
 
         return serialized_stuff
 
 def create_rig_with_context(filepath, context):
     import math
     from mathutils import Vector, Matrix, Quaternion
-    reader = StreamReader(filepath)
+    reader = FileReader(filepath)
     rig_resource = Rig().read(reader)
     rig_name = os.path.basename(filepath)
     armdata = bpy.data.armatures.new(rig_name)
@@ -139,7 +139,6 @@ def create_rig_with_context(filepath, context):
     edit_bones = ob_new.data.edit_bones
     for bone in rig_resource.bones:
         if bone.parent_idx >= 0:
-            print(bone.parent_idx)
             #print(bone.parent_idx)
             parent_matrix = edit_bones[bone.parent_idx].matrix
             parent = edit_bones[bone.parent_idx]
@@ -180,15 +179,15 @@ class Trackmask:
         self.track_blends = []
 
     def read(self, filepath):
-        reader = StreamReader(filepath)
+        reader = FileReader(filepath)
         for i in range(24):
             reader.u8()
         track_blend_count = reader.u32()
         reader.u32()
         reader.u32()
-        reader.float32()
+        reader.f32()
         if track_blend_count > 1000:
             raise ValueError("Invalid track mask.")
         for i in range(track_blend_count):
-            self.track_blends.append(reader.float32())
+            self.track_blends.append(reader.f32())
         return self
