@@ -265,7 +265,7 @@ class ImportFootprint:
 
     def execute(self, context, filepath):
         reader = FileReader(filepath)
-        rcol = RCOL().read(reader)
+        rcol = RCOL().from_binary(reader)
         footprint_chunk = None
         for chunk in rcol.chunk_data:
             if isinstance(chunk, Footprint):

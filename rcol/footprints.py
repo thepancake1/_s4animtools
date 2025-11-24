@@ -318,16 +318,16 @@ class Area(Serializable):
     def from_binary(self, reader:FileReader):
         self.name_hash = reader.u32()
         self.priority =  reader.u8()
-        self.area_type_flags = FootprintPolyFlags().read(reader)
+        self.area_type_flags = FootprintPolyFlags().from_binary(reader)
         point_count = reader.u8()
         for i in range(point_count):
-            self.points.append(Point().read(reader))
-        self.intersection_object_type = IntersectionFlags().read(reader)
-        self.allow_intersection_types = IntersectionFlags().read(reader)
-        self.surface_type_flags = SurfaceTypeFlags().read(reader)
-        self.surface_attribute_flags = SurfaceAttributeFlags().read(reader)
+            self.points.append(Point().from_binary(reader))
+        self.intersection_object_type = IntersectionFlags().from_binary(reader)
+        self.allow_intersection_types = IntersectionFlags().from_binary(reader)
+        self.surface_type_flags = SurfaceTypeFlags().from_binary(reader)
+        self.surface_attribute_flags = SurfaceAttributeFlags().from_binary(reader)
         self.deprected_level_offset = reader.u8()
-        self.bounding_box = BoundingBox().read(reader)
+        self.bounding_box = BoundingBox().from_binary(reader)
         return self
 
     def to_binary(self):
@@ -376,24 +376,24 @@ class Footprint(Serializable):
     def from_binary(self, reader:FileReader):
         self.identifier = reader.read(4)
         self.version = reader.u32()
-        self.template_key = TGI().read(reader)
+        self.template_key = TGI().from_binary(reader)
         if self.template_key.t != 0:
             minimum_height_override_count = reader.u8()
             for i in range(minimum_height_override_count):
-                self.min_height_overrides.append(PolygonHeightOverride().read(reader))
+                self.min_height_overrides.append(PolygonHeightOverride().from_binary(reader))
 
             maximum_height_override_count = reader.u8()
             for i in range(maximum_height_override_count):
-                self.max_height_overrides.append(PolygonHeightOverride().read(reader))
+                self.max_height_overrides.append(PolygonHeightOverride().from_binary(reader))
 
         else:
             footprint_area_count = reader.u8()
             for i in range(footprint_area_count):
-                self.footprint_areas.append(Area().read(reader))
+                self.footprint_areas.append(Area().from_binary(reader))
 
             routing_area_count = reader.u8()
             for i in range(routing_area_count):
-                self.routing_areas.append(Area().read(reader))
+                self.routing_areas.append(Area().from_binary(reader))
             self.maximum_height = reader.f32()
 
             self.minimum_height = reader.f32()
