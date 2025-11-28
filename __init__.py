@@ -522,7 +522,11 @@ class NewClipExporter:
                 raise ValueError("You need to set your render settings to 60 fps to downsample to 30.")
 
         # Set the source filename in the exported clip to be this blend's filename.
-        source_filename = f"{bpy.data.filepath.split(os.sep)[-1]} (Exported with Blender {bpy.app.version[0]}.{bpy.app.version[1]}.{bpy.app.version[2]})"
+        if self.context.object.enable_version_number_in_exported_clip:
+            source_filename = f"{bpy.data.filepath.split(os.sep)[-1]} (Exported with Blender {bpy.app.version[0]}.{bpy.app.version[1]}.{bpy.app.version[2]})"
+        else:
+            source_filename = f"{bpy.data.filepath.split(os.sep)[-1]}"
+
         ik_targets_to_bone = determine_ik_slot_targets(self.context.active_object)
 
         clip_infos = self.get_clip_infos()
@@ -794,7 +798,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 box.prop(context.scene, "clip_name", text = "Clip Name(s)")
                 box.prop(obj, "allow_jaw_animation_for_entire_animation",
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
-
+                box.prop(obj, "enable_version_number_in_exported_clip", text="Enable Blender Version Number in Source Asset Name")
                 box.label(text="The center rig is where the root of your exported animation will be located.")
                 box.label(text="Useful for poses with multiple sims.")
                 box.prop_search(context.object, "world_rig", context.scene, "objects", text="Center Rig")
@@ -2565,7 +2569,7 @@ def register():
                                                                            soft_min=0, soft_max=1, min=0, max=1,
                                                                            default=1)
 
-
+    bpy.types.Object.enable_version_number_in_exported_clip = BoolProperty(default=True)
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2711,3 +2715,5 @@ def unregister():
     del bpy.types.Object.right_arm_ik_enabled
     del bpy.types.Object.left_leg_ik_enabled
     del bpy.types.Object.right_leg_ik_enabled
+
+    del bpy.types.Object.enable_version_number_in_exported_clip
