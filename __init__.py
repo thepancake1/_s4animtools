@@ -1290,7 +1290,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
               # ## box.label(text="The base rig setting is not used for normal animations.")
                # box.prop_search(obj, "base_rig", context.scene, "objects", text="Base Rig")
                # box.label(text="Export an Additive Clip. Do not use for normal animations")
-              #  box.operator("s4animtools.new_export_clip", icon='MESH_CUBE', text="Export Additive Clip").additive = True
+                box.operator("s4animtools.new_export_clip", text="Export Additive Clip").additive = True
 
 
                 row = box.row()
