@@ -378,6 +378,8 @@ class AnimationExporter:
                 fc_t = channelbag.fcurves.find(translation_data_path, index=t_axis)
             else:
                 fc_t = self.source_rig.animation_data.action.fcurves.find(translation_data_path, index=t_axis)
+            if fc_t is None:
+                raise Exception(f"Couldn't find baked IK animation data for the path listed below, Bake InGame IK Animation Data first!\n\n {translation_data_path}. ")
             for keyframe in fc_t.keyframe_points:
                 frame = math.floor(keyframe.co[0])
                 # Skip every other frame, sampling_rate == 2 means downsampling 60 to 30 fps
@@ -400,6 +402,10 @@ class AnimationExporter:
                 fc_r = channelbag.fcurves.find(rotation_data_path, index=r_axis)
             else:
                 fc_r = self.source_rig.animation_data.action.fcurves.find(rotation_data_path,index=r_axis)
+            if fc_r is None:
+                raise Exception(
+                    f"Couldn't find baked IK animation data for the path listed below, Bake InGame IK Animation Data first!\n\n {rotation_data_path}. ")
+
             for keyframe in fc_r.keyframe_points:
                 frame = math.floor(keyframe.co[0])
                 if sampling_rate == 2:
