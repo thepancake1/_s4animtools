@@ -625,8 +625,8 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
 
         bpy.ops.object.mode_set(mode='EDIT')
 
-        ts3_rig = context.scene.game_type == "TS3"
-        ts4_rig = context.scene.game_type == "TS4"
+        ts3_rig = context.object.game_type == "TS3"
+        ts4_rig = context.object.game_type == "TS4"
 
         if ts3_rig:
             glasses_name = "b__Glasses__"
@@ -778,7 +778,7 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
         active_object.pose.bones["R.LoLid.FK"].use_custom_shape_bone_size = False
         active_object.pose.bones["R.LoLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-270), 0)
 
-        spine_rotation = 90 if context.scene.game_type == "TS4" else 0
+        spine_rotation = 90 if context.object.game_type == "TS4" else 0
 
         active_object.pose.bones["R.LoLid.FK"].color.palette = "THEME03"
 
