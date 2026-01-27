@@ -437,7 +437,7 @@ class NewClipExporter:
        # This object supports rig suffixes, will stick them on to the end.
 
         if not self.context.object.disable_rig_suffix:
-            for idx in range(clip_names):
+            for idx in range(len(clip_names)):
                 clip_names[idx] += "_" + self.context.opbject.rig_name
 
         return clip_names
