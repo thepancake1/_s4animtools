@@ -14,7 +14,7 @@ from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEv
                                           PlayEffectEventUI)
 from s4animtools.rig.ik_chains import S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones, \
     S4ANIMTOOLS_OT_FKIKSwitch, S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig
-from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash
+from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
 from s4animtools.rig.create_rig import Trackmask
@@ -189,10 +189,7 @@ class ClipInfo:
         self.start_frame = start_frame
         self.end_frame = end_frame
         self.name = name
-        if reference_namespace_hash == "":
-            reference_namespace_hash = 0
-        else:
-            reference_namespace_hash = int(reference_namespace_hash, 16)
+
         self.reference_namespace_hash = reference_namespace_hash
         self.explicit_namespaces = explicit_namespaces
         self.initial_offset_q = initial_offset_q
@@ -474,8 +471,17 @@ class NewClipExporter:
     def get_explicit_namespaces(self) -> str:
         return self.context.object.explicit_namespaces
 
-    def get_reference_namespace_hash(self) -> str:
+    def get_reference_namespace(self) -> str:
+        # In v0.9 this changed from  get_reference_namespace_hash to get_reference_namespace
         return self.context.object.reference_namespace_hash
+
+    def get_reference_namespace_hash(self) -> int:
+        reference_namespace = self.get_reference_namespace()
+        if reference_namespace == "":
+            reference_namespace_hash = 0
+        else:
+            reference_namespace_hash = hash_name_or_get_hash(reference_namespace)
+        return reference_namespace_hash
 
     def get_clip_infos(self) -> list[ClipInfo]:
         rig_name = self.context.object.rig_name
@@ -746,10 +752,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
-       # layout.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
 
-      #  layout.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, \n"
-      #                                                           "2 as regular files")
        # layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
@@ -1302,6 +1305,9 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row.operator("s4animtools.mask_out_children", text="Mask Out Children")
                # layout.operator("s4animtools.create_finger_ik", icon='MESH_CUBE', text="Create Finger IK")
                # layout.operator("s4animtools.create_ik_rig", icon='MESH_CUBE', text="Create IK Rig")
+                box.prop(context.scene, "s4animtools_export_path2", text="Export Path 2")
+
+                box.prop(context.scene, "export_as_loose_files", text="Export Main as Loose Files, 2 as regular files")
             row =  layout.row()
             try:
                 selected_bone = bpy.context.selected_pose_bones[0]
