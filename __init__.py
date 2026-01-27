@@ -420,17 +420,36 @@ class NewClipExporter:
             original_timestamp = original_timestamp / 2
             timeshifted_timestamp = timeshifted_timestamp / 2
         return original_timestamp, timeshifted_timestamp
+
+    def get_clip_names_from_markers(self) -> list[str]:
+        sorted_markers = sorted(self.context.scene.timeline_markers, key=lambda marker: marker.frame)
+        clip_names = []
+        for marker in sorted_markers:
+            clip_names.append(marker.name)
+        return clip_names
+
+    def get_clip_splits_from_markers(self) -> list[int]:
+        sorted_markers = sorted(self.context.scene.timeline_markers, key=lambda marker: marker.frame)
+        clip_splits = []
+        for marker in sorted_markers:
+            clip_splits.append(marker.frame)
+        return clip_splits
+
     def get_clip_names(self) -> list[str]:
         clip_names = []
-        if self.context.scene.clip_name == "":
-            raise Exception("You need to specify a clip name")
-        clip_input_names = self.context.scene.clip_name.split(",")
-        if len(clip_input_names) > 0:
-            for clip_input_name in clip_input_names:
-                if self.context.scene.clip_name_prefix == "":
-                    clip_names.append(clip_input_name)
-                else:
-                    clip_names.append(f"{self.context.scene.clip_name_prefix}_{clip_input_name}")
+
+        if self.context.scene.export_using_markers:
+            return self.get_clip_names_from_markers()
+        else:
+            if self.context.scene.clip_name == "":
+                    raise Exception("You need to specify a clip name")
+            clip_input_names = self.context.scene.clip_name.split(",")
+            if len(clip_input_names) > 0:
+                for clip_input_name in clip_input_names:
+                    if self.context.scene.clip_name_prefix == "":
+                        clip_names.append(clip_input_name)
+                    else:
+                        clip_names.append(f"{self.context.scene.clip_name_prefix}_{clip_input_name}")
         return clip_names
     def get_clip_names_with_actor_suffix(self) -> list[str]:
         clip_names = self.get_clip_names()
@@ -443,29 +462,44 @@ class NewClipExporter:
         return clip_names
 
     def get_clip_splits(self) -> list[int]:
-        clip_indices = [0, ]
-        clip_splits = self.context.scene.clip_splits.split(",")
-        # If the clip splits string is of zero length, then the user hasn't entered anything and needs to enter it.
-        if len(self.context.scene.clip_splits) == 0:
-            raise Exception("You need to specify clip splits")
+        clip_indices = []
+        if self.context.scene.export_using_markers:
+            clip_splits = self.get_clip_splits_from_markers()
+            if len(clip_splits) == 0:
+                raise Exception("Trying to export using markers but no markers have been set. Disable markers if you're using clip names and clip splits.")
+            if clip_splits[0] != 0:
+                raise Exception("First frame of the first clip must be at 0. Instead, it's at {}".format(clip_splits[0]))
+            clip_splits.append(self.context.scene.frame_end)
+            return clip_splits
+        else:
+            clip_indices = [0, ]
+            clip_splits = self.context.scene.clip_splits.split(",")
+            # If the clip splits string is of zero length, then the user hasn't entered anything and needs to enter it.
+            if len(self.context.scene.clip_splits) == 0:
+                raise Exception("You need to specify clip splits")
 
-        elif len(clip_splits) > 0:
-            for split in clip_splits:
-                clip_indices.append(int(split))
-        return clip_indices
+            elif len(clip_splits) > 0:
+                for split in clip_splits:
+                    clip_indices.append(int(split))
+            return clip_indices
 
     def get_clip_locos(self) -> list[bool]:
         clip_locos_bool = []
-        clip_locos = self.context.scene.clip_locos.split(",")
-        # If the clip locos string is of zero length, then the user hasn't entered anything and needs to enter it.
-        if len(self.context.scene.clip_locos) == 0:
+        # Ig using clip markers, don't use clip locos at all
+        if self.context.scene.export_using_markers:
             for split in self.get_clip_splits():
                 clip_locos_bool.append(False)
-        elif len(self.get_clip_splits()) - 1 != len(clip_locos):
-            raise Exception("Clip splits does not match clip locos")
-        elif len(clip_locos) > 0:
-            for split in clip_locos:
-                clip_locos_bool.append(split=="+")
+        else:
+            clip_locos = self.context.scene.clip_locos.split(",")
+            # If the clip locos string is of zero length, then the user hasn't entered anything and needs to enter it.
+            if len(self.context.scene.clip_locos) == 0:
+                for split in self.get_clip_splits():
+                    clip_locos_bool.append(False)
+            elif len(self.get_clip_splits()) - 1 != len(clip_locos):
+                raise Exception("Clip splits does not match clip locos")
+            elif len(clip_locos) > 0:
+                for split in clip_locos:
+                    clip_locos_bool.append(split=="+")
         return clip_locos_bool
 
     def get_explicit_namespaces(self) -> str:
@@ -752,7 +786,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
             layout.operator("s4animtools.upgrade_data", text="New version detected. Update file?")
         layout.operator("s4animtools.select_export_path", icon='MESH_CUBE', text="Select Animation Export Path")
         layout.prop(context.scene, "s4animtools_export_path", text="Export Path")
-
+        layout.prop(context.scene, "export_using_markers", text="Export using Markers")
        # layout.prop(context.scene, "pose_pack_mode_enabled", text="Pose Pack Mode On")
 
         if obj is not None:
@@ -2576,6 +2610,7 @@ def register():
                                                                            default=1)
 
     bpy.types.Object.enable_version_number_in_exported_clip = BoolProperty(default=True)
+    bpy.types.Scene.export_using_markers = BoolProperty(default=True)
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2723,3 +2758,4 @@ def unregister():
     del bpy.types.Object.right_leg_ik_enabled
 
     del bpy.types.Object.enable_version_number_in_exported_clip
+    del bpy.types.Scene.export_using_markers
