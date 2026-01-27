@@ -68,10 +68,13 @@ def get_64bithash_as_int(to_hash, lowercase=True):
     return int(get_64bithash(to_hash, lowercase), 16)
 
 def hash_name_or_get_hash(string, lowercase=False):
+    return u32(hash_name_or_get_hash_as_int(string, lowercase))
+
+def hash_name_or_get_hash_as_int(string, lowercase=False):
     if string.startswith("0x"):
-        return u32(int(string.strip(), 16))
+        return int(string.strip(), 16)
     else:
-        return u32(get_32bit_hash(string.strip(), lowercase=lowercase))
+        return get_32bit_hash(string.strip(), lowercase=lowercase)
 
 def hash_name_or_get_hash_64(string, lowercase=False):
     if string.startswith("0x"):

@@ -14,7 +14,7 @@ from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEv
                                           PlayEffectEventUI)
 from s4animtools.rig.ik_chains import S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones, \
     S4ANIMTOOLS_OT_FKIKSwitch, S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig
-from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash
+from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash_as_int
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
 from s4animtools.rig.create_rig import Trackmask
@@ -480,7 +480,7 @@ class NewClipExporter:
         if reference_namespace == "":
             reference_namespace_hash = 0
         else:
-            reference_namespace_hash = hash_name_or_get_hash(reference_namespace)
+            reference_namespace_hash = hash_name_or_get_hash_as_int(reference_namespace)
         return reference_namespace_hash
 
     def get_clip_infos(self) -> list[ClipInfo]:
