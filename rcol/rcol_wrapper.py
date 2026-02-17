@@ -450,7 +450,7 @@ class OT_S4ANIMTOOLS_ExportFootprint(bpy.types.Operator):
             rcol.chunk_data.append(footprint_chunk)
             rcol.chunk_info.append(ChunkInfo(0, 0))
             new_tgi = TGI()
-            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF5, 0x80000000, instance_id.data
+            new_tgi.t, new_tgi.g, new_tgi.i = 0xD382BF57, 0x80000000, instance_id.data
             print(new_tgi)
             footprint_areas = footprint_chunk.footprint_areas
             routing_areas = footprint_chunk.routing_areas
