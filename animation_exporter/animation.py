@@ -13,6 +13,8 @@ from s4animtools.channels.palette_channel import PaletteQuaternionChannel, Palet
 import math
 import s4animtools
 import bpy_extras
+
+LOCOMOTION_CHANNEL_HASH = 720414894
 ENABLE_SCALE = True
 F4_QuaternionIdentity = 17
 
@@ -455,15 +457,16 @@ class AnimationExporter:
             animation_data = self.animated_frame_data[bone.name]
             if len(animation_data.get_translation_channel().items()) > 0:
                 location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
-                location_channel._target = u32(720414894)
+                location_channel._target = u32(LOCOMOTION_CHANNEL_HASH)
                 translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3, loco_channel=True)
 
                 location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
 
                 self.exported_channels.append(location_channel)
+                # locomotion channel doesn't support rotation for now.
                 rotation_channel = s4animtools.channels.quaternion_channel.QuaternionChannel("loco", F4_QuaternionIdentity, 2)
                 rotation_channel.set_channel_data(0, 1, {}, self.snap_frames)
-                rotation_channel._target = u32(720414894)
+                rotation_channel._target = u32(LOCOMOTION_CHANNEL_HASH)
                 self.exported_channels.append(rotation_channel)
 
         if bone.name != "b__ROOT__" and bone.name != "loco":
