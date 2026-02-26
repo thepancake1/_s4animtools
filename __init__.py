@@ -1401,7 +1401,24 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
       #  self.layout.operator("s4animtools.read_locomotion_builder_from_folder", text="Read Locomotion Builder From Folder Extracted By S4S")
       #
       #  draw_locomotion_builder_data(self.layout, context)
-    def draw_all_ik_targets_of_type(self, context, obj, row, chain_bone):
+    def draw_all_ik_targets_of_type(self, context:bpy.types.Context, obj, row, chain_bone):
+        """
+        Draw all ik targets to the blender ui.
+
+        Parameters
+        ----------
+        context : bpy.types.Context
+            name of events list variable to get info from
+        obj : bpy.types.Object
+            obj the ik targets belong to
+        row :
+            the row to draw the ui into
+        chain_bone:
+            the preset bone to draw ik targets for
+        Returns
+        -------
+        nothing
+        """
         excluded = ["b__L_Hand__", "b__R_Hand__", "b__L_Foot__", "b__R_Foot__", "b__ROOT_bind__"]
         box = row.column()
         box.label(text=f"{chain_bone}")
