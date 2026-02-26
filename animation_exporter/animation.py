@@ -392,7 +392,8 @@ class AnimationExporter:
                 if start_frame <= downsampled_frame_idx < end_frame:
                     translations[downsampled_frame_idx-start_frame][t_axis] = keyframe.co[1]
         for frame in translations:
-            translation_channel_clip.add_keyframe(Vector(translations[frame].values()), frame, force=frame==0)
+            translation_channel_clip.add_keyframe(Vector(translations[frame].values()), frame, force=self.check_start_frame(
+                frame))
         rotations = defaultdict(dict)
         for r_axis in range(4):
             if bpy.app.version >= (5,0,0):
@@ -415,7 +416,20 @@ class AnimationExporter:
                 if start_frame <= downsampled_frame_idx < end_frame:
                     rotations[downsampled_frame_idx-start_frame][r_axis] = keyframe.co[1]
         for frame in rotations:
-            rotation_channel_clip.add_keyframe(Quaternion(rotations[frame].values()), frame, force=frame==0)
+            rotation_channel_clip.add_keyframe(Quaternion(rotations[frame].values()), frame, force=self.check_start_frame(
+                frame))
+
+    def check_start_frame(self, frame):
+        """
+        Check if frame index is zero.
+
+        Parameters:
+            frame (int): The frame to check if equal to zero
+
+        Returns:
+            bool: frame index is zero
+        """
+        return frame == 0
 
     def export_to_channels(self):
         """
