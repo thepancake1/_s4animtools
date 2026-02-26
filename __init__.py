@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 import bpy
 import os
 import time
@@ -717,8 +719,36 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         if getattr(obj, property_name, "") != "":
             layout.prop(obj, property_name)
 
-    def draw_events(self, obj, events_list_name, x_scale, description, event_name, layout, parameters=None, editable=True, corresponding_widget_list_count=0):
-        # Editable parameter was added so I can disable the old sound effects event list from being used
+    # Editable parameter was added so I can disable the old sound effects event list from being used
+    def draw_events(self, obj:bpy.types.Object, events_list_name:str, x_scale:float, description:str, event_name:str, layout, parameters:Optional[List[int] | None]=None, editable:bool=True, corresponding_widget_list_count:int=0):
+        """
+        Draw the events to blender ui.
+
+        Parameters
+        ----------
+        obj : bpy.types.Object
+            obj the events belong to
+        events_list_name : str
+            name of events list variable to get info from
+        x_scale : float
+            scale_x of row of event on ui
+        description : string
+            description to show in the ui
+        event_name : string
+            name of event type to show in the ui
+        layout : ? (need to figure this out)
+            layout to draw events into
+        parameters : List[int] or None
+            list of parameter names
+        editable: bool
+            whether this is event type is editable. Useful for disabling old event types
+        corresponding_widget_list_count : int
+            Widget event lists have their own count. Need it so the sum of both old and widget events are correctly shown
+            in the ui
+        Returns
+        -------
+        nothing
+        """
         events_list = getattr(obj, events_list_name)
         #print(f"{obj} - {len(events_list)} - {events_list_name}")
         layout.label(
