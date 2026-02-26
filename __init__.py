@@ -1677,7 +1677,7 @@ class OT_S4ANIMTOOLS_AddSoundEventsListUI(bpy.types.Operator):
         return {"FINISHED"}
 
 class OT_S4ANIMTOOLS_AddScriptEventsListUI(bpy.types.Operator):
-    bl_idname = "s4animtools.add_sound_events_list_ui"
+    bl_idname = "s4animtools.add_script_events_list_ui"
     bl_label = "Add Events"
     bl_options = {"REGISTER", "UNDO"}
 
