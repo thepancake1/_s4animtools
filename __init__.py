@@ -751,8 +751,7 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
         """
         events_list = getattr(obj, events_list_name)
         #print(f"{obj} - {len(events_list)} - {events_list_name}")
-        layout.label(
-            text=f"{event_name}: {len(events_list) + corresponding_widget_list_count} - {description}")
+        layout.label(text=f"{event_name}: {len(events_list) + corresponding_widget_list_count} - {description}")
         for idx, item in enumerate(events_list):
             row = layout.row()
             if item.info != "":
