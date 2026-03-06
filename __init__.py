@@ -2748,7 +2748,7 @@ def unregister():
     del bpy.types.Object.show_initial_offset_options
     del bpy.types.Object.show_experimental_options
     del bpy.types.Object.is_sim_skin
-    del bpy.types.Object.active_sim_skin
+   # del bpy.types.Object.active_sim_skin
 
     del bpy.types.Object.allow_slots
 
@@ -2780,9 +2780,9 @@ def unregister():
     del bpy.types.Object.ik_bone_04_ik_name
     del bpy.types.Object.ik_bone_05_ik_name
 
-    del bpy.types.Object.ik_bone_11
-    del bpy.types.Object.ik_bone_12
-    del bpy.types.Object.ik_bone_13
+   # del bpy.types.Object.ik_bone_11
+   # del bpy.types.Object.ik_bone_12
+   # del bpy.types.Object.ik_bone_13
     del bpy.types.Object.ik_bone_11_fk_name
     del bpy.types.Object.ik_bone_12_fk_name
     del bpy.types.Object.ik_bone_13_fk_name
