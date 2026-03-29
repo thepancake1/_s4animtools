@@ -30,7 +30,7 @@ class ExplicitNamespace:
 class BaseClipResource:
     pass
 
-class ClipResource(BaseClipResource):
+class ClipResourceTS4(BaseClipResource):
     def __init__(self, clip_name, rig_name, slot_assignments:list[SlotAssignment], explicit_namespaces, reference_namespace_hash, initial_offset_q,
                  initial_offset_t, source_file_name, loco_animation,disable_rig_suffix, version=14,
                     surface_namespace_hash=2166136261, surface_joint_name_hash=2166136261, surface_child_namespace_hash=2166136261,

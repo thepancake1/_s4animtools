@@ -24,7 +24,7 @@ from s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent, GeometryStateChangeEvent
 from s4animtools.serialization.types.basic import f32, u32
-from s4animtools.clip_processing.clip_header import ClipResource, bone_to_slot_offset_idx
+from s4animtools.clip_processing.clip_header import ClipResourceTS4, bone_to_slot_offset_idx
 from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets, get_ik_targets_for_chain_bone, \
     get_ik_target_idx_for_slot_assignment_on_chain
 
@@ -613,10 +613,10 @@ class NewClipExporter:
             if len(clip_info.explicit_namespaces) >= 2:
                 for namespace in clip_info.explicit_namespaces.split(","):
                     explicit_namespaces.append(namespace.lstrip())
-            current_clip = ClipResource(clip_info.name, clip_info.rig_name, slot_assignments,
-                                        explicit_namespaces,
-                                        clip_info.reference_namespace_hash, clip_info.initial_offset_q,
-                                        clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
+            current_clip = ClipResourceTS4(clip_info.name, clip_info.rig_name, slot_assignments,
+                                           explicit_namespaces,
+                                           clip_info.reference_namespace_hash, clip_info.initial_offset_q,
+                                           clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
             rig = self.context.object
 
             # sampling rate. 1 for every frame, 2 for every other frame, etc.
