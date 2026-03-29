@@ -23,6 +23,7 @@ class SlotAdjust(Serializable):
         self.rot_w = 0
 
     def from_binary(self, reader:FileReader):
+        self.bone_hash = reader.u32()
         self.pos_x = reader.f32()
         self.pos_y = reader.f32()
         self.pos_z = reader.f32()
@@ -38,7 +39,7 @@ class SlotAdjust(Serializable):
         return self
 
     def to_binary(self):
-        data = [f32(self.pos_x), f32(self.pos_y), f32(self.pos_z), f32(self.scale_x),
+        data = [u32(self.bone_hash), f32(self.pos_x), f32(self.pos_y), f32(self.pos_z), f32(self.scale_x),
                 f32(self.scale_y), f32(self.scale_z),
                 f32(self.rot_x), f32(self.rot_y), f32(self.rot_z), f32(self.rot_w)]
 
@@ -61,7 +62,7 @@ class BoneDelta(Serializable):
         self.version = reader.u32()
         bone_count = reader.u32()
         for bone in range(bone_count):
-            self.bones.append(SlotAdjust().read(reader))
+            self.bones.append(SlotAdjust().from_binary(reader))
 
         return self
     def to_binary(self):
