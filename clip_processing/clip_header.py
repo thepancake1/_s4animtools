@@ -3,8 +3,8 @@ import os
 import s4animtools.clip_processing
 import s4animtools.serialization
 from s4animtools.serialization.types.transforms import Quaternion, Vector3
-from s4animtools.serialization.types.basic import u32, f32, String
-from s4animtools.clip_processing.clip_body import ClipBody
+from s4animtools.serialization.types.basic import u32, f32, String, Bytes
+from s4animtools.clip_processing.clip_body import ClipBody, ClipBodyTS3
 from s4animtools.serialization import get_binary_size, get_size, concatenate_bytes
 from s4animtools.serialization.fnv import get_64bithash
 from s4animtools.serialization.types.strings import IOString
@@ -156,7 +156,7 @@ class ClipResourceTS4(BaseClipResource):
     def from_binary(reader):
         version = reader.u32()
         if version > 18:
-            raise ValueError("Clip version {} is not supported.".format(version))
+            raise ValueError("TS4 Clip version {} is not supported.".format(version))
         flags = reader.u32()
         duration = reader.f32()
         initial_offset_q = Quaternion.from_binary(reader)
@@ -191,11 +191,11 @@ class ClipResourceTS4(BaseClipResource):
             slot_assignments.append(SlotAssignment.from_binary(reader))
 
 
-        clip = ClipResource(clip_name, rig_namespace, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
-                            initial_offset_t,"", False,  disable_rig_suffix=True,
-                            version=version, surface_namespace_hash=surface_namespace_hash,
-                            surface_joint_name_hash=surface_joint_name_hash,
-                            surface_child_namespace_hash=surface_child_namespace_hash, duration=duration, flags=flags)
+        clip = ClipResourceTS4(clip_name, rig_namespace, slot_assignments, explicit_namespaces, reference_namespace_hash, initial_offset_q,
+                               initial_offset_t,"", False, disable_rig_suffix=True,
+                               version=version, surface_namespace_hash=surface_namespace_hash,
+                               surface_joint_name_hash=surface_joint_name_hash,
+                               surface_child_namespace_hash=surface_child_namespace_hash, duration=duration, flags=flags)
 
 
     def to_binary(self):
@@ -225,7 +225,148 @@ class ClipResourceTS4(BaseClipResource):
         return concatenate_bytes([header_data, clip_body])
 
 class ClipResourceTS3(BaseClipResource):
-    def __init__(self):
-        pass
+    def __init__(self, clip_name, rig_name, source_file_name, loco_animation,disable_rig_suffix, version=2,
+                 duration=0, flags=0):
+        # If version number were to ever be updated to include later versions, make sure to remember that events and strings were updated.
+        self.end_offset = 0
+        self.clip_offset = 0
+        self.slot_offset = 0
+        self.actor_offset = 0
+        self.event_offset = 0
+        self.unknown_offset = 0
+
+        self.unknown_value = 0
+        self.unknown_value2 = 0
+        if version is None:
+            self.version = 2
+
+        else:
+            self.version = version
+        self.s3pe_naming = False
+        self.flags = flags
+        self.resource_type = 0x6B20C4F3
+        if loco_animation:
+            self.flags |= 1
+        self.duration = duration
+        if disable_rig_suffix:
+            #TODO Hack to support sims 4 pose packs from s4s
+            encoded_clipname = clip_name
+            export_filename = clip_name.replace(":PosePack", "_PosePack")
+        else:
+            encoded_clipname = "{}_{}".format(clip_name, rig_name)
+            export_filename = encoded_clipname
+
+        self.clip_name = export_filename
+        self.codec_data_length = 0
+        self.clip_body = ClipBodyTS3(self.clip_name, source_file_name)
+
+    @property
+    def clip_name_length(self):
+        return len(self.clip_name)
+
+    @property
+    def rig_name_length(self):
+        return len(self.rig_name)
+
+    @property
+    def file_name_length(self):
+        return len(self.file_name)
+
+    @property
+    def clip_event_count(self):
+        return len(self.clip_event_list)
+
+    def update_duration(self, ticks):
+        # -1 tick for some reason.
+        self.duration = ticks / FPS - (1 / FPS)
+        self.clip_body.set_clip_length(ticks)
+
+
+    def add_event(self, event):
+        self.clip_event_list.append(event)
+
+    def get_clip_filename(self):
+        if self.s3pe_naming:
+            return "S3_6B20C4F3_00000000_{}_{}.Clip".format(get_64bithash(self.clip_name), self.file_name)
+        return "6B20C4F3!00000000!{}.{}.Clip".format(get_64bithash(self.clip_name), self.file_name)
+
+    def get_loose_clip_naming(self):
+        return "0x00000000!0x{}.6b20c4f3".format(get_64bithash(self.clip_name).lower())
+
+    def export(self, export_path, alternative_export_path, export_as_loose_filenames):
+        import bpy
+        export_bytes = self.to_binary()
+        anim_path = os.path.abspath(export_path)
+
+        if export_path.startswith(".\\"):
+            filepath = bpy.data.filepath
+            anim_path = os.path.join(os.path.dirname(os.path.dirname(filepath)), export_path[2:])
+
+        if export_path == "":
+            anim_path = os.path.join(os.path.expanduser("~/Desktop"), "Animation Workspace")
+        if not os.path.exists(anim_path):
+            os.mkdir(anim_path)
+        clip_filename = ""
+        if export_as_loose_filenames:
+            clip_filename = self.get_loose_clip_naming()
+        else:
+            clip_filename = self.get_clip_filename()
+
+
+        try:
+            with open(os.path.join(anim_path, clip_filename), "wb") as file:
+                file.write(export_bytes)
+
+            if alternative_export_path != "":
+                with open(os.path.join(alternative_export_path, self.get_clip_filename()), "wb") as clip_file:
+                    clip_file.write(export_bytes)
+
+        except Exception as e:
+            print(e)
+
+    @staticmethod
+    def from_binary(reader):
+        version = reader.u32()
+        if version > 2:
+            raise ValueError("TS3 Clip version {} is not supported.".format(version))
+        flags = reader.u32()
+        duration = reader.f32()
+
+        rig_namespace = IOString.from_binary(reader).string
+        explicit_namespaces = []
+        if version >= 4:
+            explicit_namespace_count = reader.u32()
+            for _ in range(explicit_namespace_count):
+                explicit_namespaces.append(String(IOString.from_binary(reader).string))
+
+        slot_assignment_count = reader.u32()
+        slot_assignments = []
+        for _ in range(slot_assignment_count):
+            slot_assignments.append(SlotAssignment.from_binary(reader))
+
+
+    def to_binary(self):
+        serialized = [u32(self.resource_type), u32(self.unknown_offset),
+                      u32(self.codec_data_length),
+                      u32(self.clip_offset), u32(self.slot_offset), u32(self.actor_offset), u32(self.event_offset),
+                      u32(self.unknown_value), u32(self.unknown_value2), u32(self.end_offset), Bytes(bytes([0]* 16))]
+        header_data = []
+
+        header_length = 0
+        for item in serialized:
+            serialized_data = item.to_binary()
+            header_data.append(serialized_data)
+        header_length += get_size(header_data)
+        print(self.clip_body)
+        clip_body = self.clip_body.to_binary()
+
+        actual_codec_data_length = len(clip_body)
+        # Replace codec data length with actual one
+        print(header_data)
+        header_data[2] = u32(actual_codec_data_length).to_binary()
+        return concatenate_bytes([header_data, clip_body])
 if __name__ == "__main__":
-    clip = ClipResource.from_binary(reader=FileReader(r"D:\Assets\Resources\1.114 Clips Hold 2\6B20C4F3!00000000!1DEC500053B15F0B.a_loco_run_turnAndStop_0_x.Clip"))
+    #clip = ClipResourceTS4.from_binary(reader=FileReader(r"D:\Assets\Resources\1.114 Clips Hold 2\6B20C4F3!00000000!1DEC500053B15F0B.a_loco_run_turnAndStop_0_x.Clip"))
+    clip = ClipResourceTS3("a2o_dance_x", "x", "a2o_dance_x.blend", False, False).to_binary()
+    with open(r"D:\testing\test ts3 clip.clip", "wb") as file:
+        file.write(clip)
