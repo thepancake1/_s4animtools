@@ -2560,7 +2560,7 @@ def register():
     bpy.types.Scene.export_as_loose_files = BoolProperty()
 
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
-    game_types = (("TS4", "TS4", "The Sims 4"),)#, ("TS3", "TS3", "The Sims 3"))
+    game_types = (("TS4", "TS4", "The Sims 4"), ("TS3", "TS3", "The Sims 3"))
 
     # Deprecated, use is_actor instead.
     bpy.types.Object.is_s4_actor = BoolProperty(default=False)
