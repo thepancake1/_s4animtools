@@ -257,6 +257,7 @@ class ClipResourceTS3(BaseClipResource):
             export_filename = encoded_clipname
 
         self.clip_name = export_filename
+        self.rig_name = rig_name
         self.codec_data_length = 0
         self.clip_body = ClipBodyTS3(self.clip_name, source_file_name)
 
@@ -364,7 +365,13 @@ class ClipResourceTS3(BaseClipResource):
         # Replace codec data length with actual one
         print(header_data)
         header_data[2] = u32(actual_codec_data_length).to_binary()
-        return concatenate_bytes([header_data, clip_body])
+
+        clip_name_offset = len(concatenate_bytes([header_data, clip_body]))
+        header_data[5] = u32(clip_name_offset- 20).to_binary()
+
+
+        # Need to null terminate the actor name. DO NOT FORGET THIS
+        return concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00])])
 if __name__ == "__main__":
     #clip = ClipResourceTS4.from_binary(reader=FileReader(r"D:\Assets\Resources\1.114 Clips Hold 2\6B20C4F3!00000000!1DEC500053B15F0B.a_loco_run_turnAndStop_0_x.Clip"))
     clip = ClipResourceTS3("a2o_dance_x", "x", "a2o_dance_x.blend", False, False).to_binary()
