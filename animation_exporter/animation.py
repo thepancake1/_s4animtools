@@ -8,7 +8,7 @@ from s4animtools.channels.palette_channel import PaletteTranslationChannel
 from s4animtools.frames.frame import PaletteTranslationFrame, PaletteFrame
 from s4animtools.clip_processing.f1_palette import F1Palette
 from collections import defaultdict
-from mathutils import Vector, Quaternion
+from mathutils import Vector, Quaternion, Matrix
 from s4animtools.channels.palette_channel import PaletteQuaternionChannel, PaletteTranslationChannel
 import math
 import s4animtools
@@ -176,7 +176,11 @@ class AnimationBoneData:
         """
 
         src_matrix = source_rig.matrix_world @ source_bone.matrix
-        dst_matrix = target_rig.matrix_world @ target_bone.matrix
+        if target_bone is not None:
+            dst_matrix = target_rig.matrix_world @ target_bone.matrix
+        else:
+            dst_matrix = target_rig.matrix_world @ Matrix.Rotation(math.radians(90), 4, 'X')
+
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
@@ -298,10 +302,8 @@ class AnimationExporter:
         The b__ROOT__ bone is never animated.
         """
         parent_bone = source_bone.parent
-        if parent_bone is not None:
-            parent_is_root = False
+        if source_bone.parent is not None:
             if source_bone.parent.name == "b__ROOT__":
-                parent_is_root = True
                 if source_bone.name in IK_POLE_TO_BASE.keys():
                     self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_rig =self.source_rig,
                                                                                                        source_bone=source_bone,
@@ -321,7 +323,7 @@ class AnimationExporter:
                                                              target_bone=self.world_root, frame_idx=frame_idx,
                                                              start_frame=start_frame,
                                                              force=force)
-            if not parent_is_root:
+            if source_bone.parent.name != "b__ROOT__":
                 if source_bone.name in IK_POLE_TO_BASE.keys():
                     self.animated_frame_data[source_bone.name].get_transform_with_offset_and_serialize(source_rig =self.source_rig,
                                                                                                        source_bone=source_bone,
@@ -337,6 +339,13 @@ class AnimationExporter:
                                                                                            force=force)
 
 
+
+        if source_bone.name == "b__ROOT__":
+            self.animate_bone_relative_to_other_bone(source_bone=source_bone,
+                                                     target_rig=self.source_rig,
+                                                     target_bone=None, frame_idx=frame_idx,
+                                                     start_frame=start_frame,
+                                                     force=force)
         for child in source_bone.children:
             if slot in child.name and not self.allow_slots:
                 continue
@@ -469,7 +478,7 @@ class AnimationExporter:
                 rotation_channel._target = u32(LOCOMOTION_CHANNEL_HASH)
                 self.exported_channels.append(rotation_channel)
 
-        if bone.name != "b__ROOT__" and bone.name != "loco":
+        if bone.name != "loco":
             animation_data = self.animated_frame_data[bone.name]
             print(f"{bone.name} animated: {animation_data.animated}")
             # Only export animation data for bone if the animated property is true
@@ -612,12 +621,11 @@ class AdditiveAnimationExporter(AnimationExporter):
         The b__ROOT__ bone is never animated.
         """
         parent_bone = source_bone.parent
-        if parent_bone is not None:
-                self.animate_bone_relative_to_other_bone(source_bone=source_bone,
-                                                         target_rig=self.base_rig,
-                                                         target_bone=self.base_rig.pose.bones[source_bone.name], frame_idx=frame_idx,
-                                                         start_frame=start_frame,
-                                                         force=force)
+        self.animate_bone_relative_to_other_bone(source_bone=source_bone,
+                                                 target_rig=self.base_rig,
+                                                 target_bone=self.base_rig.pose.bones[source_bone.name], frame_idx=frame_idx,
+                                                 start_frame=start_frame,
+                                                 force=force)
 
 
         for child in source_bone.children:
