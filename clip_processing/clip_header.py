@@ -224,12 +224,40 @@ class ClipResourceTS4(BaseClipResource):
         header_data[-1] = u32(actual_codec_data_length).to_binary()
         return concatenate_bytes([header_data, clip_body])
 
+# Todo should probably find a better spot for this
+class ClipEventsTS3:
+    def __init__(self, events):
+        self.version = 0x103
+        self.size = 0
+        # =CE=
+        self.magic = 0x3D45433D
+        self.events = events
+
+    @property
+    def event_count(self):
+        return len(self.events)
+
+
+    def from_binary(self, reader):
+        self.magic = reader.u32()
+        count = reader.u32()
+        size  = reader.u32()
+        self.size = size
+        start_offset = reader.u32()
+
+    def to_binary(self):
+        b = bytearray()
+        b.extend(u32(self.magic).to_binary())
+        b.extend(u32(self.event_count).to_binary())
+        b.extend(u32(self.size).to_binary())
+        b.extend(u32(0).to_binary())
+        return b
 class ClipResourceTS3(BaseClipResource):
     def __init__(self, clip_name, rig_name, source_file_name, loco_animation,disable_rig_suffix, version=2,
                  duration=0, flags=0):
         # If version number were to ever be updated to include later versions, make sure to remember that events and strings were updated.
         self.end_offset = 0
-        self.clip_offset = 0
+        self.clip_offset = 44
         self.slot_offset = 0
         self.actor_offset = 0
         self.event_offset = 0
@@ -260,6 +288,7 @@ class ClipResourceTS3(BaseClipResource):
         self.rig_name = rig_name
         self.codec_data_length = 0
         self.clip_body = ClipBodyTS3(self.clip_name, source_file_name)
+        self.clip_events = ClipEventsTS3([])
 
     @property
     def clip_name_length(self):
@@ -369,11 +398,16 @@ class ClipResourceTS3(BaseClipResource):
         clip_name_offset = len(concatenate_bytes([header_data, clip_body]))
         header_data[5] = u32(clip_name_offset- 20).to_binary()
 
+        clip_events_offset = len(concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00])]))
+        clip_padding_len = clip_events_offset % 4
+        print(clip_padding_len, clip_events_offset)
+        clip_padding = bytearray([0x7e] * clip_padding_len)
+        header_data[6] = u32(clip_events_offset - 24 + clip_padding_len).to_binary()
 
-        # Need to null terminate the actor name. DO NOT FORGET THIS
-        return concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00])])
+        # Need to null terminate the actor name. Is there some cleaner way of doing this?
+        return concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00]), clip_padding, self.clip_events.to_binary()])
 if __name__ == "__main__":
     #clip = ClipResourceTS4.from_binary(reader=FileReader(r"D:\Assets\Resources\1.114 Clips Hold 2\6B20C4F3!00000000!1DEC500053B15F0B.a_loco_run_turnAndStop_0_x.Clip"))
-    clip = ClipResourceTS3("a2o_dance_x", "x", "a2o_dance_x.blend", False, False).to_binary()
+    clip = ClipResourceTS3("a2o_dance", "x", "a2o_dance_x.blend", False, False).to_binary()
     with open(r"D:\testing\test ts3 clip.clip", "wb") as file:
         file.write(clip)
