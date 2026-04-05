@@ -1,6 +1,22 @@
 from s4animtools.serialization.types.basic import u32, String
 from s4animtools.serialization import Serializable
 
+
+class Byte512String(Serializable):
+    def __init__(self, string):
+        self.string = string
+
+    @staticmethod
+    def from_binary(reader):
+        value = reader.read(512).split("#")[0]
+        return Byte512String(value)
+
+    def to_binary(self):
+        encoded_string = self.string.encode("ascii") + bytearray([0x00])
+        b = bytearray(encoded_string)
+        b.extend([0x23] * (512 - len(encoded_string)))
+        return b
+
 class IOString(Serializable):
     def __init__(self, string):
         self.string = string

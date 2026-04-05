@@ -2,16 +2,19 @@ import io
 import os
 import s4animtools.clip_processing
 import s4animtools.serialization
+from s4animtools import slot_assignments
 from s4animtools.serialization.types.transforms import Quaternion, Vector3
 from s4animtools.serialization.types.basic import u32, f32, String, Bytes
 from s4animtools.clip_processing.clip_body import ClipBody, ClipBodyTS3
 from s4animtools.serialization import get_binary_size, get_size, concatenate_bytes
 from s4animtools.serialization.fnv import get_64bithash
 from s4animtools.serialization.types.strings import IOString
-from s4animtools.slot_assignments import SlotAssignment
+from s4animtools.slot_assignments import SlotAssignment, SlotAssignmentListTS3
 from s4animtools.stream import FileReader
 
 FPS = 30
+
+# TODO need to remove all other duplicated instances of this list
 
 bone_to_slot_offset_idx = {"b__L_Hand__" : 0, "b__R_Hand__" : 1,
                            "b__L_Foot__" : 2, "b__R_Foot__" : 3,
@@ -252,6 +255,8 @@ class ClipEventsTS3:
         b.extend(u32(self.size).to_binary())
         b.extend(u32(0).to_binary())
         return b
+
+
 class ClipResourceTS3(BaseClipResource):
     def __init__(self, clip_name, rig_name, source_file_name, loco_animation,disable_rig_suffix, version=2,
                  duration=0, flags=0):
@@ -264,7 +269,7 @@ class ClipResourceTS3(BaseClipResource):
         self.unknown_offset = 0
 
         self.unknown_value = 0
-        self.unknown_value2 = 0
+        self.unknown_value2 = 1
         if version is None:
             self.version = 2
 
@@ -289,6 +294,7 @@ class ClipResourceTS3(BaseClipResource):
         self.codec_data_length = 0
         self.clip_body = ClipBodyTS3(self.clip_name, source_file_name)
         self.clip_events = ClipEventsTS3([])
+        self.slot_assignment_list = SlotAssignmentListTS3([])
 
     @property
     def clip_name_length(self):
@@ -403,11 +409,27 @@ class ClipResourceTS3(BaseClipResource):
         print(clip_padding_len, clip_events_offset)
         clip_padding = bytearray([0x7e] * clip_padding_len)
         header_data[6] = u32(clip_events_offset - 24 + clip_padding_len).to_binary()
-
+        slot_assignments_offset = len(concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00]), clip_padding, self.clip_events.to_binary()]))
+        header_data[4] = u32(slot_assignments_offset-16).to_binary()
         # Need to null terminate the actor name. Is there some cleaner way of doing this?
-        return concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00]), clip_padding, self.clip_events.to_binary()])
+        return concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00]), clip_padding, self.clip_events.to_binary(), self.slot_assignment_list.to_binary()])
+
+    def add_slot_assignment(self, ik_chain_bone, target_actor_name, target_bone_name):
+        self.slot_assignment_list.add_slot_assignment(bone_to_slot_offset_idx[ik_chain_bone], target_actor_name, target_bone_name)
+
+
+
 if __name__ == "__main__":
     #clip = ClipResourceTS4.from_binary(reader=FileReader(r"D:\Assets\Resources\1.114 Clips Hold 2\6B20C4F3!00000000!1DEC500053B15F0B.a_loco_run_turnAndStop_0_x.Clip"))
-    clip = ClipResourceTS3("a2o_dance", "x", "a2o_dance_x.blend", False, False).to_binary()
+    clip = ClipResourceTS3("a2o_dance", "x", "a2o_dance_x.blend", False, False)
+    clip.add_slot_assignment( "b__L_Hand__", "x", "b__L_ThighTarget_slot")
+    clip.add_slot_assignment( "b__L_Hand__", "x", "b__L_ThighFrontTarget_slot")
+    clip.add_slot_assignment( "b__R_Hand__", "x", "b__R_ThighTarget_slot")
+    clip.add_slot_assignment( "b__R_Hand__", "x", "b__R_ThighFrontTarget_slot")
+    clip.add_slot_assignment( "b__L_Foot__", "x", "L_footWorld")
+    clip.add_slot_assignment( "b__R_Foot__", "x", "R_footWorld")
+    clip.add_slot_assignment( "b__ROOT_bind__", "x", "rootWorld")
+
+    clip_bytes = clip.to_binary()
     with open(r"D:\testing\test ts3 clip.clip", "wb") as file:
-        file.write(clip)
+        file.write(clip_bytes)
