@@ -180,7 +180,9 @@ class AnimationBoneData:
             dst_matrix = target_rig.matrix_world @ target_bone.matrix
         else:
             dst_matrix = target_rig.matrix_world @ Matrix.Rotation(math.radians(90), 4, 'X')
-
+        # If you ever debug this, there's a bug with blender where 0 scale causes
+        # inverting matrices to fail, just set the min scale to something like 0.00001 or something really
+        # small but not zero
         matrix_data = dst_matrix.inverted() @ src_matrix
         rotation_data = matrix_data.to_quaternion()
         translation_data = matrix_data.to_translation()
@@ -341,7 +343,7 @@ class AnimationExporter:
 
 
 
-        if source_bone.name == "b__ROOT__":
+        if source_bone.name == "b__ROOT__" and self.export_root_bone:
             self.animate_bone_relative_to_other_bone(source_bone=source_bone,
                                                      target_rig=self.source_rig,
                                                      target_bone=None, frame_idx=frame_idx,
