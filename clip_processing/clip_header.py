@@ -275,11 +275,11 @@ class ClipResourceTS3(BaseClipResource):
 
         else:
             self.version = version
-        self.s3pe_naming = False
+        self.s3pe_naming = True
         self.flags = flags
         self.resource_type = 0x6B20C4F3
-        if loco_animation:
-            self.flags |= 1
+       # if loco_animation:
+       #     self.flags |= 1
         self.duration = duration
         if disable_rig_suffix:
             #TODO Hack to support sims 4 pose packs from s4s
@@ -295,6 +295,7 @@ class ClipResourceTS3(BaseClipResource):
         self.clip_body = ClipBodyTS3(self.clip_name, source_file_name)
         self.clip_events = ClipEventsTS3([])
         self.slot_assignment_list = SlotAssignmentListTS3([])
+        self.file_name = export_filename
 
     @property
     def clip_name_length(self):
@@ -319,11 +320,13 @@ class ClipResourceTS3(BaseClipResource):
 
 
     def add_event(self, event):
+        # TODO Update this for ts3
         self.clip_event_list.append(event)
 
     def get_clip_filename(self):
         if self.s3pe_naming:
-            return "S3_6B20C4F3_00000000_{}_{}.Clip".format(get_64bithash(self.clip_name), self.file_name)
+            return "S3_6B20C4F3_00000000_{}_{}.animation".format(get_64bithash(self.clip_name), self.file_name)
+        # I should probably remove this, since everybody is probably using s3pe for sims 3
         return "6B20C4F3!00000000!{}.{}.Clip".format(get_64bithash(self.clip_name), self.file_name)
 
     def get_loose_clip_naming(self):
@@ -400,19 +403,21 @@ class ClipResourceTS3(BaseClipResource):
         # Replace codec data length with actual one
         print(header_data)
         header_data[2] = u32(actual_codec_data_length).to_binary()
-
-        clip_name_offset = len(concatenate_bytes([header_data, clip_body]))
-        header_data[5] = u32(clip_name_offset- 20).to_binary()
-
-        clip_events_offset = len(concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00])]))
-        clip_padding_len = clip_events_offset % 4
-        print(clip_padding_len, clip_events_offset)
-        clip_padding = bytearray([0x7e] * clip_padding_len)
-        header_data[6] = u32(clip_events_offset - 24 + clip_padding_len).to_binary()
-        slot_assignments_offset = len(concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00]), clip_padding, self.clip_events.to_binary()]))
+        slot_assignments_offset = len(concatenate_bytes([header_data, clip_body]))
         header_data[4] = u32(slot_assignments_offset-16).to_binary()
-        # Need to null terminate the actor name. Is there some cleaner way of doing this?
-        return concatenate_bytes([header_data, clip_body, self.rig_name.encode("ascii"), bytearray([0x00]), clip_padding, self.clip_events.to_binary(), self.slot_assignment_list.to_binary()])
+
+        before_rig_name_padding = slot_assignments_offset % 4
+        before_rig_name_padding_bytes = bytearray([0x7e] * before_rig_name_padding)
+        clip_name_offset = len(concatenate_bytes([header_data, clip_body, self.slot_assignment_list.to_binary(), before_rig_name_padding_bytes]))
+        header_data[5] = u32(clip_name_offset- 20).to_binary()
+        before_event_offset_padding = clip_name_offset % 4
+        event_padding = bytearray([0x7e] * before_event_offset_padding)
+        header_data[6] = u32(clip_name_offset - 24 + before_event_offset_padding).to_binary()
+
+        header_data[9] = u32(len(concatenate_bytes([header_data, clip_body, self.slot_assignment_list.to_binary(), before_rig_name_padding_bytes,  self.rig_name.encode("ascii"), bytearray([0x00]), event_padding, self.clip_events.to_binary()])) - 36).to_binary()
+
+
+        return concatenate_bytes([header_data, clip_body, self.slot_assignment_list.to_binary(), before_rig_name_padding_bytes,  self.rig_name.encode("ascii"), bytearray([0x00]), event_padding, self.clip_events.to_binary(), f32(0).to_binary(), f32(0).to_binary(), f32(0).to_binary(), f32(1).to_binary()])
 
     def add_slot_assignment(self, ik_chain_bone, target_actor_name, target_bone_name):
         self.slot_assignment_list.add_slot_assignment(bone_to_slot_offset_idx[ik_chain_bone], target_actor_name, target_bone_name)

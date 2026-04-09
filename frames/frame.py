@@ -1,6 +1,7 @@
 from s4animtools.serialization.types.basic import u16
 
-
+# There are three frame channels because the f1palette is not a normal frame
+# It's handled differently and the values are in the f1 palette instead, so the data is just an index
 class Frame:
     def __init__(self):
         self._startTick = None

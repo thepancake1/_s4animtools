@@ -24,7 +24,7 @@ from s4animtools.rig_tools import ExportRig, SyncRigToMesh
 from s4animtools.events.events import SnapEvent, SoundEvent, ScriptEvent, ReactionEvent, VisibilityEvent, ParentEvent, \
     PlayEffectEvent, FocusCompatibilityEvent, SuppressLipsyncEvent, StopEffectEvent, GeometryStateChangeEvent
 from s4animtools.serialization.types.basic import f32, u32
-from s4animtools.clip_processing.clip_header import ClipResourceTS4, bone_to_slot_offset_idx
+from s4animtools.clip_processing.clip_header import ClipResourceTS4, ClipResourceTS3, bone_to_slot_offset_idx
 from s4animtools.ik_baker import s4animtool_OT_bakeik, get_ik_targets, get_ik_targets_for_chain_bone, \
     get_ik_target_idx_for_slot_assignment_on_chain
 
@@ -573,16 +573,13 @@ class NewClipExporter:
 
         clip_infos = self.get_clip_infos()
 
-        world_rig = self.context.object.world_rig
-        world_root = self.context.object.world_bone
-
-        # World Rig is a string here.
+        world_rig : str = self.context.object.world_rig
+        world_root : str = self.context.object.world_bone
         if len(world_rig) == 0:
             world_rig = self.context.object
         else:
             world_rig = bpy.data.objects[world_rig]
 
-        # World Root is a string here.
         if len(world_root) == 0:
             world_root = world_rig.pose.bones["b__ROOT__"]
         else:
@@ -613,21 +610,31 @@ class NewClipExporter:
             if len(clip_info.explicit_namespaces) >= 2:
                 for namespace in clip_info.explicit_namespaces.split(","):
                     explicit_namespaces.append(namespace.lstrip())
-            current_clip = ClipResourceTS4(clip_info.name, clip_info.rig_name, slot_assignments,
-                                           explicit_namespaces,
-                                           clip_info.reference_namespace_hash, clip_info.initial_offset_q,
-                                           clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
             rig = self.context.object
 
+            if rig.game_type == "TS4":
+                current_clip = ClipResourceTS4(clip_info.name, clip_info.rig_name, slot_assignments,
+                                               explicit_namespaces,
+                                               clip_info.reference_namespace_hash, clip_info.initial_offset_q,
+                                               clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
+            elif rig.game_type == "TS3":
+                current_clip = ClipResourceTS3(clip_info.name, clip_info.rig_name, source_filename, clip_info.loco, context.object.disable_rig_suffix)
+            else:
+                self.report({"ERROR"}, "Invalid game type. Expected TS4 or TS3, but got {}".format(rig.game_type))
+                return {"FINISHED"}
             # sampling rate. 1 for every frame, 2 for every other frame, etc.
             # Currently used for halving the animation data for 60 fps to 30 fps.
             sampling_rate = 1
             if self.context.scene.downsample_60_to_30:
                 sampling_rate = 2
 
-            snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
-                                            self.context.object.additional_snap_frames, sampling_rate=sampling_rate)
 
+            # TODO no events for TS3 for now!
+            if rig.game_type == "TS4":
+               snap_frames = self.setup_events(self.context, current_clip, clip_info.start_frame, clip_info.end_frame - clip_info.start_frame,
+                                                self.context.object.additional_snap_frames, sampling_rate=sampling_rate)
+            else:
+                snap_frames = []
             if self.additive:
                 exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             else:
