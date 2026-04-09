@@ -259,7 +259,7 @@ class ClipEventsTS3:
 
 class ClipResourceTS3(BaseClipResource):
     def __init__(self, clip_name, rig_name, source_file_name, loco_animation,disable_rig_suffix, version=2,
-                 duration=0, flags=0):
+                 duration=0, flags=0, group_id=0):
         # If version number were to ever be updated to include later versions, make sure to remember that events and strings were updated.
         self.end_offset = 0
         self.clip_offset = 44
@@ -296,7 +296,7 @@ class ClipResourceTS3(BaseClipResource):
         self.clip_events = ClipEventsTS3([])
         self.slot_assignment_list = SlotAssignmentListTS3([])
         self.file_name = export_filename
-
+        self.group_id = group_id
     @property
     def clip_name_length(self):
         return len(self.clip_name)
@@ -324,13 +324,16 @@ class ClipResourceTS3(BaseClipResource):
         self.clip_event_list.append(event)
 
     def get_clip_filename(self):
+        group_id_string = "0x{:08x}".format(self.group_id)
+
         if self.s3pe_naming:
-            return "S3_6B20C4F3_00000000_{}_{}.animation".format(get_64bithash(self.clip_name), self.file_name)
+            return "S3_{}_00000000_{}_{}.animation".format(group_id_string, get_64bithash(self.clip_name), self.file_name)
         # I should probably remove this, since everybody is probably using s3pe for sims 3
-        return "6B20C4F3!00000000!{}.{}.Clip".format(get_64bithash(self.clip_name), self.file_name)
+        return "6B20C4F3!{}!{}.{}.Clip".format(group_id_string, get_64bithash(self.clip_name), self.file_name)
 
     def get_loose_clip_naming(self):
-        return "0x00000000!0x{}.6b20c4f3".format(get_64bithash(self.clip_name).lower())
+        group_id_string = "0x{:08x}".format(self.group_id)
+        return "{}!0x{}.6b20c4f3".format(group_id_string, get_64bithash(self.clip_name).lower())
 
     def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy

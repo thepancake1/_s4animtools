@@ -618,7 +618,16 @@ class NewClipExporter:
                                                clip_info.reference_namespace_hash, clip_info.initial_offset_q,
                                                clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
             elif rig.game_type == "TS3":
-                current_clip = ClipResourceTS3(clip_info.name, clip_info.rig_name, source_filename, clip_info.loco, context.object.disable_rig_suffix)
+                group_id = rig.ts3_group_id
+                if rig.ts3_group_id == "":
+                    group_id = 0
+                else:
+                    try:
+                        group_id = int(rig.ts3_group_id, 16)
+                    except:
+                        group_id = 0
+
+                current_clip = ClipResourceTS3(clip_info.name, clip_info.rig_name, source_filename, clip_info.loco, context.object.disable_rig_suffix, group_id=group_id)
             else:
                 self.report({"ERROR"}, "Invalid game type. Expected TS4 or TS3, but got {}".format(rig.game_type))
                 return {"FINISHED"}
@@ -636,9 +645,9 @@ class NewClipExporter:
             else:
                 snap_frames = []
             if self.additive:
-                exporter = AdditiveAnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
+                exporter = AdditiveAnimationExporter(rig, snap_frames, rig.export_root_bone, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             else:
-                exporter = AnimationExporter(rig, snap_frames, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
+                exporter = AnimationExporter(rig, snap_frames, rig.export_root_bone, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             exporter.create_animation_data()
             exporter.paletteHolder.try_add_palette_to_palette_values(0)
             exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
@@ -838,8 +847,10 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 box.prop(obj, "rig_name", text="Rig Name")  # String for current clip actor
 
             if obj.is_enabled_for_animation:
-                box = layout.box()
 
+                box = layout.box()
+                box.prop(context.object, "ts3_group_id", text="Group ID")
+                box.prop(context.object, "export_root_bone", text="Export Root Bone")
                 row = box.row()
                 #row.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
                 #row.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
@@ -2664,6 +2675,11 @@ def register():
 
     bpy.types.Object.enable_version_number_in_exported_clip = BoolProperty(default=True)
     bpy.types.Scene.export_using_markers = BoolProperty(default=True)
+
+
+    bpy.types.Object.ts3_group_id = StringProperty()
+    bpy.types.Object.export_root_bone = BoolProperty(default=False)
+
 def unregister():
     from bpy.utils import unregister_class
     for cls in reversed(classes):
@@ -2812,3 +2828,6 @@ def unregister():
 
     del bpy.types.Object.enable_version_number_in_exported_clip
     del bpy.types.Scene.export_using_markers
+
+    del bpy.types.Object.ts3_group_id
+    del bpy.types.Object.export_root_bone
