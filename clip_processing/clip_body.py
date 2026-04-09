@@ -9,32 +9,14 @@ from s4animtools.serialization.types.strings import NullTerminatedString
 OFFSET_TO_CHANNEL_DATA = 48
 SerializedChannel = namedtuple('SerializedChannel', ['header', 'data'])
 
-class ClipBody:
-    def __init__(self, clipname, source_file_name, version=2, flags = 0, tick_length = 1/30, num_ticks= 0, padding=0, f1_palette=None, f1_data_palette_offset=0,
-                 channel_data_offset=OFFSET_TO_CHANNEL_DATA, clip_name_offset=0, source_asset_name_offset=0):
-        """ Current version number"""
 
-        self._formatToken = "_pilC3S_"
-        self._version = version
-        self._flags = flags
-        self._tick_length = tick_length
-        self._tick_count = num_ticks
-        self._padding = padding
-        self._f1_palette_size:int = 0
-        if f1_palette is not None:
-            self._f1_palette_size = len(f1_palette)
-        self._channelDataOffset:int = channel_data_offset
-        self._f1DataPaletteOffset:int = f1_data_palette_offset
-        self._clipNameOffset:int = clip_name_offset
-        self._sourceAssetNameOffset: int = source_asset_name_offset
-
-        self._clipName:str = clipname
-        self._channels : list[QuaternionChannel] = []
-        if f1_palette is None:
-            self._f1PaletteData = []
-        else:
-            self._f1PaletteData = f1_palette
-        self._source_file_name = source_file_name
+class ClipBodyBase:
+    def __init__(self):
+        self._tick_count = None
+        self._f1_palette_size = None
+        self._f1_palette_data = None
+        self._channels = None
+        raise Exception("Use a subclass!")
 
     def add_channel(self, new_channel : QuaternionChannel):
         """
@@ -46,15 +28,14 @@ class ClipBody:
         return len(self._channels)
 
     def set_palette_values(self, palette_values):
-        self._f1PaletteData = list(map(f32, map(abs, palette_values)))
-        self._f1_palette_size = len(self._f1PaletteData)
+        self._f1_palette_data = list(map(f32, map(abs, palette_values)))
+        self._f1_palette_size = len(self._f1_palette_data)
 
     def set_clip_length(self, length):
         """
         Sets the clip length in ticks
         """
         self._tick_count = length
-
     @property
     def clip_name_offset(self):
         data_offset = OFFSET_TO_CHANNEL_DATA
@@ -73,6 +54,38 @@ class ClipBody:
     def f1_palette_offset(self):
 
         return self.source_asset_name_offset + len(self._source_file_name) + 1
+
+class ClipBody(ClipBodyBase):
+    def __init__(self, clipname, source_file_name, version=2, flags=0, tick_length=1 / 30, num_ticks=0, padding=0,
+                 f1_palette=None, f1_data_palette_offset=0, channel_data_offset=OFFSET_TO_CHANNEL_DATA,
+                 clip_name_offset=0, source_asset_name_offset=0):
+        """ Current version number"""
+
+        super().__init__()
+        self._formatToken = "_pilC3S_"
+        self._version = version
+        self._flags = flags
+        self._tick_length = tick_length
+        self._tick_count = num_ticks
+        self._padding = padding
+        self._f1_palette_size:int = 0
+        if f1_palette is not None:
+            self._f1_palette_size = len(f1_palette)
+        self._channelDataOffset:int = channel_data_offset
+        self._f1DataPaletteOffset:int = f1_data_palette_offset
+        self._clipNameOffset:int = clip_name_offset
+        self._sourceAssetNameOffset: int = source_asset_name_offset
+
+        self._clip_name:str = clipname
+        self._channels : list[QuaternionChannel] = []
+        if f1_palette is None:
+            self._f1_palette_data = []
+        else:
+            self._f1_palette_data = f1_palette
+        self._source_file_name = source_file_name
+
+
+
 
     def to_binary(self):
 
@@ -110,7 +123,7 @@ class ClipBody:
 
 
         # Clip name is a null-terminated string
-        clip_name_encoded = NullTerminatedString(self._clipName).to_binary()
+        clip_name_encoded = NullTerminatedString(self._clip_name).to_binary()
         clip_body_data.append(clip_name_encoded)
         data_offset += len(clip_name_encoded)
         source_file_name_encoded = NullTerminatedString(self._source_file_name).to_binary()
@@ -119,7 +132,7 @@ class ClipBody:
         data_offset += len(source_file_name_encoded)
 
 
-        for idx, data in enumerate(self._f1PaletteData):
+        for idx, data in enumerate(self._f1_palette_data):
             data_offset += 4
             clip_body_data.append(data.to_binary())
             #print(idx, data.value)
@@ -176,7 +189,7 @@ class ClipBody:
         reader.seek(current_pos+name_offset, 0)
         clip_name = NullTerminatedString.from_binary(reader).string
 
-class ClipBodyTS3:
+class ClipBodyTS3(ClipBodyBase):
     def __init__(self, clipname, source_file_name, version=2, flags = 0, tick_length = 1/30, num_ticks= 0, padding=0, f1_palette=None, f1_data_palette_offset=0,
                  channel_data_offset=OFFSET_TO_CHANNEL_DATA, clip_name_offset=0, source_asset_name_offset=0):
         """ Current version number"""
@@ -185,15 +198,15 @@ class ClipBodyTS3:
         self._version = version
         self._flags = flags
         self._tick_length = tick_length
-        self._numTicks = num_ticks
+        self._tick_count = num_ticks
         self._padding = padding
-        self._f1PaletteSize:int = 0
+        self._f1_palette_size:int = 0
         if f1_palette is not None:
-            self._f1PaletteSize = len(f1_palette)
-        self._channelDataOffset:int = channel_data_offset
-        self._f1DataPaletteOffset:int = f1_data_palette_offset
-        self._clipNameOffset:int = clip_name_offset
-        self._sourceAssetNameOffset: int = source_asset_name_offset
+            self._f1_palette_size = len(f1_palette)
+        self._channel_data_offset:int = channel_data_offset
+        self._f1_palette_data_offset:int = f1_data_palette_offset
+        self._clip_name_offset:int = clip_name_offset
+        self._source_asset_name_offset: int = source_asset_name_offset
 
         self._clipName:str = clipname
         self._channels : list[QuaternionChannel] = []
@@ -203,43 +216,10 @@ class ClipBodyTS3:
             self._f1PaletteData = f1_palette
         self._source_file_name = source_file_name
 
-    def add_channel(self, new_channel : QuaternionChannel):
-        """
-        Adds a new channel to the clip body
-        """
-        self._channels.append(new_channel)
     @property
     def channel_count(self):
         return len(self._channels)
 
-    def set_palette_values(self, palette_values):
-        self._f1PaletteData = list(map(f32, map(abs, palette_values)))
-        self._f1PaletteSize = len(self._f1PaletteData)
-
-    def set_clip_length(self, length):
-        """
-        Sets the clip length in ticks
-        """
-        self._numTicks = length
-
-    @property
-    def clip_name_offset(self):
-        data_offset = OFFSET_TO_CHANNEL_DATA
-        for channel in self._channels:
-            header, _ = channel.to_binary()
-            data_offset += sum([len(item) for item in header])
-
-        return data_offset
-
-
-    @property
-    def source_asset_name_offset(self):
-        return (self.clip_name_offset + len(self._clipName)) + 1
-
-    @property
-    def f1_palette_offset(self):
-
-        return self.source_asset_name_offset + len(self._source_file_name) + 1
 
     def to_binary(self):
 
@@ -248,11 +228,11 @@ class ClipBodyTS3:
         serialized.append(u32(self._version).to_binary())
         serialized.append(u32(self._flags).to_binary())
         serialized.append(f32(self._tick_length).to_binary())
-        serialized.append(u16(self._numTicks).to_binary())
+        serialized.append(u16(self._tick_count).to_binary())
         serialized.append(u16(self._padding).to_binary())
         serialized.append(u32(self.channel_count).to_binary())
-        serialized.append(u32(self._f1PaletteSize).to_binary())
-        serialized.append(u32(self._channelDataOffset).to_binary())
+        serialized.append(u32(self._f1_palette_size).to_binary())
+        serialized.append(u32(self._channel_data_offset).to_binary())
         serialized.append(u32(self.f1_palette_offset).to_binary())
         serialized.append(u32(self.clip_name_offset).to_binary())
         serialized.append(u32(self.source_asset_name_offset).to_binary())
