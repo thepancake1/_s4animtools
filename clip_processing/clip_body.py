@@ -48,7 +48,7 @@ class ClipBodyBase:
 
     @property
     def source_asset_name_offset(self):
-        return (self.clip_name_offset + len(self._clipName)) + 1
+        return (self.clip_name_offset + len(self._clip_name)) + 1
 
     @property
     def f1_palette_offset(self):
@@ -61,7 +61,10 @@ class ClipBody(ClipBodyBase):
                  clip_name_offset=0, source_asset_name_offset=0):
         """ Current version number"""
 
-        super().__init__()
+        self._tick_count = None
+        self._f1_palette_size = None
+        self._f1_palette_data = None
+        self._channels = None
         self._formatToken = "_pilC3S_"
         self._version = version
         self._flags = flags
@@ -194,6 +197,11 @@ class ClipBodyTS3(ClipBodyBase):
                  channel_data_offset=OFFSET_TO_CHANNEL_DATA, clip_name_offset=0, source_asset_name_offset=0):
         """ Current version number"""
 
+
+        self._tick_count = None
+        self._f1_palette_size = None
+        self._f1_palette_data = None
+        self._channels = None
         self._formatToken = "_pilC3S_"
         self._version = version
         self._flags = flags
@@ -208,7 +216,7 @@ class ClipBodyTS3(ClipBodyBase):
         self._clip_name_offset:int = clip_name_offset
         self._source_asset_name_offset: int = source_asset_name_offset
 
-        self._clipName:str = clipname
+        self._clip_name:str = clipname
         self._channels : list[QuaternionChannel] = []
         if f1_palette is None:
             self._f1PaletteData = []
@@ -257,7 +265,7 @@ class ClipBodyTS3(ClipBodyBase):
 
 
         # Clip name is a null-terminated string
-        clip_name_encoded = NullTerminatedString(self._clipName).to_binary()
+        clip_name_encoded = NullTerminatedString(self._clip_name).to_binary()
         clip_body_data.append(clip_name_encoded)
         data_offset += len(clip_name_encoded)
         source_file_name_encoded = NullTerminatedString(self._source_file_name).to_binary()
