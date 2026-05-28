@@ -1282,8 +1282,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row.prop(obj, "initial_offset_t", text="Initial Offset T")
                 row = box.row()
 
-                row.prop(obj, "reference_namespace_hash", text="Reference Namespace Hash")
+                row.prop(obj, "reference_namespace_hash", text="Reference Namespace Actor or Hash")
+                try:
+                    hex_hash = int(obj.reference_namespace_hash, 16)
+                    if not obj.reference_namespace_hash.lower().startswith("0x"):
+                        row = box.row()
 
+                        row.label(text="You put in a hash as your reference namespace hash...")
+                        row = box.row()
+
+                        row.label(text="but didn't start it with 0x! Are yopu really sure this is correct?")
+                        row = box.row()
+
+                        row.label(text="Blender wil treat this as a name of an actor instead of a hash.")
+
+                except ValueError:
+                    pass
             layout.prop(obj, "show_events", text="Show Events")
             if obj.show_events:
                 layout.prop(context.scene, "use_picker_ui", text="Use Picker UI")
