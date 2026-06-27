@@ -636,6 +636,8 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
             right_uplid_name = mirror_bone_name(left_uplid_name)
             left_lolid_name = "b__LeftLoLid__"
             right_lolid_name = mirror_bone_name(left_lolid_name)
+            left_eyescale_name = "b__LeftEye_mod__"
+            right_eyescale_name = mirror_bone_name(left_eyescale_name)
         if ts4_rig:
             glasses_name = "b__CAS_Glasses__"
             left_eye_name = "b__L_Eye__"
@@ -644,6 +646,9 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
             right_uplid_name = mirror_bone_name(left_uplid_name)
             left_lolid_name = "b__L_LoLid__"
             right_lolid_name = mirror_bone_name(left_lolid_name)
+            left_eyescale_name = "b__CAS_L_EyeScale__"
+            right_eyescale_name = mirror_bone_name(left_eyescale_name)
+
         duplicate_bone(active_object, glasses_name, "C.EyeTarget.FK", "b__Head__")
         duplicate_bone(active_object, left_eye_name, "L.EyeTarget.FK", "C.EyeTarget.FK")
         duplicate_bone(active_object, right_eye_name, "R.EyeTarget.FK", "C.EyeTarget.FK")
@@ -651,10 +656,10 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
         duplicate_bone(active_object, right_uplid_name, "R.UpLid.FK", "b__Head__")
         duplicate_bone(active_object, left_lolid_name, "L.LoLid.FK", "b__Head__")
         duplicate_bone(active_object, right_lolid_name, "R.LoLid.FK", "b__Head__")
-        duplicate_bone(active_object, "b__L_Eye__", "L.EyeBaked",
-                       parent_bone_name="b__CAS_L_EyeScale__")
-        duplicate_bone(active_object, "b__R_Eye__", "R.EyeBaked",
-                       parent_bone_name="b__CAS_R_EyeScale__")
+        duplicate_bone(active_object, left_eye_name, "L.EyeBaked",
+                       parent_bone_name=left_eyescale_name)
+        duplicate_bone(active_object, right_eye_name, "R.EyeBaked",
+                       parent_bone_name=right_eyescale_name)
 
 
         if active_object.data.edit_bones["L.UpLid.FK"].head[2] < active_object.data.edit_bones["R.UpLid.FK"].head[1]:
@@ -699,14 +704,14 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
 
 
         duplicate_bone(active_object, left_uplid_name, "L.UpLidBaked",
-                       parent_bone_name="b__CAS_L_EyeScale__")
+                       parent_bone_name=left_eyescale_name)
         duplicate_bone(active_object, right_uplid_name, "R.UpLidBaked",
-                       parent_bone_name="b__CAS_R_EyeScale__")
+                       parent_bone_name=right_eyescale_name)
 
         duplicate_bone(active_object, left_lolid_name, "L.LoLidBaked",
-                       parent_bone_name="b__CAS_L_EyeScale__")
+                       parent_bone_name=left_eyescale_name)
         duplicate_bone(active_object, right_lolid_name, "R.LoLidBaked",
-                       parent_bone_name="b__CAS_R_EyeScale__")
+                       parent_bone_name=right_eyescale_name)
 
         duplicate_bone(active_object, "L.UpLid.FK", "L.UpLidTargetBaked", "L.UpLidBaked")
         duplicate_bone(active_object, "R.UpLid.FK", "R.UpLidTargetBaked", "R.UpLidBaked")
@@ -900,38 +905,72 @@ class S4ANIMTOOLS_OT_LoadPresetBoneConfig(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        context.object.original_bone_01 = "b__L_UpperArm__"
-        context.object.original_bone_02 = "b__L_Forearm__"
-        context.object.original_bone_03 = "b__L_Hand__"
-        context.object.original_bone_04 = "b__L_ArmExportPole__"
+        if context.object.game_type == "TS4":
+            context.object.original_bone_01 = "b__L_UpperArm__"
+            context.object.original_bone_02 = "b__L_Forearm__"
+            context.object.original_bone_03 = "b__L_Hand__"
+            context.object.original_bone_04 = "b__L_ArmExportPole__"
 
-        context.object.ik_bone_01_fk_name = "L.UpperArm.FK"
-        context.object.ik_bone_02_fk_name = "L.Forearm.FK"
-        context.object.ik_bone_03_fk_name = "L.Hand.FK"
+            context.object.ik_bone_01_fk_name = "L.UpperArm.FK"
+            context.object.ik_bone_02_fk_name = "L.Forearm.FK"
+            context.object.ik_bone_03_fk_name = "L.Hand.FK"
 
-        context.object.ik_bone_01_ik_name = "L.UpperArm.IK"
-        context.object.ik_bone_02_ik_name = "L.Forearm.IK"
-        context.object.ik_bone_03_ik_name = "L.Hand.IK"
-        context.object.ik_bone_04_ik_name = "L.HandHolder.IK"
-        context.object.ik_bone_05_ik_name = "L.HandTarget.IK"
-        context.object.ik_bone_06_ik_name = "L.ArmPole.IK"
-        context.object.ik_bone_07_ik_name = "L.ArmPoleIndicator.IK"
+            context.object.ik_bone_01_ik_name = "L.UpperArm.IK"
+            context.object.ik_bone_02_ik_name = "L.Forearm.IK"
+            context.object.ik_bone_03_ik_name = "L.Hand.IK"
+            context.object.ik_bone_04_ik_name = "L.HandHolder.IK"
+            context.object.ik_bone_05_ik_name = "L.HandTarget.IK"
+            context.object.ik_bone_06_ik_name = "L.ArmPole.IK"
+            context.object.ik_bone_07_ik_name = "L.ArmPoleIndicator.IK"
 
-        context.object.original_bone_11 = "b__L_Thigh__"
-        context.object.original_bone_12 = "b__L_Calf__"
-        context.object.original_bone_13 = "b__L_Foot__"
-        context.object.original_bone_14 = "b__L_LegExportPole__"
+            context.object.original_bone_11 = "b__L_Thigh__"
+            context.object.original_bone_12 = "b__L_Calf__"
+            context.object.original_bone_13 = "b__L_Foot__"
+            context.object.original_bone_14 = "b__L_LegExportPole__"
 
-        context.object.ik_bone_11_fk_name = "L.Thigh.FK"
-        context.object.ik_bone_12_fk_name = "L.Calf.FK"
-        context.object.ik_bone_13_fk_name = "L.Foot.FK"
+            context.object.ik_bone_11_fk_name = "L.Thigh.FK"
+            context.object.ik_bone_12_fk_name = "L.Calf.FK"
+            context.object.ik_bone_13_fk_name = "L.Foot.FK"
 
-        context.object.ik_bone_11_ik_name = "L.Thigh.IK"
-        context.object.ik_bone_12_ik_name = "L.Calf.IK"
-        context.object.ik_bone_13_ik_name = "L.Foot.IK"
-        context.object.ik_bone_14_ik_name = "L.FootHolder.IK"
-        context.object.ik_bone_15_ik_name = "L.FootTarget.IK"
-        context.object.ik_bone_16_ik_name = "L.LegPole.IK"
-        context.object.ik_bone_17_ik_name = "L.LegPoleIndicator.IK"
+            context.object.ik_bone_11_ik_name = "L.Thigh.IK"
+            context.object.ik_bone_12_ik_name = "L.Calf.IK"
+            context.object.ik_bone_13_ik_name = "L.Foot.IK"
+            context.object.ik_bone_14_ik_name = "L.FootHolder.IK"
+            context.object.ik_bone_15_ik_name = "L.FootTarget.IK"
+            context.object.ik_bone_16_ik_name = "L.LegPole.IK"
+            context.object.ik_bone_17_ik_name = "L.LegPoleIndicator.IK"
+        elif context.object.game_type == "TS3":
+            context.object.original_bone_01 = "b__L_UpperArm__"
+            context.object.original_bone_02 = "b__L_Forearm__"
+            context.object.original_bone_03 = "b__L_Hand__"
+            context.object.original_bone_04 = "L_armExportPole"
 
+            context.object.ik_bone_01_fk_name = "L.UpperArm.FK"
+            context.object.ik_bone_02_fk_name = "L.Forearm.FK"
+            context.object.ik_bone_03_fk_name = "L.Hand.FK"
+
+            context.object.ik_bone_01_ik_name = "L.UpperArm.IK"
+            context.object.ik_bone_02_ik_name = "L.Forearm.IK"
+            context.object.ik_bone_03_ik_name = "L.Hand.IK"
+            context.object.ik_bone_04_ik_name = "L.HandHolder.IK"
+            context.object.ik_bone_05_ik_name = "L.HandTarget.IK"
+            context.object.ik_bone_06_ik_name = "L.ArmPole.IK"
+            context.object.ik_bone_07_ik_name = "L.ArmPoleIndicator.IK"
+
+            context.object.original_bone_11 = "b__L_Thigh__"
+            context.object.original_bone_12 = "b__L_Calf__"
+            context.object.original_bone_13 = "b__L_Foot__"
+            context.object.original_bone_14 = "L_legExportPole"
+
+            context.object.ik_bone_11_fk_name = "L.Thigh.FK"
+            context.object.ik_bone_12_fk_name = "L.Calf.FK"
+            context.object.ik_bone_13_fk_name = "L.Foot.FK"
+
+            context.object.ik_bone_11_ik_name = "L.Thigh.IK"
+            context.object.ik_bone_12_ik_name = "L.Calf.IK"
+            context.object.ik_bone_13_ik_name = "L.Foot.IK"
+            context.object.ik_bone_14_ik_name = "L.FootHolder.IK"
+            context.object.ik_bone_15_ik_name = "L.FootTarget.IK"
+            context.object.ik_bone_16_ik_name = "L.LegPole.IK"
+            context.object.ik_bone_17_ik_name = "L.LegPoleIndicator.IK"
         return {'FINISHED'}
