@@ -32,6 +32,10 @@ def mirror_bone_name(bone_name):
         elif bone_name.startswith("b__R_"):
             return bone_name.replace("b__R_", "b__L_")
         else:
+            if "Left" in bone_name:
+                return bone_name.replace("Left", "Right")
+            elif "Right" in bone_name:
+                return bone_name.replace("Right", "Left")
             return bone_name
 
 def create_bone_collection(active_object, collection_name):
@@ -116,6 +120,9 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
                 ik_bone_start_name, ik_bone_middle_name, ik_bone_end_name, ik_bone_holder_name, ik_bone_target_name,
                 fk_bone_start_name, fk_bone_middle_name, fk_bone_end_name, pole_target_name}) != 13:
             raise Exception("You have duplicate bone names")
+        bpy.context.view_layer.objects.active = active_object
+        print(f"{active_object.name} has game type {active_object.game_type}")
+        bpy.ops.object.mode_set(mode='EDIT')
 
         self.create_control_bones_for_limb(active_object, context, ik_bone_end_name, ik_bone_holder_name,
                                            ik_bone_middle_name, ik_bone_start_name, ik_bone_target_name,
@@ -124,6 +131,7 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
                                            fk_bone_end_name, pole_target_name, pole_indicator_name,
                                            left_collection_name, self.to_build)
         bpy.context.view_layer.objects.active = active_object
+        print(f"{active_object.name} has game type {active_object.game_type}")
 
         bpy.ops.object.mode_set(mode='EDIT')
         # Mirror from left side to right side
@@ -136,7 +144,7 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
                                            mirror_bone_name(fk_bone_start_name), mirror_bone_name(fk_bone_middle_name),
                                            mirror_bone_name(fk_bone_end_name), mirror_bone_name(pole_target_name), mirror_bone_name(pole_indicator_name),
                                            right_collection_name,
-                                           self.to_build)
+                                           self.to_build, mirror_ts3_bone=True)
         return {"FINISHED"}
 
     def create_control_bones_for_limb(self, active_object, context, ik_bone_end_name, ik_bone_holder_name,
@@ -145,7 +153,7 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
                                       orignal_pole_target_name,
                                       fk_bone_start_name, fk_bone_middle_name, fk_bone_end_name, pole_target_name,
                                       pole_indicator_name, collection_name,
-                                      to_build):
+                                      to_build, mirror_ts3_bone=False):
 
         # Switch to edit mode and then create the matching IK bones
         # After creating the bones, create the copy constraint
@@ -201,8 +209,14 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
                                         to_bone=original_bone_end_instance)
         create_rotation_constraint(src_obj=active_object, src_bone_name=ik_bone_target_name,
                                    to_bone=ik_bone_end_instance)
+        if context.object.game_type == "TS4":
+            pole_angle = 0
+        elif context.object.game_type == "TS3":
+            pole_angle = -90
+        else:
+            raise Exception(f"Unknown game type on object. Expected TS4 or TS3 but got {context.object.game_type}")
         create_ik_constraint(src_obj=active_object, src_bone_name=ik_bone_target_name, to_bone=ik_bone_holder_instance,
-                             pole_bone_name=pole_target_name)
+                             pole_bone_name=pole_target_name, pole_angle=pole_angle)
         c7 = create_rotation_constraint(src_obj=active_object, src_bone_name=fk_bone_start_name,
                                         to_bone=original_bone_start_instance)
         c8 = create_rotation_constraint(src_obj=active_object, src_bone_name=fk_bone_middle_name,
@@ -238,7 +252,7 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
         load_gizmo(filepath=os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "gizmo_poleindicator.obj"))
         load_gizmo(filepath=os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "gizmo_pole.obj"))
         load_gizmo(filepath=os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "gizmo_thigh.obj"))
-
+        print(f"making rig for {context.object.name}, {context.object.game_type} {to_build}")
         if context.object.game_type == "TS4":
             if to_build == "Arms":
                 active_object.pose.bones[fk_bone_start_name].custom_shape = bpy.data.objects["gizmo_upperarm"]
@@ -323,38 +337,107 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
                 0, math.radians(-90), 0)
 
 
-        elif context.scene.game == "TS3":
-            active_object.pose.bones[fk_bone_start_name].custom_shape = bpy.data.objects["gizmo_upperarm"]
-            active_object.pose.bones[fk_bone_start_name].custom_shape_scale_xyz = (100, 100, 100)
-            active_object.pose.bones[fk_bone_start_name].color.palette = "THEME01"
-            active_object.pose.bones[fk_bone_start_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
-            active_object.pose.bones[fk_bone_middle_name].custom_shape = bpy.data.objects["gizmo_upperarm"]
-            active_object.pose.bones[fk_bone_middle_name].custom_shape_scale_xyz = (100, 100, 100)
-            active_object.pose.bones[fk_bone_middle_name].color.palette = "THEME01"
+        elif context.object.game_type == "TS3":
+            if to_build == "Arms":
+                active_object.pose.bones[fk_bone_start_name].custom_shape = bpy.data.objects["gizmo_upperarm"]
+                active_object.pose.bones[fk_bone_start_name].custom_shape_scale_xyz = (100, 100, 100)
+                active_object.pose.bones[fk_bone_start_name].color.palette = "THEME01"
+                active_object.pose.bones[fk_bone_middle_name].custom_shape = bpy.data.objects["gizmo_upperarm"]
+                active_object.pose.bones[fk_bone_middle_name].custom_shape_scale_xyz = (100, 100, 100)
+                active_object.pose.bones[fk_bone_middle_name].color.palette = "THEME01"
 
-            active_object.pose.bones[fk_bone_middle_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
-            active_object.pose.bones[fk_bone_end_name].custom_shape = bpy.data.objects["gizmo_hand"]
-            active_object.pose.bones[fk_bone_end_name].custom_shape_scale_xyz = (100, 100, 100)
-            active_object.pose.bones[fk_bone_end_name].color.palette = "THEME01"
+                active_object.pose.bones[fk_bone_end_name].custom_shape = bpy.data.objects["gizmo_hand"]
+                active_object.pose.bones[fk_bone_end_name].custom_shape_scale_xyz = (100, 100, 100)
+                active_object.pose.bones[fk_bone_end_name].color.palette = "THEME01"
 
-            active_object.pose.bones[fk_bone_end_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
-            active_object.pose.bones[ik_bone_target_name].custom_shape = bpy.data.objects["gizmo_hand"]
-            active_object.pose.bones[ik_bone_target_name].custom_shape_scale_xyz = (120, 120, 120)
+                active_object.pose.bones[ik_bone_target_name].custom_shape = bpy.data.objects["gizmo_hand"]
+                active_object.pose.bones[ik_bone_target_name].custom_shape_scale_xyz = (120, 120, 120)
 
-            active_object.pose.bones[ik_bone_target_name].color.palette = "THEME04"
-            active_object.pose.bones[ik_bone_target_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                active_object.pose.bones[ik_bone_target_name].color.palette = "THEME04"
 
-            active_object.pose.bones[pole_target_name].custom_shape = bpy.data.objects["gizmo_pole"]
-            active_object.pose.bones[pole_target_name].custom_shape_scale_xyz = (1, 1, 1)
+                active_object.pose.bones[pole_target_name].custom_shape = bpy.data.objects["gizmo_pole"]
+                active_object.pose.bones[pole_target_name].custom_shape_scale_xyz = (100, 100, 100)
 
-            active_object.pose.bones[pole_target_name].color.palette = "THEME10"
-            active_object.pose.bones[pole_target_name].custom_shape_rotation_euler = (0, 0, math.radians(90))
+                active_object.pose.bones[pole_target_name].color.palette = "THEME10"
 
-            active_object.pose.bones[pole_indicator_name].custom_shape = bpy.data.objects["gizmo_poleindicator"]
-            active_object.pose.bones[pole_indicator_name].custom_shape_scale_xyz = (1, 1, 1)
-            active_object.pose.bones[pole_indicator_name].use_custom_shape_bone_size = False
-            active_object.pose.bones[pole_indicator_name].color.palette = "THEME10"
-            active_object.pose.bones[pole_indicator_name].custom_shape_rotation_euler = (0, math.radians(-90), 0)
+                active_object.pose.bones[pole_indicator_name].custom_shape = bpy.data.objects["gizmo_poleindicator"]
+                active_object.pose.bones[pole_indicator_name].custom_shape_scale_xyz = (1, 1, 1)
+                active_object.pose.bones[pole_indicator_name].use_custom_shape_bone_size = False
+                active_object.pose.bones[pole_indicator_name].color.palette = "THEME10"
+                print(fk_bone_start_name, mirror_ts3_bone)
+                print(fk_bone_middle_name, mirror_ts3_bone)
+                print(fk_bone_end_name, mirror_ts3_bone)
+                print(ik_bone_target_name, mirror_ts3_bone)
+                print(pole_target_name, mirror_ts3_bone)
+                print(pole_indicator_name, mirror_ts3_bone)
+
+                if mirror_ts3_bone:
+                    active_object.pose.bones[fk_bone_start_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_middle_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_end_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[ik_bone_target_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[pole_target_name].custom_shape_rotation_euler = (0, 0, math.radians(90))
+                    active_object.pose.bones[pole_indicator_name].custom_shape_rotation_euler = (0, math.radians(-90), 0)
+
+                else:
+                    active_object.pose.bones[fk_bone_start_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_middle_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_end_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[ik_bone_target_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[pole_target_name].custom_shape_rotation_euler = (0, 0, math.radians(90))
+                    active_object.pose.bones[pole_indicator_name].custom_shape_rotation_euler = (0, math.radians(-90), 0)
+
+
+            elif to_build == "Legs":
+                active_object.pose.bones[fk_bone_start_name].custom_shape = bpy.data.objects["gizmo_thigh"]
+                active_object.pose.bones[fk_bone_start_name].custom_shape_scale_xyz = (1, 1, 1)
+                active_object.pose.bones[fk_bone_start_name].color.palette = "THEME01"
+                active_object.pose.bones[fk_bone_start_name].use_custom_shape_bone_size = False
+
+                active_object.pose.bones[fk_bone_middle_name].custom_shape = bpy.data.objects["gizmo_upperarm"]
+                active_object.pose.bones[fk_bone_middle_name].custom_shape_scale_xyz = (1, 1, 1)
+                active_object.pose.bones[fk_bone_middle_name].color.palette = "THEME01"
+                active_object.pose.bones[fk_bone_middle_name].use_custom_shape_bone_size = False
+
+                active_object.pose.bones[fk_bone_end_name].custom_shape = bpy.data.objects["gizmo_hand"]
+                active_object.pose.bones[fk_bone_end_name].custom_shape_scale_xyz = (1, 1, 1)
+                active_object.pose.bones[fk_bone_end_name].color.palette = "THEME01"
+                active_object.pose.bones[fk_bone_end_name].use_custom_shape_bone_size = False
+
+                active_object.pose.bones[ik_bone_target_name].custom_shape = bpy.data.objects["gizmo_hand"]
+                active_object.pose.bones[ik_bone_target_name].custom_shape_scale_xyz = (1, 1, 1)
+                active_object.pose.bones[ik_bone_target_name].use_custom_shape_bone_size = False
+
+                active_object.pose.bones[ik_bone_target_name].color.palette = "THEME04"
+
+                active_object.pose.bones[pole_target_name].custom_shape = bpy.data.objects["gizmo_pole"]
+                active_object.pose.bones[pole_target_name].custom_shape_scale_xyz = (1, 1, 1)
+
+                active_object.pose.bones[pole_target_name].color.palette = "THEME10"
+                active_object.pose.bones[pole_target_name].use_custom_shape_bone_size = False
+
+
+                active_object.pose.bones[pole_indicator_name].custom_shape = bpy.data.objects["gizmo_poleindicator"]
+                active_object.pose.bones[pole_indicator_name].custom_shape_scale_xyz = (1, 1, 1)
+                active_object.pose.bones[pole_indicator_name].use_custom_shape_bone_size = False
+                active_object.pose.bones[pole_indicator_name].color.palette = "THEME10"
+
+
+                if mirror_ts3_bone:
+                    active_object.pose.bones[fk_bone_start_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_middle_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_end_name].custom_shape_rotation_euler = (0, math.radians(90), math.radians(180))
+                    active_object.pose.bones[ik_bone_target_name].custom_shape_rotation_euler = (0, math.radians(90), math.radians(180))
+                    active_object.pose.bones[pole_target_name].custom_shape_rotation_euler = (0, 0, math.radians(90))
+                    active_object.pose.bones[pole_indicator_name].custom_shape_rotation_euler = (0, math.radians(-90), 0)
+
+                else:
+                    active_object.pose.bones[fk_bone_start_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_middle_name].custom_shape_rotation_euler = (0, 0, math.radians(180))
+                    active_object.pose.bones[fk_bone_end_name].custom_shape_rotation_euler = (0, math.radians(90), math.radians(180))
+                    active_object.pose.bones[ik_bone_target_name].custom_shape_rotation_euler = (0, math.radians(90), math.radians(180))
+                    active_object.pose.bones[pole_target_name].custom_shape_rotation_euler = (0, 0, math.radians(90))
+                    active_object.pose.bones[pole_indicator_name].custom_shape_rotation_euler = (0, math.radians(-90), 0)
 
         fk_collection_name = collection_name + " FK"
         ik_collection_name = collection_name + " IK"
@@ -378,11 +461,15 @@ class S4ANIMTOOLS_OT_CreateIKChain(Operator):
 
 def load_gizmo(filepath):
     # Load the object from the given file path
+    original_object = bpy.context.object
     obj_name = os.path.splitext(os.path.basename(filepath))[0]
     if obj_name in bpy.data.objects:
         return
     bpy.ops.wm.obj_import(filepath=filepath)
     bpy.data.objects[obj_name].hide_viewport = True
+    # Restore context.object to previous value because the create limb code relies on
+    # the actibe object to be the rig and not some random gizmo
+    bpy.context.view_layer.objects.active = original_object
 class S4ANIMTOOLS_OT_FKIKSwitch(Operator):
     bl_idname = "s4animtools.fk_to_ik_switch"
     bl_label = "FK/IK Switch"
@@ -741,32 +828,54 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
             except Exception:
                 pass
 
+
         active_object.pose.bones[left_clavicle_bone_name].custom_shape = bpy.data.objects["gizmo_hand"]
-        active_object.pose.bones[left_clavicle_bone_name].custom_shape_scale_xyz = (1, 2, 1)
         active_object.pose.bones[left_clavicle_bone_name].use_custom_shape_bone_size = False
-        active_object.pose.bones[left_clavicle_bone_name].custom_shape_translation[0] = 0.07
-        active_object.pose.bones[left_clavicle_bone_name].custom_shape_translation[1] = 0.1
-        active_object.pose.bones[left_clavicle_bone_name].custom_shape_rotation_euler[1] = math.radians(90)
+
         active_object.pose.bones[left_clavicle_bone_name].color.palette = "THEME03"
 
         active_object.pose.bones[right_clavicle_bone_name].custom_shape = bpy.data.objects["gizmo_hand"]
-        active_object.pose.bones[right_clavicle_bone_name].custom_shape_scale_xyz = (1,  2, 1)
         active_object.pose.bones[right_clavicle_bone_name].use_custom_shape_bone_size = False
-        active_object.pose.bones[right_clavicle_bone_name].custom_shape_translation[0] = 0.07
-        active_object.pose.bones[right_clavicle_bone_name].custom_shape_translation[1] = 0.1
-        active_object.pose.bones[right_clavicle_bone_name].custom_shape_rotation_euler[1] = math.radians(90)
+
         active_object.pose.bones[right_clavicle_bone_name].color.palette = "THEME03"
+
+        if ts4_rig:
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_translation[0] = 0.07
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_translation[1] = 0.1
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_rotation_euler[1] = math.radians(90)
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_scale_xyz = (1, 2, 1)
+
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_translation[0] = 0.07
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_translation[1] = 0.1
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_rotation_euler[1] = math.radians(90)
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_scale_xyz = (1, 2, 1)
+
+        elif ts3_rig:
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_translation[0] = 0.063
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_translation[1] = 0.07
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_rotation_euler[1] = math.radians(90)
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_rotation_euler[2] = math.radians(-90)
+
+            active_object.pose.bones[left_clavicle_bone_name].custom_shape_scale_xyz = (2, 1, 1)
+
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_translation[0] = 0.05
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_translation[1] = 0.07
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_rotation_euler[1] = math.radians(90)
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_rotation_euler[2] = math.radians(-90)
+
+            active_object.pose.bones[right_clavicle_bone_name].custom_shape_scale_xyz = (2, 1, 1)
+        else:
+            raise Exception("expected ts4 or ts4 rig, only got some random rig. please add support for this type")
+
 
         active_object.pose.bones["L.UpLid.FK"].custom_shape = bpy.data.objects["gizmo_eyelid"]
         active_object.pose.bones["L.UpLid.FK"].custom_shape_scale_xyz = (1, 1, 1)
         active_object.pose.bones["L.UpLid.FK"].use_custom_shape_bone_size = False
-        active_object.pose.bones["L.UpLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-90), 0)
 
         active_object.pose.bones["L.UpLid.FK"].color.palette = "THEME03"
 
         active_object.pose.bones["R.UpLid.FK"].custom_shape = bpy.data.objects["gizmo_eyelid"]
         active_object.pose.bones["R.UpLid.FK"].custom_shape_scale_xyz = (1, 1, 1)
-        active_object.pose.bones["R.UpLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-90), 0)
         active_object.pose.bones["R.UpLid.FK"].use_custom_shape_bone_size = False
         active_object.pose.bones["R.UpLid.FK"].color.palette = "THEME03"
 
@@ -774,14 +883,12 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
         active_object.pose.bones["L.LoLid.FK"].custom_shape = bpy.data.objects["gizmo_eyelid"]
         active_object.pose.bones["L.LoLid.FK"].custom_shape_scale_xyz = (1, 1, 1)
         active_object.pose.bones["L.LoLid.FK"].use_custom_shape_bone_size = False
-        active_object.pose.bones["L.LoLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-270), 0)
 
         active_object.pose.bones["L.LoLid.FK"].color.palette = "THEME03"
 
         active_object.pose.bones["R.LoLid.FK"].custom_shape = bpy.data.objects["gizmo_eyelid"]
         active_object.pose.bones["R.LoLid.FK"].custom_shape_scale_xyz = (1, 1, 1)
         active_object.pose.bones["R.LoLid.FK"].use_custom_shape_bone_size = False
-        active_object.pose.bones["R.LoLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-270), 0)
 
         spine_rotation = 90 if context.object.game_type == "TS4" else 0
 
@@ -822,38 +929,67 @@ class S4ANIMTOOLS_OT_CreateBones(Operator):
         active_object.pose.bones["L.EyeTarget.FK"].custom_shape_scale_xyz = (0.08, 0.1, 0.1)
         active_object.pose.bones["L.EyeTarget.FK"].use_custom_shape_bone_size = False
         active_object.pose.bones["L.EyeTarget.FK"].color.palette = "THEME02"
-        active_object.pose.bones["L.EyeTarget.FK"].custom_shape_rotation_euler = (
-        math.radians(180), math.radians(0), 0)
+
 
         active_object.pose.bones["R.EyeTarget.FK"].custom_shape = bpy.data.objects["gizmo_rootbind"]
         active_object.pose.bones["R.EyeTarget.FK"].custom_shape_scale_xyz = (0.08, 0.1, 0.1)
         active_object.pose.bones["R.EyeTarget.FK"].use_custom_shape_bone_size = False
         active_object.pose.bones["R.EyeTarget.FK"].color.palette = "THEME02"
-        active_object.pose.bones["R.EyeTarget.FK"].custom_shape_rotation_euler = (
-        math.radians(180), math.radians(0), 0)
+
         active_object.pose.bones["L.EyeTarget.FK"].custom_shape = bpy.data.objects["gizmo_rootbind"]
         active_object.pose.bones["L.EyeTarget.FK"].custom_shape_scale_xyz = (0.08, 0.1, 0.1)
         active_object.pose.bones["L.EyeTarget.FK"].use_custom_shape_bone_size = False
         active_object.pose.bones["L.EyeTarget.FK"].color.palette = "THEME02"
-        active_object.pose.bones["L.EyeTarget.FK"].custom_shape_rotation_euler = (
-        math.radians(180), math.radians(0), 0)
 
         active_object.pose.bones["C.EyeTarget.FK"].custom_shape = bpy.data.objects["gizmo_rootbind"]
         active_object.pose.bones["C.EyeTarget.FK"].custom_shape_scale_xyz = (0.16, 0.2, 0.2)
         active_object.pose.bones["C.EyeTarget.FK"].use_custom_shape_bone_size = False
         active_object.pose.bones["C.EyeTarget.FK"].color.palette = "THEME02"
-        active_object.pose.bones["C.EyeTarget.FK"].custom_shape_rotation_euler = (
-        math.radians(180), math.radians(0), 0)
-        create_dampedtrack_constraint(active_object, src_bone_name="L.EyeTarget.FK", to_bone=active_object.pose.bones[left_eye_name])
-        create_dampedtrack_constraint(active_object, src_bone_name="R.EyeTarget.FK", to_bone=active_object.pose.bones[right_eye_name])
 
-        create_dampedtrack_constraint(active_object, src_bone_name="L.UpLid.FK", to_bone=active_object.pose.bones[left_uplid_name])
-        create_dampedtrack_constraint(active_object, src_bone_name="R.UpLid.FK", to_bone=active_object.pose.bones[right_uplid_name])
-        create_dampedtrack_constraint(active_object, src_bone_name="L.LoLid.FK", to_bone=active_object.pose.bones[left_lolid_name])
-        create_dampedtrack_constraint(active_object, src_bone_name="R.LoLid.FK", to_bone=active_object.pose.bones[right_lolid_name])
-       # bpy.ops.object.mode_set(mode='OBJECT')
 
-        create_dampedtrack_constraint(active_object, src_bone_name="L.EyeTarget.FK", to_bone=active_object.pose.bones[left_eye_name])
+        if ts4_rig:
+            active_object.pose.bones["L.UpLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-90),
+                                                                                  0)
+            active_object.pose.bones["R.UpLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-90),
+                                                                                  0)
+            active_object.pose.bones["L.LoLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-270),
+                                                                                  0)
+            active_object.pose.bones["R.LoLid.FK"].custom_shape_rotation_euler = (math.radians(-90), math.radians(-270),
+                                                                                  0)
+            active_object.pose.bones["L.EyeTarget.FK"].custom_shape_rotation_euler = (math.radians(180),
+                                                                                      math.radians(0), 0)
+            active_object.pose.bones["R.EyeTarget.FK"].custom_shape_rotation_euler = (math.radians(180),
+                                                                                      math.radians(0), 0)
+            active_object.pose.bones["C.EyeTarget.FK"].custom_shape_rotation_euler = (math.radians(180),
+                                                                                      math.radians(0), 0)
+        elif ts3_rig:
+            active_object.pose.bones["L.UpLid.FK"].custom_shape_rotation_euler = (math.radians(0), math.radians(0),
+                                                                                  0)
+            active_object.pose.bones["R.UpLid.FK"].custom_shape_rotation_euler = (math.radians(0), math.radians(0),
+                                                                                  0)
+            active_object.pose.bones["L.LoLid.FK"].custom_shape_rotation_euler = (math.radians(0), math.radians(0),
+                                                                                  math.radians(-180))
+            active_object.pose.bones["R.LoLid.FK"].custom_shape_rotation_euler = (math.radians(0), math.radians(0),
+                                                                                  math.radians(-180))
+            active_object.pose.bones["L.EyeTarget.FK"].custom_shape_rotation_euler = (math.radians(-90),
+                                                                                      math.radians(0), math.radians(-90))
+            active_object.pose.bones["R.EyeTarget.FK"].custom_shape_rotation_euler = (math.radians(-90),
+                                                                                      math.radians(0), math.radians(-90))
+            active_object.pose.bones["C.EyeTarget.FK"].custom_shape_rotation_euler = (math.radians(-90),
+                                                                                      math.radians(0), math.radians(-90))
+        if ts4_rig:
+            track_axis = "Y"
+        elif ts3_rig:
+            track_axis = "Z"
+        else:
+            track_axis = "Z"
+        create_dampedtrack_constraint(active_object, track_axis=track_axis, src_bone_name="L.EyeTarget.FK", to_bone=active_object.pose.bones[left_eye_name])
+        create_dampedtrack_constraint(active_object, track_axis=track_axis, src_bone_name="R.EyeTarget.FK", to_bone=active_object.pose.bones[right_eye_name])
+        create_dampedtrack_constraint(active_object, track_axis=track_axis, src_bone_name="L.UpLid.FK", to_bone=active_object.pose.bones[left_uplid_name])
+        create_dampedtrack_constraint(active_object, track_axis=track_axis, src_bone_name="R.UpLid.FK", to_bone=active_object.pose.bones[right_uplid_name])
+        create_dampedtrack_constraint(active_object, track_axis=track_axis, src_bone_name="L.LoLid.FK", to_bone=active_object.pose.bones[left_lolid_name])
+        create_dampedtrack_constraint(active_object, track_axis=track_axis, src_bone_name="R.LoLid.FK", to_bone=active_object.pose.bones[right_lolid_name])
+        create_dampedtrack_constraint(active_object, track_axis=track_axis, src_bone_name="L.EyeTarget.FK", to_bone=active_object.pose.bones[left_eye_name])
         constraint = create_location_constraint(active_object, "L.EyeTargetBaked", active_object.pose.bones["L.EyeTarget.FK"])
         add_driver(constraint, active_object, "influence", "baked_eye_animation_enabled", func="influence")
         constraint = create_location_constraint(active_object, "R.EyeTargetBaked", active_object.pose.bones["R.EyeTarget.FK"])

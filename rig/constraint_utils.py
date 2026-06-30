@@ -1,3 +1,6 @@
+import math
+
+
 def create_location_constraint(src_obj, src_bone, to_bone):
     constraint = to_bone.constraints.new("COPY_LOCATION")
     constraint.target = src_obj
@@ -14,12 +17,13 @@ def create_rotation_constraint(src_obj, src_bone_name, to_bone):
     constraint.name = "IK Copy Rotation"
     return constraint
 
-def create_ik_constraint(src_obj, src_bone_name, to_bone, pole_bone_name):
+def create_ik_constraint(src_obj, src_bone_name, to_bone, pole_bone_name, pole_angle=0):
     constraint = to_bone.constraints.new("IK")
     constraint.target = src_obj
     constraint.subtarget = src_bone_name
     constraint.name = "IK Chain Constraint"
     constraint.chain_count = 3
+    constraint.pole_angle = math.radians(pole_angle)
     constraint.use_rotation = False
     constraint.pole_target = src_obj
     constraint.pole_subtarget = pole_bone_name
@@ -36,11 +40,13 @@ def create_stretchto_constraint(src_obj, src_bone_name, to_bone):
     return constraint
 
 
-def create_dampedtrack_constraint(src_obj, src_bone_name, to_bone):
+def create_dampedtrack_constraint(src_obj, src_bone_name, to_bone, track_axis):
+    if track_axis not in ("X", "Y", "Z"):
+        raise Exception("Invalid track axis specified. Expected X, Y or Z but got some other one for some reason." )
     constraint = to_bone.constraints.new("DAMPED_TRACK")
     constraint.target = src_obj
     constraint.subtarget = src_bone_name
-    constraint.track_axis = "TRACK_Y"
+    constraint.track_axis = f"TRACK_{track_axis}"
     constraint.name = "Eyes Damped Track"
     return constraint
 
