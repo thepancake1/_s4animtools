@@ -1,3 +1,15 @@
+# Thank you https://blender.stackexchange.com/questions/28504/blender-ignores-changes-to-python-scripts!
+import importlib
+import sys
+
+current_package_prefix = f"{__name__}."
+for name, module in sys.modules.copy().items():
+    if name.startswith(current_package_prefix):
+        print(f"Reloading {name}")
+        try:
+            importlib.reload(module)
+        except:
+            print(f"Failed to reload {name}")
 from typing import Optional, List
 
 import bpy
@@ -63,6 +75,8 @@ from s4animtools.walkstyles.blender import LocomotionBuilderVariantData, draw_lo
     locomotion_unregister
 from s4animtools.control_rig.sticky_bones import OT_S4ANIMTOOLS_PreviewSlotAssignment, \
     OT_S4ANIMTOOLS_PreviewAllSlotAssignments
+
+
 
 CURRENT_S4ANIMTOOLS_VERSION = 2
 JAW_ANIMATE_DURATION = 100000
@@ -2592,7 +2606,7 @@ def register():
     bpy.types.Scene.export_as_loose_files = BoolProperty()
 
     actor_types = (("sim", "Sim", "This actor is a sim."), ("object", "Object", "This actor is an object."), ("prop", "Prop", "This actor is a prop."))
-    game_types = (("TS4", "TS4", "The Sims 4"), ("TS3", "TS3", "The Sims 3"))
+    game_types = (("Unknown", "Unknown", "Unknown"), ("TS4", "TS4", "The Sims 4"), ("TS3", "TS3", "The Sims 3"))
 
     # Deprecated, use is_actor instead.
     bpy.types.Object.is_s4_actor = BoolProperty(default=False)
