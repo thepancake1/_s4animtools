@@ -231,12 +231,61 @@ class SlotAssignmentBlender:
         self.slot_assignment_idx = slot_assignment_idx
         self.chain_idx = chain_idx
 
+class ClipNameFormatter:
+    def __init__(self, context):
+        self.context = context
+
+    def get_clip_names_from_markers(self) -> list[str]:
+        sorted_markers = sorted(self.context.scene.timeline_markers, key=lambda marker: marker.frame)
+        clip_names = []
+        for marker in sorted_markers:
+            clip_names.append(marker.name)
+        return clip_names
+
+    def get_clip_splits_from_markers(self) -> list[int]:
+        sorted_markers = sorted(self.context.scene.timeline_markers, key=lambda marker: marker.frame)
+        clip_splits = []
+        for marker in sorted_markers:
+            clip_splits.append(marker.frame)
+        return clip_splits
+
+    def get_clip_names(self) -> list[str]:
+        clip_names = []
+
+        if self.context.scene.export_using_markers:
+            return self.get_clip_names_from_markers()
+        else:
+            if self.context.scene.clip_name == "":
+                    raise Exception("You need to specify a clip name")
+            # if the string has newlines it's a 5.2+ clip name input, split by it isntead of comma
+            if self.context.scene.clip_name.count("\n") > 0:
+                clip_input_names = self.context.scene.clip_name.split("\n")
+            else:
+                clip_input_names = self.context.scene.clip_name.split(",")
+            if len(clip_input_names) > 0:
+                for clip_input_name in clip_input_names:
+                    if self.context.scene.clip_name_prefix == "":
+                        clip_names.append(clip_input_name)
+                    else:
+                        clip_names.append(f"{self.context.scene.clip_name_prefix}_{clip_input_name}")
+        return clip_names
+    def get_clip_names_with_actor_suffix(self) -> list[str]:
+        clip_names = self.get_clip_names()
+       # This object supports rig suffixes, will stick them on to the end.
+
+        if not self.context.object.disable_rig_suffix:
+            for idx in range(len(clip_names)):
+                clip_names[idx] += "_" + self.context.object.rig_name
+
+        return clip_names
+
 class NewClipExporter:
 
     def __init__(self):
         self.context = None
         self.additive = False
         self.clip_infos = []
+        self.clip_name_formatter = ClipNameFormatter(self.context)
 
     def setup_events(self, context, current_clip, start_frame, frame_count, additional_snap_frames, sampling_rate):
         """Shifts the timestamps of the clip events depending on the split.
@@ -437,45 +486,6 @@ class NewClipExporter:
             timeshifted_timestamp = timeshifted_timestamp / 2
         return original_timestamp, timeshifted_timestamp
 
-    def get_clip_names_from_markers(self) -> list[str]:
-        sorted_markers = sorted(self.context.scene.timeline_markers, key=lambda marker: marker.frame)
-        clip_names = []
-        for marker in sorted_markers:
-            clip_names.append(marker.name)
-        return clip_names
-
-    def get_clip_splits_from_markers(self) -> list[int]:
-        sorted_markers = sorted(self.context.scene.timeline_markers, key=lambda marker: marker.frame)
-        clip_splits = []
-        for marker in sorted_markers:
-            clip_splits.append(marker.frame)
-        return clip_splits
-
-    def get_clip_names(self) -> list[str]:
-        clip_names = []
-
-        if self.context.scene.export_using_markers:
-            return self.get_clip_names_from_markers()
-        else:
-            if self.context.scene.clip_name == "":
-                    raise Exception("You need to specify a clip name")
-            clip_input_names = self.context.scene.clip_name.split(",")
-            if len(clip_input_names) > 0:
-                for clip_input_name in clip_input_names:
-                    if self.context.scene.clip_name_prefix == "":
-                        clip_names.append(clip_input_name)
-                    else:
-                        clip_names.append(f"{self.context.scene.clip_name_prefix}_{clip_input_name}")
-        return clip_names
-    def get_clip_names_with_actor_suffix(self) -> list[str]:
-        clip_names = self.get_clip_names()
-       # This object supports rig suffixes, will stick them on to the end.
-
-        if not self.context.object.disable_rig_suffix:
-            for idx in range(len(clip_names)):
-                clip_names[idx] += "_" + self.context.opbject.rig_name
-
-        return clip_names
 
     def get_clip_splits(self) -> list[int]:
         clip_indices = []
@@ -546,7 +556,7 @@ class NewClipExporter:
         if initial_offset_q == "":
             initial_offset_q = "0,0,0,1"
         clip_infos = []
-        clip_names = self.get_clip_names()
+        clip_names = self.clip_name_formatter.get_clip_names()
         clip_indices = self.get_clip_splits()
         clip_locos = self.get_clip_locos()
 
@@ -567,9 +577,10 @@ class NewClipExporter:
             return frame
         return frame // sampling_rate
     def execute(self, context):
+
         t1 = time.time()
         self.context = context
-
+        self.clip_name_formatter = ClipNameFormatter(self.context)
         export_as_loose_files = self.context.scene.export_as_loose_files
 
         # Check if the user has toggled 60 fps downsampling to 30 fps
@@ -893,7 +904,27 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 box.prop(context.scene, "clip_splits", text="Clip Split Point(s)")
                 box.prop(context.scene, "clip_name_prefix", text = "Clip Name Prefix")  # clip_name_prefix
-                box.prop(context.scene, "clip_name", text = "Clip Name(s)")
+                if bpy.app.version >= (5, 2):
+                    if context.scene.clip_name.count("\n") > 0 or context.scene.clip_name.count("\n") > 0:
+                        box.label(text="Clip Names")
+                    else:
+                        box.label(text="Clip Name")
+                    box.textbox(context.scene, "clip_name")
+
+                else:
+                    box.prop(context.scene, "clip_name", text="Clip Name(s)")
+
+                box.label(text="Your clip names for this actor will export as: ")
+                clip_name_formatter = ClipNameFormatter(bpy.context)
+                for clip_name in clip_name_formatter.get_clip_names_with_actor_suffix():
+                    box2 = box.box()
+                    row = box2.row()
+                    row.label(text=clip_name)
+                    row.operator("s4animtools.copy_text_to_clipboard", text="Copy Name").text = clip_name
+                    row = box2.row()
+                    row.label(text=get_64bithash(clip_name))
+                    row.operator("s4animtools.copy_text_to_clipboard", text="Copy Hash").text = get_64bithash(clip_name)
+
                 box.prop(obj, "allow_jaw_animation_for_entire_animation",
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
                 box.prop(obj, "enable_version_number_in_exported_clip", text="Enable Blender Version Number in Source Asset Name")
@@ -911,7 +942,12 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 row.operator("s4animtools.new_export_clip", text="Export Clip")
 
                 row.operator("s4animtools.export_all_clips", text="Export All Clips")
-                box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+                if bpy.app.version >= (5, 2):
+                    box.label(text="Animation Notes")
+                    box.textbox(context.object, "animation_notes")
+                else:
+                    box.prop(context.object, "animation_notes", text="Animation Notes", icon='TEXT')
+
 
 
             layout.prop(obj, "show_footprint_options", text="Show Footprint Options")
@@ -2280,6 +2316,20 @@ class OT_S4ANIMTOOLS_ResetSlotAssignmentPreview(bpy.types.Operator):
 
         return {"FINISHED"}
 
+class OT_S4ANIMTOOLS_CopyTextToClipboard(bpy.types.Operator):
+    bl_idname = "s4animtools.copy_text_to_clipboard"
+    bl_label = "Copy Text To Clipboard"
+    bl_options = {"REGISTER", "UNDO"}
+    text : StringProperty()
+
+    def execute(self, context):
+        if os.name == "nt":
+            import subprocess
+            cmd = 'echo ' + self.text + '|clip'
+            result = subprocess.check_call(cmd, shell=True)
+        else:
+            raise Exception("Copying clip names and hashes only works on windows currently, sorry.")
+        return {"FINISHED"}
 
 classes = (
     Snapper, ExportRig, SyncRigToMesh,
@@ -2300,7 +2350,7 @@ classes = (
     OT_S4ANIMTOOLS_NewExportClip,
     OT_S4ANIMTOOLS_ToggleSlots, OT_S4ANIMTOOLS_CreateClipData, OT_S4ANIMTOOLS_InitializeThumbnails, OT_S4ANIMTOOLS_PreviewSlotAssignment, OT_S4ANIMTOOLS_PreviewAllSlotAssignments,
     S4ANIMTOOLS_OT_DeleteAllIKTargets,S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones,S4ANIMTOOLS_OT_FKIKSwitch,S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig,
-OT_S4ANIMTOOLS_ResetSlotAssignmentPreview)
+OT_S4ANIMTOOLS_ResetSlotAssignmentPreview, OT_S4ANIMTOOLS_CopyTextToClipboard)
 
 def update_selected_bones(self, context):
     pass
