@@ -97,7 +97,7 @@ class ClipResourceTS4(BaseClipResource):
 
     def update_duration(self, ticks):
         # -1 tick for some reason.
-        self.duration = ticks / FPS
+        self.duration = ticks / FPS - (1 / FPS)
         self.clip_body.set_clip_length(ticks)
 
 
@@ -315,7 +315,7 @@ class ClipResourceTS3(BaseClipResource):
 
     def update_duration(self, ticks):
         # -1 tick for some reason.
-        self.duration = ticks / FPS
+        self.duration = ticks / FPS - (1 / FPS)
         self.clip_body.set_clip_length(ticks)
 
 
