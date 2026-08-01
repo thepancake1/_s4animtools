@@ -28,9 +28,10 @@ class PaletteQuaternionChannel(s4animtools.channels.quaternion_channel.Quaternio
         self._individual_frames = individual_frames
         self._frame_count = len(self._individual_frames)
 
+        values: Any
         for idx, values in self._individual_frames.items():
             single_frame = PaletteFrame()
-            single_frame.set_frame_data(idx, list(values), idx == 0, actual_values[idx])
+            single_frame.set_frame_data(idx, list(values), False, actual_values[idx])
             single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
             serialized = single_frame._frame_data
             self.serialized_frames[idx] = single_frame
@@ -64,7 +65,7 @@ class PaletteTranslationChannel(PaletteQuaternionChannel):
 
         for idx, values in self._individual_frames.items():
             single_frame = PaletteTranslationFrame()
-            single_frame.set_frame_data(idx, list(values), idx == 0, actual_values[idx])
+            single_frame.set_frame_data(idx, list(values), False, actual_values[idx])
             single_frame._frame_data = list(map(self.serialize_data, single_frame._frame_data))
             serialized = single_frame._frame_data
             self.serialized_frames[idx] = single_frame
