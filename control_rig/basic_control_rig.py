@@ -1,5 +1,7 @@
 
 import bpy
+import bpy_extras.anim_utils
+
 from mathutils import Vector, Quaternion
 class CopyLeftSideAnimationToRightSide(bpy.types.Operator):
     bl_idname = "s4animtools.copy_left_side"
@@ -157,7 +159,11 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
         obj = context.object
         action = obj.animation_data.action
 
-        for group in action.groups:
+        # Need to make this compatible with pre blender 5.0
+        slot = obj.animation_data.action_slot
+        channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, slot)
+        groups = channelbag.groups
+        for group in groups:
             oldname = group.name
 
 
@@ -170,8 +176,9 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
                 group.name = group.name + "temp"
             for fcurve in group.channels:
                 fcurve.data_path = fcurve.data_path.replace(oldname,group.name)
+        groups = channelbag.groups
 
-        for group in action.groups:
+        for group in groups:
             oldname = group.name
             group.name = group.name.replace("temp", "")
 
@@ -223,7 +230,7 @@ class FlipLeftSideAnimationToRightSideSim(bpy.types.Operator):
                         keyframe.co[1] = current_value * multiplier
 
 
-        fcurves = obj.animation_data.action.fcurves
+        fcurves = channelbag.fcurves
         for fcurve in fcurves:
             for kf in fcurve.keyframe_points:
                 kf.interpolation = 'CONSTANT'
