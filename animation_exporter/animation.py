@@ -15,7 +15,12 @@ import s4animtools
 import bpy_extras
 
 LOCOMOTION_CHANNEL_HASH = 720414894
-ENABLE_SCALE = True
+ENABLE_SCALE = False
+ENABLE_ROTATION = False
+ENABLE_LOCATION = False
+
+ENABLE_IK = True
+
 F4_QuaternionIdentity = 17
 
 F3 = 3
@@ -490,28 +495,30 @@ class AnimationExporter:
                 valid = bone.name != "b__ROOT__"
                 root_valid = bone.name == "b__ROOT__" and self.export_root_bone
                 if root_valid or valid:
-                    if len(animation_data.get_translation_channel().items()) > 0:
-                        if self.use_full_precision:
-                            location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
-                            translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3)
-                            location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
-                        else:
-                            location_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                                  TRANSLATION_SUBTARGET_IDX)
-                            location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
+                    if ENABLE_LOCATION:
+                        if len(animation_data.get_translation_channel().items()) > 0:
+                            if self.use_full_precision:
+                                location_channel = PaletteTranslationChannel(bone.name, F3, TRANSLATION_SUBTARGET_IDX)
+                                translation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_translation_channel(), axis_count=3)
+                                location_channel.palette_setup(channel_data=translation_channel_data,snap_frames=self.snap_frames, values=original_values)
+                            else:
+                                location_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                                      TRANSLATION_SUBTARGET_IDX)
+                                location_channel.setup(animation_data.get_translation_channel(), snap_frames=self.snap_frames)
 
-                        self.exported_channels.append(location_channel)
+                            self.exported_channels.append(location_channel)
 
-                    if len(animation_data.get_rotation_channel().items()) > 0:
-                        if self.use_full_precision:
-                            rotation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_rotation_channel(), axis_count=4)
+                    if ENABLE_ROTATION:
+                        if len(animation_data.get_rotation_channel().items()) > 0:
+                            if self.use_full_precision:
+                                rotation_channel_data, original_values = self.get_f1_palette_for_channel(animation_data.get_rotation_channel(), axis_count=4)
 
-                            rotation_channel = PaletteQuaternionChannel(bone.name, F4, ROTATION_SUBTARGET_IDX)
-                            rotation_channel.palette_setup(channel_data=rotation_channel_data,snap_frames=self.snap_frames, values=original_values)
-                        else:
-                            rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
-                            rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
-                        self.exported_channels.append(rotation_channel)
+                                rotation_channel = PaletteQuaternionChannel(bone.name, F4, ROTATION_SUBTARGET_IDX)
+                                rotation_channel.palette_setup(channel_data=rotation_channel_data,snap_frames=self.snap_frames, values=original_values)
+                            else:
+                                rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX, ROTATION_SUBTARGET_IDX)
+                                rotation_channel.setup(animation_data.get_rotation_channel(), snap_frames=self.snap_frames)
+                            self.exported_channels.append(rotation_channel)
 
 #
             if animation_data.animated:
@@ -536,26 +543,27 @@ class AnimationExporter:
                 for ik_target_idx in range(IK_TARGET_COUNT):
                     animation_translation_channel = animation_data.get_translation_channel(ik_target_idx)
                     animation_rotation_channel = animation_data.get_rotation_channel(ik_target_idx)
-                    if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
-                        if self.use_full_precision:
-                            translation_channel = PaletteTranslationChannel(bone.name, F3, IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
-                            translation_channel_data,original_values = self.get_f1_palette_for_channel(animation_translation_channel, axis_count=3)
-                            translation_channel.palette_setup(channel_data=translation_channel_data,
-                                                              snap_frames=self.snap_frames,
-                                                              values=original_values)
-                            rotation_channel = PaletteQuaternionChannel(bone.name, F4, IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
-                            rotation_channel_data,original_values = self.get_f1_palette_for_channel(animation_rotation_channel, axis_count=4)
-                            rotation_channel.palette_setup(channel_data=rotation_channel_data, snap_frames=self.snap_frames,
-                                                           values=original_values)
-                        else:
-                            translation_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
-                                                                     IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
-                            rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
-                                                       IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
-                            translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)
-                            rotation_channel.setup(animation_rotation_channel, snap_frames=self.snap_frames)
-                        self.exported_channels.append(translation_channel)
-                        self.exported_channels.append(rotation_channel)
+                    if ENABLE_IK:
+                        if len(animation_rotation_channel.items()) > 0 and len(animation_translation_channel.items()) > 0:
+                            if self.use_full_precision:
+                                translation_channel = PaletteTranslationChannel(bone.name, F3, IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+                                translation_channel_data,original_values = self.get_f1_palette_for_channel(animation_translation_channel, axis_count=3)
+                                translation_channel.palette_setup(channel_data=translation_channel_data,
+                                                                  snap_frames=self.snap_frames,
+                                                                  values=original_values)
+                                rotation_channel = PaletteQuaternionChannel(bone.name, F4, IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
+                                rotation_channel_data,original_values = self.get_f1_palette_for_channel(animation_rotation_channel, axis_count=4)
+                                rotation_channel.palette_setup(channel_data=rotation_channel_data, snap_frames=self.snap_frames,
+                                                               values=original_values)
+                            else:
+                                translation_channel = Vector3Channel(bone.name, F3_HIGH_PRECISION_NORMALIZED_IDX,
+                                                                         IK_TRANSLATION_SUBTARGET_IDX + (ik_target_idx * 2))
+                                rotation_channel = QuaternionChannel(bone.name, F4_SUPER_HIGH_PRECISION_IDX,
+                                                           IK_ROTATION_SUBTARGET_IDX + ik_target_idx * 2)
+                                translation_channel.setup(animation_translation_channel, snap_frames=self.snap_frames)
+                                rotation_channel.setup(animation_rotation_channel, snap_frames=self.snap_frames)
+                            self.exported_channels.append(translation_channel)
+                            self.exported_channels.append(rotation_channel)
 
         for child in bone.children:
             if slot in child.name and not self.allow_slots:
