@@ -28,7 +28,7 @@ from s4animtools.events.events_ui import (AnimationEvent, SoundEventInfo, SnapEv
                                           PlayEffectEventUI)
 from s4animtools.rig.ik_chains import S4ANIMTOOLS_OT_CreateIKChain, S4ANIMTOOLS_OT_CreateBones, \
     S4ANIMTOOLS_OT_FKIKSwitch, S4ANIMTOOLS_OT_IKFKSwitch, S4ANIMTOOLS_OT_LoadPresetBoneConfig
-from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash_as_int
+from s4animtools.serialization.fnv import get_64bithash, get_32bit_hash, hash_name_or_get_hash_as_int, get_64bithash_as_int
 from s4animtools.rcol.rcol_wrapper import OT_S4ANIMTOOLS_ImportFootprint, OT_S4ANIMTOOLS_VisualizeFootprint, \
     OT_S4ANIMTOOLS_ExportFootprint
 from s4animtools.rig.create_rig import Trackmask
@@ -57,7 +57,7 @@ from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget, LIST_OT_C
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
     LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget, IKTarget, S4ANIMTOOLS_OT_DeleteAllIKTargets
 import s4animtools.animation_exporter.animation
-from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter
+from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter, ENABLE_IK
 import s4animtools.rig.create_rig
 from s4animtools.serialization.types.transforms import Vector3, Quaternion
 from s4animtools.clip_operators import OT_S4ANIMTOOLS_CreateClipData, get_formatted_clip_name, \
@@ -201,7 +201,7 @@ class Snapper(bpy.types.Operator):
 
 class ClipInfo:
     def __init__(self, start_frame, end_frame, name, reference_namespace_hash, explicit_namespaces, initial_offset_q,
-                 initial_offset_t, rig_name, loco):
+                 initial_offset_t, rig_name, loco, instance_id):
         self.start_frame = start_frame
         self.end_frame = end_frame
         self.name = name
@@ -212,6 +212,7 @@ class ClipInfo:
         self.initial_offset_t = initial_offset_t
         self.rig_name = rig_name
         self.loco = loco
+        self.instance_id = instance_id
 
     def __str__(self):
         return (f"\nName: {self.name}\n"
@@ -231,6 +232,10 @@ class SlotAssignmentBlender:
         self.slot_assignment_idx = slot_assignment_idx
         self.chain_idx = chain_idx
 
+class InvalidHexException(Exception):
+    pass
+class IncorrectCustomClipInstanceCountException(Exception):
+    pass
 class ClipNameFormatter:
     def __init__(self, context):
         self.context = context
@@ -260,8 +265,14 @@ class ClipNameFormatter:
             # if the string has newlines it's a 5.2+ clip name input, split by it isntead of comma
             if self.context.scene.clip_name.count("\n") > 0:
                 clip_input_names = self.context.scene.clip_name.split("\n")
-            else:
+            elif self.context.scene.clip_name.count(",") > 0:
                 clip_input_names = self.context.scene.clip_name.split(",")
+            # Not blank, yet has no comma or newline, so it's just a single clip
+
+            elif len(self.context.scene.clip_name) > 0:
+                clip_input_names = [self.context.scene.clip_name]
+            else:
+                clip_input_names = []
             if len(clip_input_names) > 0:
                 for clip_input_name in clip_input_names:
                     if self.context.scene.clip_name_prefix == "":
@@ -279,6 +290,38 @@ class ClipNameFormatter:
 
         return clip_names
 
+    def get_clip_instances(self) -> list[int]:
+        if self.context.object.custom_clip_instances.count("\n") > 0 or self.context.object.custom_clip_instances.count(",") > 0:
+            if self.context.object.custom_clip_instances.count("\n") > 0:
+                custom_clip_instances = self.context.object.custom_clip_instances.split("\n")
+            elif self.context.object.custom_clip_instances.count(",") > 0:
+                custom_clip_instances = self.context.object.custom_clip_instances.split(",")
+            else:
+                custom_clip_instances = []
+            if len(custom_clip_instances) != len(self.get_clip_names_with_actor_suffix()):
+                raise IncorrectCustomClipInstanceCountException("You have custom clip instances set, yet it doesn't match the amount of clips.\nEither leave custom clip names blank or fix this")
+            invalid_hex = False
+            for clip_instance in custom_clip_instances:
+                try:
+                    int(clip_instance, 16)
+                except:
+                    invalid_hex = True
+            if invalid_hex:
+                raise InvalidHexException("You specified a custom clip_instance but it's not valid hex.")
+            return [int(clip_instance, 16) for clip_instance in custom_clip_instances]
+
+        # Not blank, yet has no comma or newline, so it's just a single clip
+        if len(self.context.object.custom_clip_instances) > 0:
+            invalid_hex = False
+            try:
+                int(self.context.object.custom_clip_instances, 16)
+            except:
+                invalid_hex = True
+            if invalid_hex:
+                raise InvalidHexException("You specified a custom clip_instance but it's not valid hex.")
+            return [int(self.context.object.custom_clip_instances, 16)]
+
+        return [get_64bithash_as_int(clip_name) for clip_name in self.get_clip_names_with_actor_suffix()]
 class NewClipExporter:
 
     def __init__(self):
@@ -559,6 +602,7 @@ class NewClipExporter:
         clip_names = self.clip_name_formatter.get_clip_names()
         clip_indices = self.get_clip_splits()
         clip_locos = self.get_clip_locos()
+        clip_instances = self.clip_name_formatter.get_clip_instances()
 
         if len(clip_names) != len(clip_indices) - 1:
             raise ValueError(
@@ -569,7 +613,7 @@ class NewClipExporter:
                          explicit_namespaces=self.get_explicit_namespaces(),
                          reference_namespace_hash=self.get_reference_namespace_hash(),
                          initial_offset_q=Quaternion.from_str(initial_offset_q),
-                         initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name, loco=clip_locos[clip_idx]))
+                         initial_offset_t=Vector3.from_str(initial_offset_t), rig_name=rig_name, loco=clip_locos[clip_idx], instance_id=clip_instances[clip_idx]))
         return clip_infos
 
     def get_downsampled_frame_idx(self, frame, sampling_rate):
@@ -638,7 +682,7 @@ class NewClipExporter:
             rig = self.context.object
 
             if rig.game_type == "TS4":
-                current_clip = ClipResourceTS4(clip_info.name, clip_info.rig_name, slot_assignments,
+                current_clip = ClipResourceTS4(clip_info.name, clip_info.instance_id, clip_info.rig_name, slot_assignments,
                                                explicit_namespaces,
                                                clip_info.reference_namespace_hash, clip_info.initial_offset_q,
                                                clip_info.initial_offset_t, source_filename, clip_info.loco, context.object.disable_rig_suffix)
@@ -652,7 +696,7 @@ class NewClipExporter:
                     except:
                         group_id = 0
 
-                current_clip = ClipResourceTS3(clip_info.name, clip_info.rig_name, source_filename, clip_info.loco, context.object.disable_rig_suffix, group_id=group_id)
+                current_clip = ClipResourceTS3(clip_info.name, clip_info.instance_id, clip_info.rig_name, source_filename, clip_info.loco, context.object.disable_rig_suffix, group_id=group_id)
             else:
                 self.report({"ERROR"}, "Invalid game type. Expected TS4 or TS3, but got {}".format(rig.game_type))
                 return {"FINISHED"}
@@ -670,7 +714,7 @@ class NewClipExporter:
             else:
                 snap_frames = []
             if self.additive:
-                exporter = AdditiveAnimationExporter(rig, snap_frames, rig.export_root_bone, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=bpy.data.objects[base_rig], allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
+                exporter = AdditiveAnimationExporter(rig, snap_frames, rig.export_root_bone, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, base_rig=rig, allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             else:
                 exporter = AnimationExporter(rig, snap_frames, rig.export_root_bone, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             exporter.create_animation_data()
@@ -704,13 +748,13 @@ class NewClipExporter:
                         ik_weight = gather_ik_weights(rig, ik_weight_animation_data, slot_assignment_info.source_bone, ik_idx, self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
                                                       self.get_downsampled_frame_idx(frame_idx, sampling_rate), last_frame_influences[(slot_assignment_info.source_bone, ik_idx)])
                         last_frame_influences[(slot_assignment_info.source_bone, ik_idx)] = ik_weight
-
-            for source_bone_ik in slot_assignment_source_bones:
-                for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
-                    exporter.add_baked_animation_data_to_frame(slot_assignment_info.source_bone,
-                                                               start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
-                                                               end_frame=self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate), ik_idx=ik_idx, sampling_rate=sampling_rate)
-                    current_clip.clip_body.add_channel((create_ik_weight_channels(slot_assignment_info.source_bone, ik_weight_animation_data[(slot_assignment_info.source_bone, ik_idx)], ik_idx)))
+            if ENABLE_IK:
+                for source_bone_ik in slot_assignment_source_bones:
+                    for ik_idx, slot_assignment_info in enumerate(ik_targets_to_bone[source_bone_ik]):
+                        exporter.add_baked_animation_data_to_frame(slot_assignment_info.source_bone,
+                                                                   start_frame=self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate),
+                                                                   end_frame=self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate), ik_idx=ik_idx, sampling_rate=sampling_rate)
+                        current_clip.clip_body.add_channel((create_ik_weight_channels(slot_assignment_info.source_bone, ik_weight_animation_data[(slot_assignment_info.source_bone, ik_idx)], ik_idx)))
 
             for channel in exporter.export_to_channels():
                 current_clip.clip_body.add_channel(new_channel=channel)
@@ -876,10 +920,22 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
                 box = layout.box()
                 box.prop(context.object, "ts3_group_id", text="Group ID")
                 box.prop(context.object, "export_root_bone", text="Export Root Bone")
+                if bpy.app.version >= (5, 2):
+                    if context.object.custom_clip_instances.count("\n") > 0 or context.object.custom_clip_instances.count(",") > 0:
+                        box.label(text="Custom Clip Instances")
+                    else:
+                        box.label(text="Custom Clip Instance")
+                    box.textbox(context.object, "custom_clip_instances")
+                else:
+                    box.prop(context.object, "custom_clip_instances", text="Custom Clip Names")
+
                 row = box.row()
                 #row.operator("s4animtools.create_clip_data", text=OT_S4ANIMTOOLS_CreateClipData.bl_label)
                 #row.operator("s4animtools.initialize_thumbnails", text=OT_S4ANIMTOOLS_InitializeThumbnails.bl_label)
                 #
+
+                # This is not the actual clip code!!! this was from an old attempt at adding pose pack support
+
                 for idx, item in enumerate(context.scene.clips):
                     item : ClipData
                     row = box.row()
@@ -916,15 +972,23 @@ class S4ANIMTOOLS_PT_MainPanel(bpy.types.Panel):
 
                 box.label(text="Your clip names for this actor will export as: ")
                 clip_name_formatter = ClipNameFormatter(bpy.context)
-                for clip_name in clip_name_formatter.get_clip_names_with_actor_suffix():
-                    box2 = box.box()
-                    row = box2.row()
-                    row.label(text=clip_name)
-                    row.operator("s4animtools.copy_text_to_clipboard", text="Copy Name").text = clip_name
-                    row = box2.row()
-                    row.label(text=get_64bithash(clip_name))
-                    row.operator("s4animtools.copy_text_to_clipboard", text="Copy Hash").text = get_64bithash(clip_name)
+                try:
+                    clip_hashes = clip_name_formatter.get_clip_instances()
 
+                    for idx, clip_name in enumerate(clip_name_formatter.get_clip_names_with_actor_suffix()):
+                        box2 = box.box()
+                        row = box2.row()
+                        row.label(text=clip_name)
+                        row.operator("s4animtools.copy_text_to_clipboard", text="Copy Name").text = clip_name
+                        row = box2.row()
+                        row.label(text=hex(clip_hashes[idx]))
+                        row.operator("s4animtools.copy_text_to_clipboard", text="Copy Hash").text = hex(clip_hashes[idx])
+                except InvalidHexException:
+                    row.label(text="One of your clip hashes is an invalid hex value. Make sure it's a valid hexadecimal value pls")
+                except IncorrectCustomClipInstanceCountException as e:
+                    # multi line labels will be implemetned in 5.3, so keep that in miond
+                    row.label(text="You have custom clip instances set, yet it doesn't match the amount of clips.\nEither leave custom clip names blank or fix this")
+                    row.label(text=str(e))
                 box.prop(obj, "allow_jaw_animation_for_entire_animation",
                                  text="Allow Jaw Animation For Entire Animation (Use this for poses or posepacks)")
                 box.prop(obj, "enable_version_number_in_exported_clip", text="Enable Blender Version Number in Source Asset Name")
@@ -2357,7 +2421,7 @@ def update_selected_bones(self, context):
 
 
 def handle_version_upgrade(context):
-    
+
 
     old_version = context.scene.s4animtools_version
     # This code handles upgrading the addon from an older version.
@@ -2757,6 +2821,7 @@ def register():
 
     bpy.types.Object.ts3_group_id = StringProperty()
     bpy.types.Object.export_root_bone = BoolProperty(default=False)
+    bpy.types.Object.custom_clip_instances = StringProperty()
 
 def unregister():
     from bpy.utils import unregister_class
@@ -2909,3 +2974,4 @@ def unregister():
 
     del bpy.types.Object.ts3_group_id
     del bpy.types.Object.export_root_bone
+    del bpy.types.Object.custom_clip_instances

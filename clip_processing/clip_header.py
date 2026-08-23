@@ -34,7 +34,7 @@ class BaseClipResource:
     pass
 
 class ClipResourceTS4(BaseClipResource):
-    def __init__(self, clip_name, rig_name, slot_assignments:list[SlotAssignment], explicit_namespaces, reference_namespace_hash, initial_offset_q,
+    def __init__(self, clip_name, clip_instance, rig_name, slot_assignments:list[SlotAssignment], explicit_namespaces, reference_namespace_hash, initial_offset_q,
                  initial_offset_t, source_file_name, loco_animation,disable_rig_suffix, version=14,
                     surface_namespace_hash=2166136261, surface_joint_name_hash=2166136261, surface_child_namespace_hash=2166136261,
                  duration=0, flags=0):
@@ -77,6 +77,7 @@ class ClipResourceTS4(BaseClipResource):
         self.slot_assignment_count = len(slot_assignments)
         self.clip_event_list = []
         self.codec_data_length = 0
+        self.clip_instance = clip_instance
         self.clip_body = ClipBody(self.clip_name, source_file_name)
 
     @property
@@ -106,17 +107,17 @@ class ClipResourceTS4(BaseClipResource):
 
     def get_clip_filename(self):
         if self.s3pe_naming:
-            return "S4_6B20C4F3_00000000_{}_{}.Clip".format(get_64bithash(self.clip_name), self.file_name)
-        return "6B20C4F3!00000000!{}.{}.Clip".format(get_64bithash(self.clip_name), self.file_name)
+            return "S4_6B20C4F3_00000000_{:016X}_{}.Clip".format(self.clip_instance, self.file_name)
+        return "6B20C4F3!00000000!{:016X}_{}.Clip".format(self.clip_instance, self.file_name)
 
     def get_clip_header_filename(self):
         if self.s3pe_naming:
-            return "S4_BC4A5044_00000000_{}_{}.ClipHeader".format(get_64bithash(self.clip_name), self.file_name)
-        return "BC4A5044!00000000!{}.{}.ClipHeader".format(get_64bithash(self.clip_name), self.file_name)
+            return "S4_BC4A5044_00000000_{:016X}_{}.ClipHeader".format(self.clip_instance, self.file_name)
+        return "BC4A5044!00000000!{:016X}.{}.ClipHeader".format(self.clip_instance, self.file_name)
     def get_loose_clip_naming(self):
-        return "0x00000000!0x{}.6b20c4f3".format(get_64bithash(self.clip_name).lower())
+        return "0x00000000!0x{:016X}.6b20c4f3".format(self.clip_instance).lower()
     def get_loose_clip_header_naming(self):
-        return "0x00000000!0x{}.bc4a5044".format(get_64bithash(self.clip_name).lower())
+        return "0x00000000!0x{}.bc4a5044".format(self.clip_instance).lower()
 
     def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy
@@ -258,7 +259,7 @@ class ClipEventsTS3:
 
 
 class ClipResourceTS3(BaseClipResource):
-    def __init__(self, clip_name, rig_name, source_file_name, loco_animation,disable_rig_suffix, version=2,
+    def __init__(self, clip_name, clip_instance, rig_name, source_file_name, loco_animation,disable_rig_suffix, version=2,
                  duration=0, flags=0, group_id=0):
         # If version number were to ever be updated to include later versions, make sure to remember that events and strings were updated.
         self.end_offset = 0
@@ -297,6 +298,7 @@ class ClipResourceTS3(BaseClipResource):
         self.slot_assignment_list = SlotAssignmentListTS3([])
         self.file_name = export_filename
         self.group_id = group_id
+        self.clip_instance = clip_instance
     @property
     def clip_name_length(self):
         return len(self.clip_name)
@@ -324,16 +326,15 @@ class ClipResourceTS3(BaseClipResource):
         self.clip_event_list.append(event)
 
     def get_clip_filename(self):
-        group_id_string = "0x{:08x}".format(self.group_id)
+        group_id_string = "{:08x}".format(self.group_id)
 
         if self.s3pe_naming:
-            return "S3_{}_00000000_{}_{}.animation".format(group_id_string, get_64bithash(self.clip_name), self.file_name)
+            return "S3_{}_00000000_{:016X}_{}.animation".format(group_id_string, self.clip_instance, self.file_name)
         # I should probably remove this, since everybody is probably using s3pe for sims 3
-        return "6B20C4F3!{}!{}.{}.Clip".format(group_id_string, get_64bithash(self.clip_name), self.file_name)
+        return "6B20C4F3!{}!{:016X}.{}.Clip".format(group_id_string,  self.clip_instance, self.file_name)
 
     def get_loose_clip_naming(self):
-        group_id_string = "0x{:08x}".format(self.group_id)
-        return "{}!0x{}.6b20c4f3".format(group_id_string, get_64bithash(self.clip_name).lower())
+        return "0x{:08x}!0x{:016x}.6b20c4f3".format(group_id_string,  self.clip_instance).lower()
 
     def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy
