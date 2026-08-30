@@ -325,6 +325,12 @@ class AnimationExporter:
                                                              target_bone=self.root_bone, frame_idx=frame_idx,
                                                              start_frame=start_frame,
                                                              force=force)
+                elif source_bone.name == "ai7umko":
+                    self.animate_bone_relative_to_other_bone(source_bone=source_bone,
+                                                             target_rig=self.source_rig,
+                                                             target_bone=self.root_bone, frame_idx=frame_idx,
+                                                             start_frame=start_frame,
+                                                             force=force)
                 else:
                     self.animate_bone_relative_to_other_bone(source_bone=source_bone,
                                                              target_rig=self.world_rig,

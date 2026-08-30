@@ -107,8 +107,8 @@ class ClipResourceTS4(BaseClipResource):
 
     def get_clip_filename(self):
         if self.s3pe_naming:
-            return "S4_6B20C4F3_00000000_{:016X}_{}.Clip".format(self.clip_instance, self.file_name)
-        return "6B20C4F3!00000000!{:016X}_{}.Clip".format(self.clip_instance, self.file_name)
+            return "S4_6B20C4F3_00000000_{:016X}{}.Clip".format(self.clip_instance, self.file_name)
+        return "6B20C4F3!00000000!{:016X}.{}.Clip".format(self.clip_instance, self.file_name)
 
     def get_clip_header_filename(self):
         if self.s3pe_naming:
@@ -268,8 +268,8 @@ class ClipResourceTS3(BaseClipResource):
         self.actor_offset = 0
         self.event_offset = 0
         self.unknown_offset = 0
-
-        self.unknown_value = 0
+        # 0 for regular animations, 2 for animations that have the locomotion channel
+        self.animation_flags = 0
         self.unknown_value2 = 1
         if version is None:
             self.version = 2
@@ -329,12 +329,12 @@ class ClipResourceTS3(BaseClipResource):
         group_id_string = "{:08x}".format(self.group_id)
 
         if self.s3pe_naming:
-            return "S3_{}_00000000_{:016X}_{}.animation".format(group_id_string, self.clip_instance, self.file_name)
+            return "S3_6B20C4F3_{}_{:016X}_{}.animation".format(group_id_string, self.clip_instance, self.file_name)
         # I should probably remove this, since everybody is probably using s3pe for sims 3
         return "6B20C4F3!{}!{:016X}.{}.Clip".format(group_id_string,  self.clip_instance, self.file_name)
 
     def get_loose_clip_naming(self):
-        return "0x{:08x}!0x{:016x}.6b20c4f3".format(group_id_string,  self.clip_instance).lower()
+        return "0x{:08x}!0x{:016x}.6b20c4f3".format(self.group_id,  self.clip_instance).lower()
 
     def export(self, export_path, alternative_export_path, export_as_loose_filenames):
         import bpy
@@ -392,7 +392,7 @@ class ClipResourceTS3(BaseClipResource):
         serialized = [u32(self.resource_type), u32(self.unknown_offset),
                       u32(self.codec_data_length),
                       u32(self.clip_offset), u32(self.slot_offset), u32(self.actor_offset), u32(self.event_offset),
-                      u32(self.unknown_value), u32(self.unknown_value2), u32(self.end_offset), Bytes(bytes([0]* 16))]
+                      u32(self.animation_flags), u32(self.unknown_value2), u32(self.end_offset), Bytes(bytes([0] * 16))]
         header_data = []
 
         header_length = 0

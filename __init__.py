@@ -2,6 +2,7 @@
 import importlib
 import sys
 
+
 current_package_prefix = f"{__name__}."
 for name, module in sys.modules.copy().items():
     if name.startswith(current_package_prefix):
@@ -49,6 +50,9 @@ import s4animtools.channels.loco_channel
 import s4animtools.channels.palette_channel
 import s4animtools.channels.quaternion_channel
 import s4animtools.control_rig.basic_control_rig
+from s4animtools.channels.quaternion_channel import QuaternionChannel
+from s4animtools.clip_processing.clip_body import ClipBody, ClipBodyTS3
+
 import s4animtools.frames.frame
 from s4animtools.control_rig.basic_control_rig import CopyLeftSideAnimationToRightSide, \
     CopySelectedLeftSideToRightSide, CopyLeftSideAnimationToRightSideSim, CopyBakedAnimationToControlRig, FlipLeftSideAnimationToRightSideSim
@@ -57,7 +61,7 @@ from s4animtools.ik_manager import BeginIKMarker, LIST_OT_NewIKTarget, LIST_OT_C
     s4animtool_OT_removeIK, s4animtool_OT_mute_ik, s4animtool_OT_unmute_ik, LIST_OT_NewIKRange, LIST_OT_DeleteIKRange, \
     LIST_OT_DeleteSpecificIKTarget, MAX_SUBROOTS, s4animtools_OT_guessTarget, IKTarget, S4ANIMTOOLS_OT_DeleteAllIKTargets
 import s4animtools.animation_exporter.animation
-from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter, ENABLE_IK
+from s4animtools.animation_exporter.animation import AnimationExporter, AdditiveAnimationExporter, ENABLE_IK, LOCOMOTION_CHANNEL_HASH
 import s4animtools.rig.create_rig
 from s4animtools.serialization.types.transforms import Vector3, Quaternion
 from s4animtools.clip_operators import OT_S4ANIMTOOLS_CreateClipData, get_formatted_clip_name, \
@@ -718,8 +722,7 @@ class NewClipExporter:
             else:
                 exporter = AnimationExporter(rig, snap_frames, rig.export_root_bone, world_rig=world_rig, world_root=world_root, use_full_precision=self.context.object.use_full_precision, allow_slots=self.context.object.allow_slots, overlay=self.context.object.is_overlay)
             exporter.create_animation_data()
-            exporter.paletteHolder.try_add_palette_to_palette_values(0)
-            exporter.paletteHolder.try_add_palette_to_palette_values(1.0)
+
 
             last_frame_influences = defaultdict(int)
             ik_weight_animation_data = defaultdict(dict)
@@ -758,10 +761,25 @@ class NewClipExporter:
 
             for channel in exporter.export_to_channels():
                 current_clip.clip_body.add_channel(new_channel=channel)
+
+            for channel in current_clip.clip_body._channels:
+                channel : QuaternionChannel
+                if channel._target.data == LOCOMOTION_CHANNEL_HASH:
+                    # Why 2? If it's just one, an empty loco bone at the start if the user keys all clips will just get keyed, so 2 means the bone
+                    # was moved from the start
+                    if channel._frame_count > 2:
+                        print("LOCO BONE!")
+                        # Set motion accumulation to enabled for sims 3 clips
+                        if isinstance(current_clip.clip_body, ClipBodyTS3):
+                            current_clip : ClipResourceTS3
+                            current_clip.animation_flags = 2
+
             current_clip.clip_body.set_palette_values(exporter.paletteHolder.palette_values)
             current_clip.update_duration(self.get_downsampled_frame_idx(clip_info.end_frame, sampling_rate)- self.get_downsampled_frame_idx(clip_info.start_frame, sampling_rate))
 
             current_clip.export(export_path=self.context.scene.s4animtools_export_path, alternative_export_path=self.context.scene.s4animtools_export_path2, export_as_loose_filenames=export_as_loose_files)
+            print(f"PALETTE VALUES : {exporter.paletteHolder.palette_values}")
+
         t2 = time.time()
         print(f"Took {t2 - t1} seconds for clip export")
         return {"FINISHED"}
