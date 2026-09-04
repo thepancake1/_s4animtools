@@ -262,16 +262,30 @@ class AnimationExporter:
     @staticmethod
     def has_keyframe(ob, attr):
         anim = ob.animation_data
-        if anim is not None and anim.action is not None:
-            for fcu in anim.action.fcurves:
+        if bpy.app.version >= (5, 0, 0):
+            action = ob.animation_data.action
+            action_slot = ob.animation_data.action_slot
+            channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, action_slot)
+            for fcu in channelbag.fcurves:
                 if fcu.data_path == attr:
                     return len(fcu.keyframe_points) > 0
+        else:
+            if anim is not None and anim.action is not None:
+                for fcu in anim.action.fcurves:
+                    if fcu.data_path == attr:
+                        return len(fcu.keyframe_points) > 0
         return False
 
     def create_animation_data(self):
         """
         Create an AnimationBoneData class for each bone that can be animated.
         """
+
+        if bpy.app.version >= (5, 0, 0):
+            action = self.source_rig.animation_data.action
+            action_slot = self.source_rig.animation_data.action_slot
+            channelbag = bpy_extras.anim_utils.action_get_channelbag_for_slot(action, action_slot)
+
         for bone in self.source_rig.pose.bones:
             if slot in bone.name and not self.allow_slots:
                 continue
@@ -280,7 +294,12 @@ class AnimationExporter:
             self.animated_frame_data[bone.name] = AnimationBoneData(self)
             if self.overlay:
                 for path in possible_paths:
-                    has_keyframe = self.source_rig.animation_data.action.fcurves.find(path.format(bone.name))
+                    if bpy.app.version >= (5, 0, 0):
+                        has_keyframe = channelbag.fcurves.find(path.format(bone.name))
+
+                    else:
+                        has_keyframe = self.source_rig.animation_data.action.fcurves.find(path.format(bone.name))
+
                     if has_keyframe:
                         self.animated_frame_data[bone.name].animated = True
                         break
